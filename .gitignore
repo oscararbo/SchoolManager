@@ -1,0 +1,11 @@
+# Build artifacts
+**/bin/
+**/obj/
+
+# User/editor files
+.vscode/
+
+# Local database files
+*.db
+*.db-shm
+*.db-wal
