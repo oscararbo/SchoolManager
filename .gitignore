@@ -2,10 +2,47 @@
 **/bin/
 **/obj/
 
-# User/editor files
-.vscode/
-
 # Local database files
 *.db
 *.db-shm
 *.db-wal
+
+# Compiled output
+/Front/dist
+/Front/tmp
+/Front/out-tsc
+/Front/bazel-out
+
+# Node
+/Front/node_modules
+/Front/npm-debug.log
+/Front/yarn-error.log
+
+# IDEs and editors
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Visual Studio Code
+.vscode/*
+/Front/.vscode/*
+!/Front/.vscode/settings.json
+!/Front/.vscode/tasks.json
+!/Front/.vscode/launch.json
+!/Front/.vscode/extensions.json
+!/Front/.vscode/mcp.json
+/Front/.history/*
+
+# Miscellaneous
+/Front/.angular/cache
+/Front/.sass-cache/
+/Front/connect.lock
+/Front/coverage
+/Front/libpeerconnection.log
+/Front/testem.log
+/Front/typings
+/Front/__screenshots__/
