@@ -1,0 +1,20 @@
+<main class="home-shell container-fluid py-3">
+	<header class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+		<h1 class="h3 mb-0 text-primary-emphasis">Panel academico</h1>
+		<app-logout-button (logout)="cerrarSesion()"></app-logout-button>
+	</header>
+
+	@if (session()) {
+		@if (session()!.rol === 'profesor') {
+			<app-profesor-home
+				[profesorId]="session()!.id"
+				[profesorNombre]="session()!.nombre">
+			</app-profesor-home>
+		} @else {
+			<app-alumno-home
+				[estudianteId]="session()!.id"
+				[nombre]="session()!.nombre">
+			</app-alumno-home>
+		}
+	}
+</main>

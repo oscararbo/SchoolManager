@@ -1,0 +1,17 @@
+<button type="button" class="btn btn-outline-secondary btn-sm logout-btn" (click)="solicitarCierreSesion()">
+	Cerrar sesion
+</button>
+
+@if (mostrandoConfirmacion) {
+	<div class="logout-modal-backdrop" role="dialog" aria-modal="true" aria-label="Confirmacion de cierre de sesion">
+		<div class="card border-0 shadow logout-modal-card">
+			<div class="card-body p-4">
+				<p class="mb-3">Seguro que quieres cerrar sesion?</p>
+				<div class="d-flex justify-content-end gap-2">
+					<button type="button" class="btn btn-outline-secondary btn-sm" (click)="cancelarCierreSesion()">Cancelar</button>
+					<button type="button" class="btn btn-danger btn-sm" (click)="confirmarCierreSesion()">Confirmar</button>
+				</div>
+			</div>
+		</div>
+	</div>
+}

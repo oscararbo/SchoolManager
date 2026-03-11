@@ -1,0 +1,12 @@
+.card {
+    border-radius: 14px;
+}
+
+.panel-card {
+    max-height: calc(100vh - 220px);
+}
+
+.tabla-scroll {
+    overflow-y: auto;
+    max-height: calc(100vh - 340px);
+}

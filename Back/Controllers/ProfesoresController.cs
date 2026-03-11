@@ -19,6 +19,7 @@ public class ProfesoresController(AppDbContext context) : ControllerBase
             {
                 p.Id,
                 p.Nombre,
+                p.Correo,
                 Imparticiones = p.ProfesorAsignaturaCursos.Select(i => new
                 {
                     i.AsignaturaId,
@@ -38,7 +39,102 @@ public class ProfesoresController(AppDbContext context) : ControllerBase
         var profesor = await context.Profesores
             .AsNoTracking()
             .Where(p => p.Id == id)
-            .Select(p => new { p.Id, p.Nombre })
+            .Select(p => new { p.Id, p.Nombre, p.Correo })
+            .FirstOrDefaultAsync();
+
+        if (profesor is null)
+        {
+            return NotFound("El profesor no existe.");
+        }
+
+        var imparticiones = await context.ProfesorAsignaturaCursos
+            .AsNoTracking()
+            .Where(i => i.ProfesorId == id)
+            .Select(i => new
+            {
+                i.CursoId,
+                Curso = i.Curso!.Nombre,
+                i.AsignaturaId,
+                Asignatura = i.Asignatura!.Nombre
+            })
+            .OrderBy(i => i.Curso)
+            .ThenBy(i => i.Asignatura)
+            .ToListAsync();
+
+        var cursos = imparticiones
+            .GroupBy(i => new { i.CursoId, i.Curso })
+            .Select(g => new
+            {
+                g.Key.CursoId,
+                Curso = g.Key.Curso,
+                Asignaturas = g.Select(x => new
+                {
+                    x.AsignaturaId,
+                    Nombre = x.Asignatura
+                })
+            })
+            .OrderBy(x => x.Curso)
+            .ToList();
+
+        return Ok(new
+        {
+            profesor.Id,
+            profesor.Nombre,
+            profesor.Correo,
+            Cursos = cursos
+        });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create(CreateProfesorDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Nombre))
+        {
+            return BadRequest("El nombre del profesor es obligatorio.");
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Correo))
+        {
+            return BadRequest("El correo del profesor es obligatorio.");
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Contrasena))
+        {
+            return BadRequest("La contrasena del profesor es obligatoria.");
+        }
+
+        var correo = dto.Correo.Trim().ToLowerInvariant();
+
+        var correoDuplicado = await context.Profesores
+            .AnyAsync(p => p.Correo.ToLower() == correo);
+
+        if (correoDuplicado)
+        {
+            return BadRequest("Ya existe un profesor con ese correo.");
+        }
+
+        var profesor = new Profesor
+        {
+            Nombre = dto.Nombre.Trim(),
+            Correo = correo,
+            Contrasena = dto.Contrasena.Trim()
+        };
+        context.Profesores.Add(profesor);
+        await context.SaveChangesAsync();
+        return CreatedAtAction(nameof(GetAll), new { id = profesor.Id }, profesor);
+    }
+
+    [HttpGet("{id:int}/panel")]
+    public async Task<IActionResult> GetPanelProfesor(int id)
+    {
+        var profesor = await context.Profesores
+            .AsNoTracking()
+            .Where(p => p.Id == id)
+            .Select(p => new
+            {
+                p.Id,
+                p.Nombre
+            })
             .FirstOrDefaultAsync();
 
         if (profesor is null)
@@ -83,18 +179,66 @@ public class ProfesoresController(AppDbContext context) : ControllerBase
         });
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Create(CreateProfesorDto dto)
+    [HttpGet("{profesorId:int}/asignaturas/{asignaturaId:int}/alumnos")]
+    public async Task<IActionResult> GetAlumnosDeAsignatura(int profesorId, int asignaturaId)
     {
-        if (string.IsNullOrWhiteSpace(dto.Nombre))
+        var profesorExiste = await context.Profesores.AnyAsync(p => p.Id == profesorId);
+        if (!profesorExiste)
         {
-            return BadRequest("El nombre del profesor es obligatorio.");
+            return NotFound("El profesor no existe.");
         }
 
-        var profesor = new Profesor { Nombre = dto.Nombre.Trim() };
-        context.Profesores.Add(profesor);
-        await context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetAll), new { id = profesor.Id }, profesor);
+        var profesorImparteAsignatura = await context.ProfesorAsignaturaCursos
+            .AnyAsync(pac => pac.ProfesorId == profesorId && pac.AsignaturaId == asignaturaId);
+
+        if (!profesorImparteAsignatura)
+        {
+            return BadRequest("El profesor no imparte esta asignatura.");
+        }
+
+        var asignaturaInfo = await context.Asignaturas
+            .AsNoTracking()
+            .Where(a => a.Id == asignaturaId)
+            .Select(a => new
+            {
+                a.Id,
+                a.Nombre,
+                a.CursoId,
+                Curso = a.Curso!.Nombre
+            })
+            .FirstOrDefaultAsync();
+
+        if (asignaturaInfo is null)
+        {
+            return NotFound("La asignatura no existe.");
+        }
+
+        var alumnos = await context.EstudianteAsignaturas
+            .AsNoTracking()
+            .Where(ea => ea.AsignaturaId == asignaturaId)
+            .Select(ea => new
+            {
+                EstudianteId = ea.EstudianteId,
+                Alumno = ea.Estudiante!.Nombre,
+                Nota = context.Notas
+                    .Where(n => n.EstudianteId == ea.EstudianteId && n.AsignaturaId == asignaturaId)
+                    .Select(n => (decimal?)n.Valor)
+                    .FirstOrDefault()
+            })
+            .OrderBy(x => x.Alumno)
+            .ToListAsync();
+
+        return Ok(new
+        {
+            Asignatura = new
+            {
+                asignaturaInfo.Id,
+                asignaturaInfo.Nombre,
+                CursoId = asignaturaInfo.CursoId,
+                Curso = asignaturaInfo.Curso
+            },
+            Alumnos = alumnos
+        });
     }
 
     [HttpPost("{profesorId:int}/imparticiones")]

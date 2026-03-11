@@ -1,0 +1,42 @@
+<section class="vstack gap-3">
+    <header class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <h2 class="h4 mb-0">Hola, {{ nombre }}</h2>
+        @if (panel()) {
+            <span class="badge rounded-pill text-bg-primary fs-6">Curso actual: {{ panel()!.curso.curso }}</span>
+        }
+    </header>
+
+    @if (cargando()) {
+        <div class="alert alert-secondary mb-0" role="status">Cargando panel...</div>
+    } @else {
+        @if (error()) {
+            <div class="alert alert-danger mb-0" role="alert">{{ error() }}</div>
+        } @else {
+            <article class="card shadow-sm border-0 panel-card">
+                <div class="card-body">
+                    <h3 class="h5">Resumen academico</h3>
+                    <div class="table-responsive tabla-scroll">
+                        <table class="table table-striped table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Asignatura</th>
+                                <th>Profesor</th>
+                                <th>Nota</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (materia of panel()!.materias; track materia.asignaturaId) {
+                                <tr>
+                                    <td>{{ materia.asignatura }}</td>
+                                    <td>{{ materia.profesor ?? 'Pendiente' }}</td>
+                                    <td>{{ materia.nota ?? '-' }}</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                </div>
+            </article>
+        }
+    }
+</section>

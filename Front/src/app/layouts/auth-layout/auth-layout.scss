@@ -1,78 +1,16 @@
-.custom-container {
-    position: relative;
-    width: 100%;
+.auth-shell {
     height: 100vh;
     overflow: hidden;
-    display: flex;
-
-    .logo-info {
-        position: relative;
-        flex: 0 0 60%;
-        width: 60%;
-        height: 100%;
-        transition: order .6s ease, transform .6s ease;
-        z-index: 2;
-
-        &.order-0 {
-            order: 0;
-        }
-
-        &.order-1 {
-            order: 1;
-        }
-    }
-
-    .bg-custom {
-        position: absolute;
-        inset: 0;
-        background: darkblue;
-        border-radius: 0;
-        transition: border-radius .6s ease;
-    }
-
-    .form-content {
-        position: relative;
-        flex: 0 0 40%;
-        width: 40%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 3;
-
-        &.order-0 {
-            order: 0;
-        }
-
-        &.order-1 {
-            order: 1;
-        }
-
-        .form-div {
-            width: 80%;
-            animation: fadeIn .5s ease forwards;
-            opacity: 0;
-        }
-    }
+    padding: 24px;
+    box-sizing: border-box;
+    background: radial-gradient(circle at top left, #e6f0ff 0%, #f3f7ff 35%, #fbfdff 100%);
 }
 
-.logo-info.order-1 .bg-custom {
-    border-radius: 0;
+.auth-brand-panel {
+    background: linear-gradient(160deg, #0b3d91 0%, #2157b8 55%, #2f6ad7 100%);
 }
 
-.clickText{
-    color: blue;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.auth-form-card {
+    max-width: 520px;
+    border-radius: 16px;
 }

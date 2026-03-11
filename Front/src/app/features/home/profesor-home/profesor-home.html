@@ -1,0 +1,118 @@
+<section class="vstack gap-3">
+    <header>
+        <h2 class="h4 mb-1">Bienvenido, {{ profesorNombre }}</h2>
+        <p class="text-secondary mb-0">Selecciona un curso y una asignatura para gestionar notas.</p>
+    </header>
+
+    @if (cargando()) {
+        <div class="alert alert-secondary mb-0" role="status">Cargando panel...</div>
+    } @else {
+        @if (error()) {
+            <div class="alert alert-danger mb-0" role="alert">{{ error() }}</div>
+        }
+
+        <div class="row g-3">
+            <article class="col-12 col-lg-4">
+                <div class="card shadow-sm border-0 panel-card">
+                    <div class="card-body">
+                        <h3 class="h5">Cursos y asignaturas</h3>
+
+                @if (panel()?.cursos?.length) {
+                    @for (curso of panel()!.cursos; track curso.cursoId) {
+                        <details class="pt-2 border-top curso-item">
+                            <summary class="fw-semibold">{{ curso.curso }}</summary>
+
+                            <ul class="list-unstyled mt-2 mb-0">
+                                @for (asignatura of curso.asignaturas; track asignatura.asignaturaId) {
+                                    <li class="mb-2">
+                                        <button
+                                            class="btn btn-sm w-100 text-start"
+                                            type="button"
+                                            (click)="cargarAlumnos(asignatura.asignaturaId)"
+                                            [class.btn-primary]="asignaturaActivaId() === asignatura.asignaturaId"
+                                            [class.btn-outline-primary]="asignaturaActivaId() !== asignatura.asignaturaId">
+                                            {{ asignatura.nombre }}
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                        </details>
+                    }
+                } @else {
+                    <div class="alert alert-warning mb-0" role="alert">No tienes imparticiones asignadas.</div>
+                }
+                    </div>
+                </div>
+            </article>
+
+            <article class="col-12 col-lg-8">
+                <div class="card shadow-sm border-0 panel-card">
+                    <div class="card-body">
+                        <h3 class="h5">Alumnos de la asignatura</h3>
+
+                @if (detalleAsignatura()) {
+                    <p class="text-secondary mb-3">
+                        {{ detalleAsignatura()!.asignatura.nombre }} · {{ detalleAsignatura()!.asignatura.curso }}
+                    </p>
+
+                    <div class="tabla-scroll">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Alumno</th>
+                                    <th>Nota actual</th>
+                                    <th>Accion</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (alumno of detalleAsignatura()!.alumnos; track alumno.estudianteId) {
+                                    <tr [class.fila-seleccionada]="estudianteSeleccionadoId() === alumno.estudianteId">
+                                        <td>{{ alumno.alumno }}</td>
+                                        <td>{{ alumno.nota ?? '-' }}</td>
+                                        <td>
+                                            <button
+                                                class="btn btn-sm btn-outline-secondary"
+                                                type="button"
+                                                (click)="seleccionarAlumno(alumno.estudianteId, alumno.nota)">
+                                                Seleccionar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="row g-2 align-items-end nota-editor mt-3 pt-3 border-top">
+                        <div class="col-12 col-md-4">
+                            <label class="form-label mb-1" for="notaInput">Nota (0 a 10)</label>
+                            <input
+                                class="form-control"
+                                id="notaInput"
+                                type="number"
+                                min="0"
+                                max="10"
+                                step="0.01"
+                                [ngModel]="notaTemporal()"
+                                (ngModelChange)="notaTemporal.set($event)">
+                        </div>
+
+                        <div class="col-12 col-md-auto">
+                            <button
+                                class="btn btn-success"
+                                type="button"
+                                [disabled]="guardandoNota() || !asignaturaActivaId() || !estudianteSeleccionadoId()"
+                                (click)="guardarNota(asignaturaActivaId()!)">
+                                {{ guardandoNota() ? 'Guardando...' : 'Guardar nota' }}
+                            </button>
+                        </div>
+                    </div>
+                } @else {
+                    <div class="alert alert-info mb-0" role="alert">Elige una asignatura para ver sus alumnos.</div>
+                }
+                    </div>
+                </div>
+            </article>
+        </div>
+    }
+</section>

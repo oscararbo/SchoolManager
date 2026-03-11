@@ -15,6 +15,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Profesor>()
+            .HasIndex(p => p.Correo)
+            .IsUnique();
+
+        modelBuilder.Entity<Estudiante>()
+            .HasIndex(e => e.Correo)
+            .IsUnique();
+
         modelBuilder.Entity<Asignatura>()
             .HasOne(a => a.Curso)
             .WithMany()

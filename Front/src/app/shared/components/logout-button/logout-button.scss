@@ -1,0 +1,21 @@
+.logout-btn:hover {
+	background-color: #dc3545;
+	border-color: #dc3545;
+	color: #ffffff;
+}
+
+.logout-modal-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(15, 23, 42, 0.35);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1050;
+	padding: 16px;
+}
+
+.logout-modal-card {
+	width: min(420px, 100%);
+	border-radius: 14px;
+}

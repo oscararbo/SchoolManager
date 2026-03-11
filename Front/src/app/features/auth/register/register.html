@@ -1,16 +1,16 @@
-<form [formGroup]="formRegister" (ngSubmit)="register()" class="w-100">
+<form [formGroup]="formRegister" (ngSubmit)="register()" class="w-100 vstack gap-3">
     <!-- Error feedback -->
     <div *ngIf="errorMessage()" class="mb-3">
         <div class="alert alert-danger" role="alert">{{ errorMessage() }}</div>
     </div>
 
     <!-- Form title -->
-    <div class="mb-5 mt-3 border-bottom">
-        <h2 class="h3 text-center w-100 mb-4">Registrarme</h2>
+    <div class="border-bottom pb-2">
+        <h2 class="h4 text-center mb-0">Registrarme</h2>
     </div>
 
     <!-- Email -->
-    <div class="form-floating mb-3">
+    <div class="form-floating">
         <input
         type="email"
         formControlName="email"
@@ -40,7 +40,7 @@
     </div>
 
     <!-- Username -->
-    <div class="form-floating mb-3">
+    <div class="form-floating">
         <input
         type="text"
         formControlName="username"
@@ -72,7 +72,7 @@
     </div>
 
     <!-- Password -->
-    <div class="form-floating mb-3">
+    <div class="form-floating">
         <input
         type="password"
         formControlName="password"
@@ -98,7 +98,7 @@
     </div>
 
     <!-- Password repeat -->
-    <div class="form-floating mb-4">
+    <div class="form-floating">
         <input
         type="password"
         formControlName="passwordConfirm"
@@ -124,10 +124,10 @@
     </div>
 
     <!-- Submit action -->
-    <div class="text-center mt-4">
+    <div class="d-grid mt-2">
         <button
         type="submit"
-        class="btn btn-dark w-100 d-block btn-primary-hover"
+        class="btn btn-dark"
         [disabled]="isLoading">
             @if (isLoading) {
                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>

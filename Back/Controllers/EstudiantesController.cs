@@ -19,6 +19,7 @@ public class EstudiantesController(AppDbContext context) : ControllerBase
             {
                 e.Id,
                 e.Nombre,
+                e.Correo,
                 e.CursoId,
                 Curso = e.Curso != null ? e.Curso.Nombre : null
             })
@@ -37,6 +38,7 @@ public class EstudiantesController(AppDbContext context) : ControllerBase
             {
                 e.Id,
                 e.Nombre,
+                e.Correo,
                 e.CursoId,
                 Curso = e.Curso != null ? e.Curso.Nombre : null,
                 Asignaturas = e.EstudianteAsignaturas.Select(x => new
@@ -74,6 +76,26 @@ public class EstudiantesController(AppDbContext context) : ControllerBase
             return BadRequest("El nombre del estudiante es obligatorio.");
         }
 
+        if (string.IsNullOrWhiteSpace(dto.Correo))
+        {
+            return BadRequest("El correo del estudiante es obligatorio.");
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Contrasena))
+        {
+            return BadRequest("La contrasena del estudiante es obligatoria.");
+        }
+
+        var correo = dto.Correo.Trim().ToLowerInvariant();
+
+        var correoDuplicado = await context.Estudiantes
+            .AnyAsync(e => e.Correo.ToLower() == correo);
+
+        if (correoDuplicado)
+        {
+            return BadRequest("Ya existe un estudiante con ese correo.");
+        }
+
         var cursoExiste = await context.Cursos.AnyAsync(c => c.Id == dto.CursoId);
         if (!cursoExiste)
         {
@@ -83,6 +105,8 @@ public class EstudiantesController(AppDbContext context) : ControllerBase
         var estudiante = new Estudiante
         {
             Nombre = dto.Nombre.Trim(),
+            Correo = correo,
+            Contrasena = dto.Contrasena.Trim(),
             CursoId = dto.CursoId
         };
 
@@ -127,5 +151,57 @@ public class EstudiantesController(AppDbContext context) : ControllerBase
 
         await context.SaveChangesAsync();
         return Ok();
+    }
+
+    [HttpGet("{id:int}/panel")]
+    public async Task<IActionResult> GetPanelAlumno(int id)
+    {
+        var estudiante = await context.Estudiantes
+            .AsNoTracking()
+            .Where(e => e.Id == id)
+            .Select(e => new
+            {
+                e.Id,
+                e.Nombre,
+                CursoId = e.CursoId,
+                Curso = e.Curso!.Nombre
+            })
+            .FirstOrDefaultAsync();
+
+        if (estudiante is null)
+        {
+            return NotFound("El estudiante no existe.");
+        }
+
+        var filas = await context.EstudianteAsignaturas
+            .AsNoTracking()
+            .Where(ea => ea.EstudianteId == id)
+            .Select(ea => new
+            {
+                AsignaturaId = ea.AsignaturaId,
+                Asignatura = ea.Asignatura!.Nombre,
+                Profesor = ea.Asignatura.ProfesorAsignaturaCursos
+                    .Where(pac => pac.CursoId == estudiante.CursoId)
+                    .Select(pac => pac.Profesor!.Nombre)
+                    .FirstOrDefault(),
+                Nota = context.Notas
+                    .Where(n => n.EstudianteId == id && n.AsignaturaId == ea.AsignaturaId)
+                    .Select(n => (decimal?)n.Valor)
+                    .FirstOrDefault()
+            })
+            .OrderBy(x => x.Asignatura)
+            .ToListAsync();
+
+        return Ok(new
+        {
+            estudiante.Id,
+            estudiante.Nombre,
+            Curso = new
+            {
+                estudiante.CursoId,
+                estudiante.Curso
+            },
+            Materias = filas
+        });
     }
 }

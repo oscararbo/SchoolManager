@@ -1,27 +1,20 @@
-<div class="w-100 bg-light custom-container">
-    <div class="logo-info position-relative" [ngClass]="typePageForm == 'login' ? 'order-0' : 'order-1'">
-        <div class="bg-custom d-flex justify-content-center align-items-center h-100" [class.is-left]="typePageForm === 'login'">
+<div class="auth-shell">
+        <div class="row g-0 align-items-stretch rounded-4 overflow-hidden shadow h-100">
+        <div class="col-12 col-lg-7">
+            <div class="auth-brand-panel h-100 d-flex flex-column justify-content-center p-4 p-md-5 text-white">
+                <h1 class="display-6 fw-semibold mb-3">School Manager</h1>
+                <p class="lead mb-0">Consulta tus clases, tus asignaturas y tus notas en un solo lugar.</p>
+            </div>
         </div>
-    </div>
 
-    <!-- Auth Form Panel -->
-    <div class="form-content d-flex align-items-center justify-content-center" [ngClass]="typePageForm == 'login' ? 'order-1' : 'order-0'">
-        <div class="form-div">
-            @if (typePageForm === 'login') {
-                <!-- Login form component -->
-                <app-login class="form-div"></app-login>
-                <div class="text-center">
-                    <hr class="d-block w-75 mt-5 mb-4 m-auto">
-                    <span class="fw-bold">¿No tienes cuenta? </span><span class="clickText fw-bold" (click)="togglePageForm('register')">Registrate</span>
+        <div class="col-12 col-lg-5 bg-body">
+            <div class="h-100 d-flex align-items-center justify-content-center p-3 p-md-4">
+                <div class="auth-form-card card border-0 shadow-sm w-100">
+                    <div class="card-body p-4 p-md-5">
+                        <app-login></app-login>
+                    </div>
                 </div>
-            } @else {
-                <!-- Register form component -->
-                <app-register class="form-div"></app-register>
-                <div class="text-center">
-                    <hr class="d-block w-75 mt-5 mb-4 m-auto">
-                    <span class="clickText fw-bold" (click)="togglePageForm('login')">Iniciar sesión</span>
-                </div>
-            }
+            </div>
         </div>
     </div>
 </div>

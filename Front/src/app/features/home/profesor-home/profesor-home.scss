@@ -1,0 +1,27 @@
+.card {
+    border-radius: 14px;
+}
+
+.curso-item summary {
+    cursor: pointer;
+}
+
+.panel-card {
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+}
+
+.tabla-scroll {
+    overflow-y: auto;
+    max-height: calc(100vh - 360px);
+}
+
+.fila-seleccionada {
+    > td {
+        background-color: #dbeafe !important;
+    }
+
+    > td:first-child {
+        font-weight: 600;
+    }
+}
