@@ -53,11 +53,14 @@ public class EstudiantesService(AppDbContext context, IPasswordService passwordS
                 }).ToList(),
                 Notas = e.Notas.Select(n => new EstudianteNotaDetalleDto
                 {
-                    AsignaturaId = n.AsignaturaId,
-                    Asignatura = n.Asignatura!.Nombre,
+                    TareaId = n.TareaId,
+                    Tarea = n.Tarea!.Nombre,
+                    AsignaturaId = n.Tarea.AsignaturaId,
+                    Asignatura = n.Tarea.Asignatura!.Nombre,
+                    Trimestre = n.Tarea.Trimestre,
                     Valor = n.Valor,
-                    ProfesorId = n.ProfesorId,
-                    Profesor = n.Profesor!.Nombre
+                    ProfesorId = n.Tarea.ProfesorId,
+                    Profesor = n.Tarea.Profesor!.Nombre
                 }).ToList()
             })
             .FirstOrDefaultAsync();
@@ -82,6 +85,11 @@ public class EstudiantesService(AppDbContext context, IPasswordService passwordS
             return new BadRequestObjectResult("La contrasena del estudiante es obligatoria.");
         }
 
+        if (dto.CursoId <= 0)
+        {
+            return new BadRequestObjectResult("El curso del estudiante es obligatorio.");
+        }
+
         var correo = dto.Correo.Trim().ToLowerInvariant();
 
         var correoDuplicado = await context.Estudiantes
@@ -92,8 +100,13 @@ public class EstudiantesService(AppDbContext context, IPasswordService passwordS
             return new BadRequestObjectResult("Ya existe un estudiante con ese correo.");
         }
 
-        var cursoExiste = await context.Cursos.AnyAsync(c => c.Id == dto.CursoId);
-        if (!cursoExiste)
+        var curso = await context.Cursos
+            .AsNoTracking()
+            .Where(c => c.Id == dto.CursoId)
+            .Select(c => new { c.Id, c.Nombre })
+            .FirstOrDefaultAsync();
+
+        if (curso is null)
         {
             return new BadRequestObjectResult("El curso indicado no existe.");
         }
@@ -115,7 +128,7 @@ public class EstudiantesService(AppDbContext context, IPasswordService passwordS
             Nombre = estudiante.Nombre,
             Correo = estudiante.Correo,
             CursoId = estudiante.CursoId,
-            Curso = null
+            Curso = curso.Nombre
         });
     }
 
@@ -165,13 +178,7 @@ public class EstudiantesService(AppDbContext context, IPasswordService passwordS
         var estudiante = await context.Estudiantes
             .AsNoTracking()
             .Where(e => e.Id == id)
-            .Select(e => new
-            {
-                e.Id,
-                e.Nombre,
-                CursoId = e.CursoId,
-                Curso = e.Curso!.Nombre
-            })
+            .Select(e => new { e.Id, e.Nombre, e.CursoId, Curso = e.Curso!.Nombre })
             .FirstOrDefaultAsync();
 
         if (estudiante is null)
@@ -179,35 +186,84 @@ public class EstudiantesService(AppDbContext context, IPasswordService passwordS
             return new NotFoundObjectResult("El estudiante no existe.");
         }
 
-        var filas = await context.EstudianteAsignaturas
-            .AsNoTracking()
+        var asignaturaIds = await context.EstudianteAsignaturas
             .Where(ea => ea.EstudianteId == id)
-            .Select(ea => new AlumnoMateriaDto
-            {
-                AsignaturaId = ea.AsignaturaId,
-                Asignatura = ea.Asignatura!.Nombre,
-                Profesor = ea.Asignatura.ProfesorAsignaturaCursos
-                    .Where(pac => pac.CursoId == estudiante.CursoId)
-                    .Select(pac => pac.Profesor!.Nombre)
-                    .FirstOrDefault(),
-                Nota = context.Notas
-                    .Where(n => n.EstudianteId == id && n.AsignaturaId == ea.AsignaturaId)
-                    .Select(n => (decimal?)n.Valor)
-                    .FirstOrDefault()
-            })
-            .OrderBy(x => x.Asignatura)
+            .Select(ea => ea.AsignaturaId)
             .ToListAsync();
+
+        var materias = new List<AlumnoMateriaDto>();
+
+        foreach (var asignaturaId in asignaturaIds)
+        {
+            var asignatura = await context.Asignaturas
+                .AsNoTracking()
+                .Where(a => a.Id == asignaturaId)
+                .Select(a => new
+                {
+                    a.Id,
+                    a.Nombre,
+                    Profesor = a.ProfesorAsignaturaCursos
+                        .Where(pac => pac.CursoId == estudiante.CursoId)
+                        .Select(pac => pac.Profesor!.Nombre)
+                        .FirstOrDefault()
+                })
+                .FirstOrDefaultAsync();
+
+            if (asignatura is null) continue;
+
+            var tareas = await context.Tareas
+                .AsNoTracking()
+                .Where(t => t.AsignaturaId == asignaturaId)
+                .OrderBy(t => t.Trimestre)
+                .ThenBy(t => t.Nombre)
+                .ToListAsync();
+
+            var tareaIds = tareas.Select(t => t.Id).ToList();
+            var notasAlumno = await context.Notas
+                .AsNoTracking()
+                .Where(n => n.EstudianteId == id && tareaIds.Contains(n.TareaId))
+                .ToListAsync();
+
+            var notasList = tareas.Select(t =>
+            {
+                var nota = notasAlumno.FirstOrDefault(n => n.TareaId == t.Id);
+                return new AlumnoTareaDto
+                {
+                    TareaId = t.Id,
+                    Nombre = t.Nombre,
+                    Trimestre = t.Trimestre,
+                    Valor = nota?.Valor
+                };
+            }).ToList();
+
+            decimal? Media(int trim)
+            {
+                var vals = notasList.Where(n => n.Trimestre == trim && n.Valor.HasValue).Select(n => n.Valor!.Value).ToList();
+                return vals.Count > 0 ? Math.Round(vals.Average(), 2) : null;
+            }
+
+            var t1 = Media(1);
+            var t2 = Media(2);
+            var t3 = Media(3);
+            decimal? notaFinal = (t1.HasValue && t2.HasValue && t3.HasValue) ? Math.Round((t1.Value + t2.Value + t3.Value) / 3, 2) : null;
+
+            materias.Add(new AlumnoMateriaDto
+            {
+                AsignaturaId = asignatura.Id,
+                Asignatura = asignatura.Nombre,
+                Profesor = asignatura.Profesor,
+                Notas = notasList,
+                Medias = new MediasTrimestralesDto { T1 = t1, T2 = t2, T3 = t3 },
+                NotaFinal = notaFinal
+            });
+        }
 
         return new OkObjectResult(new AlumnoPanelDto
         {
             Id = estudiante.Id,
             Nombre = estudiante.Nombre,
-            Curso = new AlumnoCursoDto
-            {
-                CursoId = estudiante.CursoId,
-                Curso = estudiante.Curso
-            },
-            Materias = filas
+            Curso = new AlumnoCursoDto { CursoId = estudiante.CursoId, Curso = estudiante.Curso },
+            Materias = materias.OrderBy(m => m.Asignatura).ToList()
         });
     }
 

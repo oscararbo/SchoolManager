@@ -11,24 +11,14 @@ public class PasswordService : IPasswordService
         return hasher.HashPassword(string.Empty, plainTextPassword);
     }
 
-    public bool Verify(string storedPassword, string plainTextPassword, out bool needsRehash)
+    public bool Verify(string storedPassword, string plainTextPassword)
     {
-        needsRehash = false;
-
         if (string.IsNullOrWhiteSpace(storedPassword) || string.IsNullOrWhiteSpace(plainTextPassword))
         {
             return false;
         }
 
-        if (storedPassword.StartsWith("AQAAAA", StringComparison.Ordinal))
-        {
-            var result = hasher.VerifyHashedPassword(string.Empty, storedPassword, plainTextPassword);
-            needsRehash = result == PasswordVerificationResult.SuccessRehashNeeded;
-            return result != PasswordVerificationResult.Failed;
-        }
-
-        var matchesLegacy = storedPassword == plainTextPassword;
-        needsRehash = matchesLegacy;
-        return matchesLegacy;
+        var result = hasher.VerifyHashedPassword(string.Empty, storedPassword, plainTextPassword);
+        return result != PasswordVerificationResult.Failed;
     }
 }

@@ -60,55 +60,31 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var passwordService = scope.ServiceProvider.GetRequiredService<IPasswordService>();
+
     db.Database.EnsureCreated();
 
-    try
-    {
-        db.Database.ExecuteSqlRaw("ALTER TABLE Profesores ADD COLUMN EsAdmin INTEGER NOT NULL DEFAULT 0;");
-    }
-    catch
-    {
-        // Column already exists in previously updated databases.
-    }
+    var adminCorreo = "admin@prueba.com";
+    var adminExistente = db.Profesores.FirstOrDefault(p => p.Correo.ToLower() == adminCorreo);
 
-    db.Database.ExecuteSqlRaw(@"
-        CREATE TABLE IF NOT EXISTS RefreshTokens (
-            Id INTEGER NOT NULL CONSTRAINT PK_RefreshTokens PRIMARY KEY AUTOINCREMENT,
-            UserId INTEGER NOT NULL,
-            Rol TEXT NOT NULL,
-            Token TEXT NOT NULL,
-            CreatedAtUtc TEXT NOT NULL,
-            ExpiresAtUtc TEXT NOT NULL,
-            RevokedAtUtc TEXT NULL
-        );
-    ");
-
-    db.Database.ExecuteSqlRaw("CREATE UNIQUE INDEX IF NOT EXISTS IX_RefreshTokens_Token ON RefreshTokens(Token);");
-    db.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS IX_RefreshTokens_UserId_Rol ON RefreshTokens(UserId, Rol);");
-
-    var adminNombre = builder.Configuration["SeedAdmin:Nombre"] ?? "Administrador";
-    var adminCorreo = builder.Configuration["SeedAdmin:Correo"] ?? "admin@schoolmanager.local";
-    var adminContrasena = builder.Configuration["SeedAdmin:Contrasena"] ?? "Admin123!";
-    var adminCorreoNormalizado = adminCorreo.Trim().ToLowerInvariant();
-
-    var adminExistente = db.Profesores.FirstOrDefault(p => p.Correo.ToLower() == adminCorreoNormalizado);
     if (adminExistente is null)
     {
         db.Profesores.Add(new()
         {
-            Nombre = adminNombre,
-            Correo = adminCorreoNormalizado,
-            Contrasena = passwordService.Hash(adminContrasena),
+            Nombre = "Administrador",
+            Correo = adminCorreo,
+            Contrasena = passwordService.Hash("Prueba1"),
             EsAdmin = true
         });
-
-        db.SaveChanges();
     }
-    else if (!adminExistente.EsAdmin)
+    else
     {
+        adminExistente.Nombre = "Administrador";
+        adminExistente.Correo = adminCorreo;
+        adminExistente.Contrasena = passwordService.Hash("Prueba1");
         adminExistente.EsAdmin = true;
-        db.SaveChanges();
     }
+
+    db.SaveChanges();
 }
 
 if (app.Environment.IsDevelopment())

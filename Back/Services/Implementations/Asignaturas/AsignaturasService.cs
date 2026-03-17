@@ -116,15 +116,17 @@ public class AsignaturasService(AppDbContext context) : IAsignaturasService
         var alumnos = await context.EstudianteAsignaturas
             .AsNoTracking()
             .Where(ea => ea.AsignaturaId == id)
-            .Select(ea => new AsignaturaAlumnoDetalleDto
+            .Select(ea => new
             {
-                EstudianteId = ea.EstudianteId,
+                ea.EstudianteId,
                 Alumno = ea.Estudiante!.Nombre,
-                Notas = ea.Estudiante.Notas
-                    .Where(n => n.AsignaturaId == id)
+                Notas = context.Notas
+                    .Where(n => n.EstudianteId == ea.EstudianteId && n.Tarea!.AsignaturaId == id)
                     .Select(n => new AsignaturaNotaSimpleDto
                     {
                         Id = n.Id,
+                        Tarea = n.Tarea!.Nombre,
+                        Trimestre = n.Tarea.Trimestre,
                         Valor = n.Valor
                     })
                     .ToList()
@@ -142,7 +144,12 @@ public class AsignaturasService(AppDbContext context) : IAsignaturasService
                 Nombre = asignatura.Curso
             },
             Imparticiones = imparticiones,
-            Alumnos = alumnos
+            Alumnos = alumnos.Select(a => new AsignaturaAlumnoDetalleDto
+            {
+                EstudianteId = a.EstudianteId,
+                Alumno = a.Alumno,
+                Notas = a.Notas
+            }).ToList()
         });
     }
 
@@ -153,8 +160,13 @@ public class AsignaturasService(AppDbContext context) : IAsignaturasService
             return new BadRequestObjectResult("El nombre de la asignatura es obligatorio.");
         }
 
-        var cursoExiste = await context.Cursos.AnyAsync(c => c.Id == dto.CursoId);
-        if (!cursoExiste)
+        var curso = await context.Cursos
+            .AsNoTracking()
+            .Where(c => c.Id == dto.CursoId)
+            .Select(c => new { c.Id, c.Nombre })
+            .FirstOrDefaultAsync();
+
+        if (curso is null)
         {
             return new BadRequestObjectResult("El curso indicado no existe.");
         }
@@ -173,6 +185,20 @@ public class AsignaturasService(AppDbContext context) : IAsignaturasService
         };
         context.Asignaturas.Add(asignatura);
         await context.SaveChangesAsync();
-        return new CreatedResult($"/api/asignaturas/{asignatura.Id}", asignatura);
+
+        var response = new AsignaturaResumenDto
+        {
+            Id = asignatura.Id,
+            Nombre = asignatura.Nombre,
+            Curso = new AsignaturaCursoDto
+            {
+                Id = curso.Id,
+                Nombre = curso.Nombre
+            },
+            Profesores = new List<AsignaturaProfesorDto>(),
+            Alumnos = new List<AsignaturaAlumnoSimpleDto>()
+        };
+
+        return new CreatedResult($"/api/asignaturas/{asignatura.Id}", response);
     }
 }

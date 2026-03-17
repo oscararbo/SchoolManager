@@ -1,6 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { SessionService } from '../../core/services/session.service';
 
+//#region Interfaces
 export interface LoginResponse {
     rol: 'profesor' | 'alumno' | 'admin';
     id: number;
@@ -12,219 +15,298 @@ export interface LoginResponse {
     curso?: string;
 }
 
-interface RefreshResponse {
-    token: string;
-    refreshToken: string;
-}
-
 export interface ProfesorPanel {
     id: number;
     nombre: string;
     cursos: Array<{
         cursoId: number;
         curso: string;
-        asignaturas: Array<{
-            asignaturaId: number;
-            nombre: string;
-        }>;
+        asignaturas: Array<{ asignaturaId: number; nombre: string }>;
     }>;
 }
 
+export interface TareaResumen {
+    tareaId: number;
+    nombre: string;
+    trimestre: number;
+}
+
+export interface TareaDetalle {
+    id: number;
+    nombre: string;
+    trimestre: number;
+    asignaturaId: number;
+    asignatura: string;
+}
+
+export interface MediasTrimestrales {
+    t1: number | null;
+    t2: number | null;
+    t3: number | null;
+}
+
+export interface AsignaturaAlumnoNota {
+    tareaId: number;
+    valor: number | null;
+}
+
+export interface AsignaturaAlumno {
+    estudianteId: number;
+    alumno: string;
+    notas: AsignaturaAlumnoNota[];
+    medias: MediasTrimestrales;
+    notaFinal: number | null;
+}
+
 export interface AsignaturaAlumnos {
-    asignatura: {
-        id: number;
-        nombre: string;
-        cursoId: number;
-        curso: string;
-    };
-    alumnos: Array<{
-        estudianteId: number;
-        alumno: string;
-        nota: number | null;
-    }>;
+    asignatura: { id: number; nombre: string; cursoId: number; curso: string };
+    tareas: TareaResumen[];
+    alumnos: AsignaturaAlumno[];
+}
+
+export interface AlumnoTarea {
+    tareaId: number;
+    nombre: string;
+    trimestre: number;
+    valor: number | null;
+}
+
+export interface AlumnoMateria {
+    asignaturaId: number;
+    asignatura: string;
+    profesor: string | null;
+    notas: AlumnoTarea[];
+    medias: MediasTrimestrales;
+    notaFinal: number | null;
 }
 
 export interface AlumnoPanel {
     id: number;
     nombre: string;
-    curso: {
-        cursoId: number;
-        curso: string;
-    };
-    materias: Array<{
-        asignaturaId: number;
-        asignatura: string;
-        profesor: string | null;
-        nota: number | null;
-    }>;
+    curso: { cursoId: number; curso: string };
+    materias: AlumnoMateria[];
 }
+
+export interface CursoItem {
+    id: number;
+    nombre: string;
+}
+
+export interface AsignaturaItem {
+    id: number;
+    nombre: string;
+    curso: { id: number; nombre: string };
+    profesores: Array<{ profesorId: number; nombre: string }>;
+    alumnos: Array<{ id: number; nombre: string }>;
+}
+
+export interface ProfesorImparticion {
+    asignaturaId: number;
+    asignatura: string;
+    cursoId: number;
+    curso: string;
+}
+
+export interface ProfesorListItem {
+    id: number;
+    nombre: string;
+    correo: string;
+    esAdmin: boolean;
+    imparticiones: ProfesorImparticion[];
+}
+
+export interface EstudianteItem {
+    id: number;
+    nombre: string;
+    correo: string;
+    cursoId: number;
+    curso: string | null;
+}
+
+export interface CreateProfesorData {
+    nombre: string;
+    correo: string;
+    contrasena: string;
+    esAdmin?: boolean;
+}
+
+export interface CreateEstudianteData {
+    nombre: string;
+    correo: string;
+    contrasena: string;
+    cursoId: number;
+}
+//#endregion
 
 @Injectable({ providedIn: 'root' })
 export class SchoolApiService {
     private readonly apiUrl = 'http://localhost:5014/api';
+    private http = inject(HttpClient);
+    private sessionService = inject(SessionService);
 
-    constructor(private readonly sessionService: SessionService) {}
-
-    private getAuthHeaders(): HeadersInit {
-        const session = this.sessionService.getSession();
-        if (!session?.token) {
-            throw new Error('Sesion no valida. Inicia sesion de nuevo.');
+    private extractError(error: unknown): Error {
+        if (error instanceof HttpErrorResponse) {
+            const msg = typeof error.error === 'string' ? error.error : (error.message ?? 'Error de servidor.');
+            return new Error(msg);
         }
-
-        return {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.token}`
-        };
+        return error instanceof Error ? error : new Error('Error desconocido.');
     }
 
-    private async refreshAccessToken(): Promise<boolean> {
-        const session = this.sessionService.getSession();
-
-        if (!session?.refreshToken) {
-            this.sessionService.clearSession();
-            return false;
-        }
-
-        const response = await fetch(`${this.apiUrl}/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken: session.refreshToken })
-        });
-
-        if (!response.ok) {
-            this.sessionService.clearSession();
-            return false;
-        }
-
-        const data = (await response.json()) as RefreshResponse;
-        this.sessionService.setSession({
-            ...session,
-            token: data.token,
-            refreshToken: data.refreshToken
-        });
-
-        return true;
-    }
-
-    private async fetchWithAuth(url: string, options?: RequestInit): Promise<Response> {
-        const firstTry = await fetch(url, {
-            ...(options ?? {}),
-            headers: {
-                ...(options?.headers ?? {}),
-                ...this.getAuthHeaders()
-            }
-        });
-
-        if (firstTry.status !== 401) {
-            return firstTry;
-        }
-
-        const refreshed = await this.refreshAccessToken();
-        if (!refreshed) {
-            return firstTry;
-        }
-
-        return await fetch(url, {
-            ...(options ?? {}),
-            headers: {
-                ...(options?.headers ?? {}),
-                ...this.getAuthHeaders()
-            }
-        });
-    }
-
-    private async ensureAuthorized(response: Response): Promise<void> {
-        if (response.status === 401) {
-            this.sessionService.clearSession();
-            throw new Error('Tu sesion ha expirado. Inicia sesion de nuevo.');
-        }
-    }
+    //#region Auth
 
     async login(correo: string, contrasena: string): Promise<LoginResponse> {
-        const response = await fetch(`${this.apiUrl}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ correo, contrasena })
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || 'No se ha podido iniciar sesion.');
-        }
-
-        return (await response.json()) as LoginResponse;
+        try {
+            return await firstValueFrom(
+                this.http.post<LoginResponse>(`${this.apiUrl}/auth/login`, { correo, contrasena })
+            );
+        } catch (e) { throw this.extractError(e); }
     }
 
     async logout(): Promise<void> {
         const session = this.sessionService.getSession();
-
-        if (!session?.refreshToken) {
-            this.sessionService.clearSession();
-            return;
-        }
-
+        if (!session?.refreshToken) { this.sessionService.clearSession(); return; }
         try {
-            const response = await this.fetchWithAuth(`${this.apiUrl}/auth/logout`, {
-                method: 'POST',
-                body: JSON.stringify({ refreshToken: this.sessionService.getSession()?.refreshToken })
-            });
-
-            if (!response.ok && response.status !== 401) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'No se pudo cerrar sesion.');
-            }
+            await firstValueFrom(
+                this.http.post<void>(`${this.apiUrl}/auth/logout`, { refreshToken: session.refreshToken })
+            );
         } finally {
             this.sessionService.clearSession();
         }
     }
+    //#endregion
+
+    //#region ProfesorPanel
 
     async getPanelProfesor(profesorId: number): Promise<ProfesorPanel> {
-        const response = await this.fetchWithAuth(`${this.apiUrl}/profesores/${profesorId}/panel`);
-
-        await this.ensureAuthorized(response);
-
-        if (!response.ok) {
-            throw new Error('No se pudo cargar el panel del profesor.');
-        }
-
-        return (await response.json()) as ProfesorPanel;
+        try {
+            return await firstValueFrom(
+                this.http.get<ProfesorPanel>(`${this.apiUrl}/profesores/${profesorId}/panel`)
+            );
+        } catch (e) { throw this.extractError(e); }
     }
 
     async getAlumnosDeAsignatura(profesorId: number, asignaturaId: number): Promise<AsignaturaAlumnos> {
-        const response = await this.fetchWithAuth(`${this.apiUrl}/profesores/${profesorId}/asignaturas/${asignaturaId}/alumnos`);
-
-        await this.ensureAuthorized(response);
-
-        if (!response.ok) {
-            throw new Error('No se pudieron cargar los alumnos de la asignatura.');
-        }
-
-        return (await response.json()) as AsignaturaAlumnos;
+        try {
+            return await firstValueFrom(
+                this.http.get<AsignaturaAlumnos>(
+                    `${this.apiUrl}/profesores/${profesorId}/asignaturas/${asignaturaId}/alumnos`
+                )
+            );
+        } catch (e) { throw this.extractError(e); }
     }
 
-    async ponerNota(profesorId: number, estudianteId: number, asignaturaId: number, valor: number): Promise<void> {
-        const response = await this.fetchWithAuth(`${this.apiUrl}/profesores/${profesorId}/notas`, {
-            method: 'POST',
-            body: JSON.stringify({ estudianteId, asignaturaId, valor })
-        });
-
-        await this.ensureAuthorized(response);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || 'No se pudo guardar la nota.');
-        }
+    async ponerNota(profesorId: number, estudianteId: number, tareaId: number, valor: number): Promise<void> {
+        try {
+            await firstValueFrom(
+                this.http.post<void>(`${this.apiUrl}/profesores/${profesorId}/notas`, { tareaId, estudianteId, valor })
+            );
+        } catch (e) { throw this.extractError(e); }
     }
+
+    async crearTarea(profesorId: number, nombre: string, trimestre: number, asignaturaId: number): Promise<TareaDetalle> {
+        try {
+            return await firstValueFrom(
+                this.http.post<TareaDetalle>(
+                    `${this.apiUrl}/profesores/${profesorId}/tareas`, { nombre, trimestre, asignaturaId }
+                )
+            );
+        } catch (e) { throw this.extractError(e); }
+    }
+    //#endregion
+
+    //#region AlumnoPanel
 
     async getPanelAlumno(estudianteId: number): Promise<AlumnoPanel> {
-        const response = await this.fetchWithAuth(`${this.apiUrl}/estudiantes/${estudianteId}/panel`);
-
-        await this.ensureAuthorized(response);
-
-        if (!response.ok) {
-            throw new Error('No se pudo cargar el panel del alumno.');
-        }
-
-        return (await response.json()) as AlumnoPanel;
+        try {
+            return await firstValueFrom(
+                this.http.get<AlumnoPanel>(`${this.apiUrl}/estudiantes/${estudianteId}/panel`)
+            );
+        } catch (e) { throw this.extractError(e); }
     }
+    //#endregion
+
+    //#region AdminCursos
+
+    async getCursos(): Promise<CursoItem[]> {
+        try {
+            return await firstValueFrom(this.http.get<CursoItem[]>(`${this.apiUrl}/cursos`));
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    async createCurso(nombre: string): Promise<CursoItem> {
+        try {
+            return await firstValueFrom(this.http.post<CursoItem>(`${this.apiUrl}/cursos`, { nombre }));
+        } catch (e) { throw this.extractError(e); }
+    }
+    //#endregion
+
+    //#region AdminAsignaturas
+
+    async getAsignaturas(): Promise<AsignaturaItem[]> {
+        try {
+            return await firstValueFrom(this.http.get<AsignaturaItem[]>(`${this.apiUrl}/asignaturas`));
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    async createAsignatura(nombre: string, cursoId: number): Promise<AsignaturaItem> {
+        try {
+            return await firstValueFrom(
+                this.http.post<AsignaturaItem>(`${this.apiUrl}/asignaturas`, { nombre, cursoId })
+            );
+        } catch (e) { throw this.extractError(e); }
+    }
+    //#endregion
+
+    //#region AdminProfesores
+
+    async getProfesores(): Promise<ProfesorListItem[]> {
+        try {
+            return await firstValueFrom(this.http.get<ProfesorListItem[]>(`${this.apiUrl}/profesores`));
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    async createProfesor(data: CreateProfesorData): Promise<ProfesorListItem> {
+        try {
+            return await firstValueFrom(this.http.post<ProfesorListItem>(`${this.apiUrl}/profesores`, data));
+        } catch (e) { throw this.extractError(e); }
+    }
+    //#endregion
+
+    //#region AdminEstudiantes
+
+    async getEstudiantes(): Promise<EstudianteItem[]> {
+        try {
+            return await firstValueFrom(this.http.get<EstudianteItem[]>(`${this.apiUrl}/estudiantes`));
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    async createEstudiante(data: CreateEstudianteData): Promise<EstudianteItem> {
+        try {
+            return await firstValueFrom(this.http.post<EstudianteItem>(`${this.apiUrl}/estudiantes`, data));
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    async matricularEstudiante(estudianteId: number, asignaturaId: number): Promise<void> {
+        try {
+            await firstValueFrom(
+                this.http.post<void>(
+                    `${this.apiUrl}/estudiantes/${estudianteId}/asignaturas/${asignaturaId}`, {}
+                )
+            );
+        } catch (e) { throw this.extractError(e); }
+    }
+    //#endregion
+
+    //#region AdminImparticiones
+
+    async asignarImparticion(profesorId: number, asignaturaId: number, cursoId: number): Promise<void> {
+        try {
+            await firstValueFrom(
+                this.http.post<void>(
+                    `${this.apiUrl}/profesores/${profesorId}/imparticiones`, { asignaturaId, cursoId }
+                )
+            );
+        } catch (e) { throw this.extractError(e); }
+    }
+    //#endregion
 }

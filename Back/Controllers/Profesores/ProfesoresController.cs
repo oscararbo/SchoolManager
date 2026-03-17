@@ -58,4 +58,18 @@ public class ProfesoresController(IProfesoresService profesoresService) : Contro
     {
         return await profesoresService.PonerNotaAsync(profesorId, dto, User);
     }
+
+    [HttpPost("{profesorId:int}/tareas")]
+    [Authorize(Policy = "ProfesorOrAdmin")]
+    public async Task<IActionResult> CrearTarea(int profesorId, CreateTareaDto dto)
+    {
+        return await profesoresService.CrearTareaAsync(profesorId, dto, User);
+    }
+
+    [HttpGet("{profesorId:int}/asignaturas/{asignaturaId:int}/tareas")]
+    [Authorize(Policy = "ProfesorOrAdmin")]
+    public async Task<IActionResult> GetTareasDeAsignatura(int profesorId, int asignaturaId)
+    {
+        return await profesoresService.GetTareasDeAsignaturaAsync(profesorId, asignaturaId, User);
+    }
 }

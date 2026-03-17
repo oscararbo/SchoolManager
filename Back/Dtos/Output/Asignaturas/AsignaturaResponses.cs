@@ -36,6 +36,8 @@ public class AsignaturaImparticionDto
 public class AsignaturaNotaSimpleDto
 {
     public int Id { get; set; }
+    public string Tarea { get; set; } = string.Empty;
+    public int Trimestre { get; set; }
     public decimal Valor { get; set; }
 }
 

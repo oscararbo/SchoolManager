@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<EstudianteAsignatura> EstudianteAsignaturas => Set<EstudianteAsignatura>();
     public DbSet<ProfesorAsignaturaCurso> ProfesorAsignaturaCursos => Set<ProfesorAsignaturaCurso>();
     public DbSet<Nota> Notas => Set<Nota>();
+    public DbSet<Tarea> Tareas => Set<Tarea>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -45,7 +46,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasPrecision(4, 2);
 
         modelBuilder.Entity<Nota>()
-            .HasIndex(x => new { x.EstudianteId, x.AsignaturaId })
+            .HasIndex(x => new { x.EstudianteId, x.TareaId })
             .IsUnique();
 
         modelBuilder.Entity<RefreshToken>()

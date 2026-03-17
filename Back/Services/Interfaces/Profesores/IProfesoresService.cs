@@ -13,4 +13,6 @@ public interface IProfesoresService
     Task<IActionResult> GetAlumnosDeAsignaturaAsync(int profesorId, int asignaturaId, ClaimsPrincipal user);
     Task<IActionResult> AsignarImparticionAsync(int profesorId, AsignarImparticionDto dto, ClaimsPrincipal user);
     Task<IActionResult> PonerNotaAsync(int profesorId, PonerNotaDto dto, ClaimsPrincipal user);
+    Task<IActionResult> CrearTareaAsync(int profesorId, CreateTareaDto dto, ClaimsPrincipal user);
+    Task<IActionResult> GetTareasDeAsignaturaAsync(int profesorId, int asignaturaId, ClaimsPrincipal user);
 }

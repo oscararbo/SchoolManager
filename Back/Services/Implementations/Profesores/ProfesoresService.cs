@@ -121,13 +121,13 @@ public class ProfesoresService(AppDbContext context, IPasswordService passwordSe
         context.Profesores.Add(profesor);
         await context.SaveChangesAsync();
 
-        return new CreatedResult($"/api/profesores/{profesor.Id}", new ProfesorDetalleDto
+        return new CreatedResult($"/api/profesores/{profesor.Id}", new ProfesorListItemDto
         {
             Id = profesor.Id,
             Nombre = profesor.Nombre,
             Correo = profesor.Correo,
             EsAdmin = profesor.EsAdmin,
-            Cursos = new()
+            Imparticiones = new()
         });
     }
 
@@ -224,24 +224,66 @@ public class ProfesoresService(AppDbContext context, IPasswordService passwordSe
             return new NotFoundObjectResult("La asignatura no existe.");
         }
 
-        var alumnos = await context.EstudianteAsignaturas
+        var tareas = await context.Tareas
+            .AsNoTracking()
+            .Where(t => t.AsignaturaId == asignaturaId)
+            .OrderBy(t => t.Trimestre)
+            .ThenBy(t => t.Nombre)
+            .Select(t => new TareaResumenDto { TareaId = t.Id, Nombre = t.Nombre, Trimestre = t.Trimestre })
+            .ToListAsync();
+
+        var tareaIds = tareas.Select(t => t.TareaId).ToList();
+
+        var alumnosRaw = await context.EstudianteAsignaturas
             .AsNoTracking()
             .Where(ea => ea.AsignaturaId == asignaturaId)
-            .Select(ea => new AsignaturaAlumnoDto
-            {
-                EstudianteId = ea.EstudianteId,
-                Alumno = ea.Estudiante!.Nombre,
-                Nota = context.Notas
-                    .Where(n => n.EstudianteId == ea.EstudianteId && n.AsignaturaId == asignaturaId)
-                    .Select(n => (decimal?)n.Valor)
-                    .FirstOrDefault()
-            })
-            .OrderBy(x => x.Alumno)
+            .Select(ea => new { ea.EstudianteId, Alumno = ea.Estudiante!.Nombre })
+            .OrderBy(a => a.Alumno)
             .ToListAsync();
+
+        var alumnoIds = alumnosRaw.Select(a => a.EstudianteId).ToList();
+
+        var todasNotas = await context.Notas
+            .AsNoTracking()
+            .Where(n => alumnoIds.Contains(n.EstudianteId) && tareaIds.Contains(n.TareaId))
+            .ToListAsync();
+
+        var alumnos = alumnosRaw.Select(a =>
+        {
+            var notasAlumno = todasNotas.Where(n => n.EstudianteId == a.EstudianteId).ToList();
+            var notasList = tareas.Select(t =>
+            {
+                var nota = notasAlumno.FirstOrDefault(n => n.TareaId == t.TareaId);
+                return new AsignaturaNotaAlumnoDto { TareaId = t.TareaId, Valor = nota?.Valor };
+            }).ToList();
+
+            decimal? Media(int trim)
+            {
+                var vals = tareas.Where(t => t.Trimestre == trim)
+                    .Select(t => notasList.First(n => n.TareaId == t.TareaId).Valor)
+                    .Where(v => v.HasValue).Select(v => v!.Value).ToList();
+                return vals.Count > 0 ? vals.Average() : null;
+            }
+
+            var t1 = Media(1);
+            var t2 = Media(2);
+            var t3 = Media(3);
+            decimal? notaFinal = (t1.HasValue && t2.HasValue && t3.HasValue) ? Math.Round((t1.Value + t2.Value + t3.Value) / 3, 2) : null;
+
+            return new AsignaturaAlumnoDto
+            {
+                EstudianteId = a.EstudianteId,
+                Alumno = a.Alumno,
+                Notas = notasList,
+                Medias = new MediasTrimestralesDto { T1 = t1.HasValue ? Math.Round(t1.Value, 2) : null, T2 = t2.HasValue ? Math.Round(t2.Value, 2) : null, T3 = t3.HasValue ? Math.Round(t3.Value, 2) : null },
+                NotaFinal = notaFinal
+            };
+        }).ToList();
 
         return new OkObjectResult(new AsignaturaAlumnosResponseDto
         {
             Asignatura = asignaturaInfo,
+            Tareas = tareas,
             Alumnos = alumnos
         });
     }
@@ -316,10 +358,15 @@ public class ProfesoresService(AppDbContext context, IPasswordService passwordSe
             return new BadRequestObjectResult("La nota debe estar entre 0 y 10.");
         }
 
-        var profesorExiste = await context.Profesores.AnyAsync(p => p.Id == profesorId);
-        if (!profesorExiste)
+        var tarea = await context.Tareas.FirstOrDefaultAsync(t => t.Id == dto.TareaId);
+        if (tarea is null)
         {
-            return new NotFoundObjectResult("El profesor no existe.");
+            return new NotFoundObjectResult("La tarea no existe.");
+        }
+
+        if (tarea.ProfesorId != profesorId && !user.IsInRole("admin"))
+        {
+            return new ForbidResult();
         }
 
         var estudiante = await context.Estudiantes.FirstOrDefaultAsync(e => e.Id == dto.EstudianteId);
@@ -329,44 +376,117 @@ public class ProfesoresService(AppDbContext context, IPasswordService passwordSe
         }
 
         var estudianteMatriculado = await context.EstudianteAsignaturas.AnyAsync(x =>
-            x.EstudianteId == dto.EstudianteId && x.AsignaturaId == dto.AsignaturaId);
-
+            x.EstudianteId == dto.EstudianteId && x.AsignaturaId == tarea.AsignaturaId);
         if (!estudianteMatriculado)
         {
             return new BadRequestObjectResult("El estudiante no esta matriculado en esa asignatura.");
         }
 
         var profesorImparte = await context.ProfesorAsignaturaCursos.AnyAsync(x =>
-            x.ProfesorId == profesorId &&
-            x.AsignaturaId == dto.AsignaturaId &&
-            x.CursoId == estudiante.CursoId);
-
+            x.ProfesorId == tarea.ProfesorId && x.AsignaturaId == tarea.AsignaturaId && x.CursoId == estudiante.CursoId);
         if (!profesorImparte)
         {
             return new BadRequestObjectResult("El profesor no imparte esa asignatura al curso del estudiante.");
         }
 
-        var notaExistente = await context.Notas
-            .FirstOrDefaultAsync(n => n.EstudianteId == dto.EstudianteId && n.AsignaturaId == dto.AsignaturaId);
+        var notaExistente = await context.Notas.FirstOrDefaultAsync(n =>
+            n.EstudianteId == dto.EstudianteId && n.TareaId == dto.TareaId);
 
         if (notaExistente is null)
         {
             context.Notas.Add(new Nota
             {
                 EstudianteId = dto.EstudianteId,
-                AsignaturaId = dto.AsignaturaId,
-                ProfesorId = profesorId,
+                TareaId = dto.TareaId,
                 Valor = dto.Valor
             });
         }
         else
         {
-            notaExistente.ProfesorId = profesorId;
             notaExistente.Valor = dto.Valor;
         }
 
         await context.SaveChangesAsync();
         return new OkResult();
+    }
+
+    public async Task<IActionResult> CrearTareaAsync(int profesorId, CreateTareaDto dto, ClaimsPrincipal user)
+    {
+        if (!UsuarioCoincideConProfesor(profesorId, user))
+        {
+            return new ForbidResult();
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Nombre))
+        {
+            return new BadRequestObjectResult("El nombre de la tarea es obligatorio.");
+        }
+
+        if (dto.Trimestre < 1 || dto.Trimestre > 3)
+        {
+            return new BadRequestObjectResult("El trimestre debe ser 1, 2 o 3.");
+        }
+
+        var profesorExiste = await context.Profesores.AnyAsync(p => p.Id == profesorId);
+        if (!profesorExiste)
+        {
+            return new NotFoundObjectResult("El profesor no existe.");
+        }
+
+        var profesorImparteAsignatura = await context.ProfesorAsignaturaCursos
+            .AnyAsync(pac => pac.ProfesorId == profesorId && pac.AsignaturaId == dto.AsignaturaId);
+        if (!profesorImparteAsignatura)
+        {
+            return new BadRequestObjectResult("El profesor no imparte esa asignatura.");
+        }
+
+        var asignaturaNombre = await context.Asignaturas
+            .Where(a => a.Id == dto.AsignaturaId)
+            .Select(a => a.Nombre)
+            .FirstOrDefaultAsync();
+
+        if (asignaturaNombre is null)
+        {
+            return new NotFoundObjectResult("La asignatura no existe.");
+        }
+
+        var tarea = new Tarea
+        {
+            Nombre = dto.Nombre.Trim(),
+            Trimestre = dto.Trimestre,
+            AsignaturaId = dto.AsignaturaId,
+            ProfesorId = profesorId
+        };
+
+        context.Tareas.Add(tarea);
+        await context.SaveChangesAsync();
+
+        return new CreatedResult($"/api/profesores/{profesorId}/tareas/{tarea.Id}", new TareaDetalleDto
+        {
+            Id = tarea.Id,
+            Nombre = tarea.Nombre,
+            Trimestre = tarea.Trimestre,
+            AsignaturaId = tarea.AsignaturaId,
+            Asignatura = asignaturaNombre
+        });
+    }
+
+    public async Task<IActionResult> GetTareasDeAsignaturaAsync(int profesorId, int asignaturaId, ClaimsPrincipal user)
+    {
+        if (!UsuarioCoincideConProfesor(profesorId, user))
+        {
+            return new ForbidResult();
+        }
+
+        var tareas = await context.Tareas
+            .AsNoTracking()
+            .Where(t => t.AsignaturaId == asignaturaId && t.ProfesorId == profesorId)
+            .OrderBy(t => t.Trimestre)
+            .ThenBy(t => t.Nombre)
+            .Select(t => new TareaResumenDto { TareaId = t.Id, Nombre = t.Nombre, Trimestre = t.Trimestre })
+            .ToListAsync();
+
+        return new OkObjectResult(tareas);
     }
 
     private static bool UsuarioCoincideConProfesor(int profesorId, ClaimsPrincipal user)

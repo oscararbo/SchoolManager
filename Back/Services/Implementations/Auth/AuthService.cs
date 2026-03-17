@@ -25,14 +25,8 @@ public class AuthService(AppDbContext context, IConfiguration configuration, IPa
         var profesor = await context.Profesores
             .FirstOrDefaultAsync(p => p.Correo.ToLower() == correo);
 
-        if (profesor is not null && passwordService.Verify(profesor.Contrasena, contrasena, out var profesorNeedsRehash))
+        if (profesor is not null && passwordService.Verify(profesor.Contrasena, contrasena))
         {
-            if (profesorNeedsRehash)
-            {
-                profesor.Contrasena = passwordService.Hash(contrasena);
-                await context.SaveChangesAsync();
-            }
-
             var rol = profesor.EsAdmin ? "admin" : "profesor";
             var token = GenerarToken(profesor.Id, correo, rol);
             var refreshToken = await CrearRefreshTokenAsync(profesor.Id, rol);
@@ -52,14 +46,8 @@ public class AuthService(AppDbContext context, IConfiguration configuration, IPa
             .Include(e => e.Curso)
             .FirstOrDefaultAsync(e => e.Correo.ToLower() == correo);
 
-        if (estudiante is not null && passwordService.Verify(estudiante.Contrasena, contrasena, out var estudianteNeedsRehash))
+        if (estudiante is not null && passwordService.Verify(estudiante.Contrasena, contrasena))
         {
-            if (estudianteNeedsRehash)
-            {
-                estudiante.Contrasena = passwordService.Hash(contrasena);
-                await context.SaveChangesAsync();
-            }
-
             var token = GenerarToken(estudiante.Id, correo, "alumno");
             var refreshToken = await CrearRefreshTokenAsync(estudiante.Id, "alumno");
 

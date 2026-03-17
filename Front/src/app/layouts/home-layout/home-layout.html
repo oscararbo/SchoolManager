@@ -5,16 +5,22 @@
 	</header>
 
 	@if (session()) {
-		@if (session()!.rol !== 'alumno') {
-			<app-profesor-home
-				[profesorId]="session()!.id"
-				[profesorNombre]="session()!.nombre">
-			</app-profesor-home>
-		} @else {
-			<app-alumno-home
-				[estudianteId]="session()!.id"
-				[nombre]="session()!.nombre">
-			</app-alumno-home>
-		}
-	}
+        @if (session()!.rol === 'admin') {
+            <app-admin-home></app-admin-home>
+        } @else if (session()!.rol === 'profesor') {
+            <app-profesor-home
+                [profesorId]="session()!.id"
+                [profesorNombre]="session()!.nombre">
+            </app-profesor-home>
+        } @else {
+            <app-alumno-home
+                [estudianteId]="session()!.id"
+                [nombre]="session()!.nombre">
+            </app-alumno-home>
+        }
+    }
 </main>
+
+@if (authState.sessionExpired()) {
+    <app-session-expired-dialog></app-session-expired-dialog>
+}
