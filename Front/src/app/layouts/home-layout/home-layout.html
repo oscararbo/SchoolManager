@@ -5,7 +5,7 @@
 	</header>
 
 	@if (session()) {
-		@if (session()!.rol === 'profesor') {
+		@if (session()!.rol !== 'alumno') {
 			<app-profesor-home
 				[profesorId]="session()!.id"
 				[profesorNombre]="session()!.nombre">

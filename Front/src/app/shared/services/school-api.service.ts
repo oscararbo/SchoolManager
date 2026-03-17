@@ -1,12 +1,20 @@
 import { Injectable } from '@angular/core';
+import { SessionService } from '../../core/services/session.service';
 
 export interface LoginResponse {
-    rol: 'profesor' | 'alumno';
+    rol: 'profesor' | 'alumno' | 'admin';
     id: number;
     nombre: string;
     correo: string;
+    token: string;
+    refreshToken: string;
     cursoId?: number;
     curso?: string;
+}
+
+interface RefreshResponse {
+    token: string;
+    refreshToken: string;
 }
 
 export interface ProfesorPanel {
@@ -55,6 +63,83 @@ export interface AlumnoPanel {
 export class SchoolApiService {
     private readonly apiUrl = 'http://localhost:5014/api';
 
+    constructor(private readonly sessionService: SessionService) {}
+
+    private getAuthHeaders(): HeadersInit {
+        const session = this.sessionService.getSession();
+        if (!session?.token) {
+            throw new Error('Sesion no valida. Inicia sesion de nuevo.');
+        }
+
+        return {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.token}`
+        };
+    }
+
+    private async refreshAccessToken(): Promise<boolean> {
+        const session = this.sessionService.getSession();
+
+        if (!session?.refreshToken) {
+            this.sessionService.clearSession();
+            return false;
+        }
+
+        const response = await fetch(`${this.apiUrl}/auth/refresh`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken: session.refreshToken })
+        });
+
+        if (!response.ok) {
+            this.sessionService.clearSession();
+            return false;
+        }
+
+        const data = (await response.json()) as RefreshResponse;
+        this.sessionService.setSession({
+            ...session,
+            token: data.token,
+            refreshToken: data.refreshToken
+        });
+
+        return true;
+    }
+
+    private async fetchWithAuth(url: string, options?: RequestInit): Promise<Response> {
+        const firstTry = await fetch(url, {
+            ...(options ?? {}),
+            headers: {
+                ...(options?.headers ?? {}),
+                ...this.getAuthHeaders()
+            }
+        });
+
+        if (firstTry.status !== 401) {
+            return firstTry;
+        }
+
+        const refreshed = await this.refreshAccessToken();
+        if (!refreshed) {
+            return firstTry;
+        }
+
+        return await fetch(url, {
+            ...(options ?? {}),
+            headers: {
+                ...(options?.headers ?? {}),
+                ...this.getAuthHeaders()
+            }
+        });
+    }
+
+    private async ensureAuthorized(response: Response): Promise<void> {
+        if (response.status === 401) {
+            this.sessionService.clearSession();
+            throw new Error('Tu sesion ha expirado. Inicia sesion de nuevo.');
+        }
+    }
+
     async login(correo: string, contrasena: string): Promise<LoginResponse> {
         const response = await fetch(`${this.apiUrl}/auth/login`, {
             method: 'POST',
@@ -70,8 +155,33 @@ export class SchoolApiService {
         return (await response.json()) as LoginResponse;
     }
 
+    async logout(): Promise<void> {
+        const session = this.sessionService.getSession();
+
+        if (!session?.refreshToken) {
+            this.sessionService.clearSession();
+            return;
+        }
+
+        try {
+            const response = await this.fetchWithAuth(`${this.apiUrl}/auth/logout`, {
+                method: 'POST',
+                body: JSON.stringify({ refreshToken: this.sessionService.getSession()?.refreshToken })
+            });
+
+            if (!response.ok && response.status !== 401) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'No se pudo cerrar sesion.');
+            }
+        } finally {
+            this.sessionService.clearSession();
+        }
+    }
+
     async getPanelProfesor(profesorId: number): Promise<ProfesorPanel> {
-        const response = await fetch(`${this.apiUrl}/profesores/${profesorId}/panel`);
+        const response = await this.fetchWithAuth(`${this.apiUrl}/profesores/${profesorId}/panel`);
+
+        await this.ensureAuthorized(response);
 
         if (!response.ok) {
             throw new Error('No se pudo cargar el panel del profesor.');
@@ -81,7 +191,9 @@ export class SchoolApiService {
     }
 
     async getAlumnosDeAsignatura(profesorId: number, asignaturaId: number): Promise<AsignaturaAlumnos> {
-        const response = await fetch(`${this.apiUrl}/profesores/${profesorId}/asignaturas/${asignaturaId}/alumnos`);
+        const response = await this.fetchWithAuth(`${this.apiUrl}/profesores/${profesorId}/asignaturas/${asignaturaId}/alumnos`);
+
+        await this.ensureAuthorized(response);
 
         if (!response.ok) {
             throw new Error('No se pudieron cargar los alumnos de la asignatura.');
@@ -91,11 +203,12 @@ export class SchoolApiService {
     }
 
     async ponerNota(profesorId: number, estudianteId: number, asignaturaId: number, valor: number): Promise<void> {
-        const response = await fetch(`${this.apiUrl}/profesores/${profesorId}/notas`, {
+        const response = await this.fetchWithAuth(`${this.apiUrl}/profesores/${profesorId}/notas`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ estudianteId, asignaturaId, valor })
         });
+
+        await this.ensureAuthorized(response);
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -104,7 +217,9 @@ export class SchoolApiService {
     }
 
     async getPanelAlumno(estudianteId: number): Promise<AlumnoPanel> {
-        const response = await fetch(`${this.apiUrl}/estudiantes/${estudianteId}/panel`);
+        const response = await this.fetchWithAuth(`${this.apiUrl}/estudiantes/${estudianteId}/panel`);
+
+        await this.ensureAuthorized(response);
 
         if (!response.ok) {
             throw new Error('No se pudo cargar el panel del alumno.');

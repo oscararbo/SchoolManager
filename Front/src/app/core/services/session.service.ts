@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
 
-export type SessionRole = 'profesor' | 'alumno';
+export type SessionRole = 'profesor' | 'alumno' | 'admin';
 
 export interface UserSession {
     rol: SessionRole;
     id: number;
     nombre: string;
     correo: string;
+    token: string;
+    refreshToken?: string;
     cursoId?: number;
     curso?: string;
 }

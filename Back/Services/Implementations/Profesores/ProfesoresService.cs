@@ -3,58 +3,62 @@ using Back.Api.Dtos;
 using Back.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
-namespace Back.Api.Controllers;
+namespace Back.Api.Services;
 
-[ApiController]
-[Route("api/[controller]")]
-public class ProfesoresController(AppDbContext context) : ControllerBase
+public class ProfesoresService(AppDbContext context, IPasswordService passwordService) : IProfesoresService
 {
-    [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAllAsync()
     {
         var profesores = await context.Profesores
             .AsNoTracking()
-            .Select(p => new
+            .Select(p => new ProfesorListItemDto
             {
-                p.Id,
-                p.Nombre,
-                p.Correo,
-                Imparticiones = p.ProfesorAsignaturaCursos.Select(i => new
+                Id = p.Id,
+                Nombre = p.Nombre,
+                Correo = p.Correo,
+                EsAdmin = p.EsAdmin,
+                Imparticiones = p.ProfesorAsignaturaCursos.Select(i => new ProfesorImparticionDto
                 {
-                    i.AsignaturaId,
+                    AsignaturaId = i.AsignaturaId,
                     Asignatura = i.Asignatura!.Nombre,
-                    i.CursoId,
+                    CursoId = i.CursoId,
                     Curso = i.Curso!.Nombre
-                })
+                }).ToList()
             })
             .ToListAsync();
 
-        return Ok(profesores);
+        return new OkObjectResult(profesores);
     }
 
-    [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<IActionResult> GetByIdAsync(int id)
     {
         var profesor = await context.Profesores
             .AsNoTracking()
             .Where(p => p.Id == id)
-            .Select(p => new { p.Id, p.Nombre, p.Correo })
+            .Select(p => new ProfesorDetalleDto
+            {
+                Id = p.Id,
+                Nombre = p.Nombre,
+                Correo = p.Correo,
+                EsAdmin = p.EsAdmin
+            })
             .FirstOrDefaultAsync();
 
         if (profesor is null)
         {
-            return NotFound("El profesor no existe.");
+            return new NotFoundObjectResult("El profesor no existe.");
         }
 
         var imparticiones = await context.ProfesorAsignaturaCursos
             .AsNoTracking()
             .Where(i => i.ProfesorId == id)
-            .Select(i => new
+            .Select(i => new ProfesorImparticionDto
             {
-                i.CursoId,
+                CursoId = i.CursoId,
                 Curso = i.Curso!.Nombre,
-                i.AsignaturaId,
+                AsignaturaId = i.AsignaturaId,
                 Asignatura = i.Asignatura!.Nombre
             })
             .OrderBy(i => i.Curso)
@@ -63,44 +67,38 @@ public class ProfesoresController(AppDbContext context) : ControllerBase
 
         var cursos = imparticiones
             .GroupBy(i => new { i.CursoId, i.Curso })
-            .Select(g => new
+            .Select(g => new ProfesorCursoPanelDto
             {
-                g.Key.CursoId,
+                CursoId = g.Key.CursoId,
                 Curso = g.Key.Curso,
-                Asignaturas = g.Select(x => new
+                Asignaturas = g.Select(x => new ProfesorCursoAsignaturaDto
                 {
-                    x.AsignaturaId,
+                    AsignaturaId = x.AsignaturaId,
                     Nombre = x.Asignatura
-                })
+                }).ToList()
             })
             .OrderBy(x => x.Curso)
             .ToList();
 
-        return Ok(new
-        {
-            profesor.Id,
-            profesor.Nombre,
-            profesor.Correo,
-            Cursos = cursos
-        });
+        profesor.Cursos = cursos;
+        return new OkObjectResult(profesor);
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Create(CreateProfesorDto dto)
+    public async Task<IActionResult> CreateAsync(CreateProfesorDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Nombre))
         {
-            return BadRequest("El nombre del profesor es obligatorio.");
+            return new BadRequestObjectResult("El nombre del profesor es obligatorio.");
         }
 
         if (string.IsNullOrWhiteSpace(dto.Correo))
         {
-            return BadRequest("El correo del profesor es obligatorio.");
+            return new BadRequestObjectResult("El correo del profesor es obligatorio.");
         }
 
         if (string.IsNullOrWhiteSpace(dto.Contrasena))
         {
-            return BadRequest("La contrasena del profesor es obligatoria.");
+            return new BadRequestObjectResult("La contrasena del profesor es obligatoria.");
         }
 
         var correo = dto.Correo.Trim().ToLowerInvariant();
@@ -110,46 +108,59 @@ public class ProfesoresController(AppDbContext context) : ControllerBase
 
         if (correoDuplicado)
         {
-            return BadRequest("Ya existe un profesor con ese correo.");
+            return new BadRequestObjectResult("Ya existe un profesor con ese correo.");
         }
 
         var profesor = new Profesor
         {
             Nombre = dto.Nombre.Trim(),
             Correo = correo,
-            Contrasena = dto.Contrasena.Trim()
+            Contrasena = passwordService.Hash(dto.Contrasena.Trim()),
+            EsAdmin = dto.EsAdmin
         };
         context.Profesores.Add(profesor);
         await context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetAll), new { id = profesor.Id }, profesor);
+
+        return new CreatedResult($"/api/profesores/{profesor.Id}", new ProfesorDetalleDto
+        {
+            Id = profesor.Id,
+            Nombre = profesor.Nombre,
+            Correo = profesor.Correo,
+            EsAdmin = profesor.EsAdmin,
+            Cursos = new()
+        });
     }
 
-    [HttpGet("{id:int}/panel")]
-    public async Task<IActionResult> GetPanelProfesor(int id)
+    public async Task<IActionResult> GetPanelProfesorAsync(int id, ClaimsPrincipal user)
     {
+        if (!UsuarioCoincideConProfesor(id, user))
+        {
+            return new ForbidResult();
+        }
+
         var profesor = await context.Profesores
             .AsNoTracking()
             .Where(p => p.Id == id)
-            .Select(p => new
+            .Select(p => new ProfesorPanelDto
             {
-                p.Id,
-                p.Nombre
+                Id = p.Id,
+                Nombre = p.Nombre
             })
             .FirstOrDefaultAsync();
 
         if (profesor is null)
         {
-            return NotFound("El profesor no existe.");
+            return new NotFoundObjectResult("El profesor no existe.");
         }
 
         var imparticiones = await context.ProfesorAsignaturaCursos
             .AsNoTracking()
             .Where(i => i.ProfesorId == id)
-            .Select(i => new
+            .Select(i => new ProfesorImparticionDto
             {
-                i.CursoId,
+                CursoId = i.CursoId,
                 Curso = i.Curso!.Nombre,
-                i.AsignaturaId,
+                AsignaturaId = i.AsignaturaId,
                 Asignatura = i.Asignatura!.Nombre
             })
             .OrderBy(i => i.Curso)
@@ -158,34 +169,34 @@ public class ProfesoresController(AppDbContext context) : ControllerBase
 
         var cursos = imparticiones
             .GroupBy(i => new { i.CursoId, i.Curso })
-            .Select(g => new
+            .Select(g => new ProfesorCursoPanelDto
             {
-                g.Key.CursoId,
+                CursoId = g.Key.CursoId,
                 Curso = g.Key.Curso,
-                Asignaturas = g.Select(x => new
+                Asignaturas = g.Select(x => new ProfesorCursoAsignaturaDto
                 {
-                    x.AsignaturaId,
+                    AsignaturaId = x.AsignaturaId,
                     Nombre = x.Asignatura
-                })
+                }).ToList()
             })
             .OrderBy(x => x.Curso)
             .ToList();
 
-        return Ok(new
-        {
-            profesor.Id,
-            profesor.Nombre,
-            Cursos = cursos
-        });
+        profesor.Cursos = cursos;
+        return new OkObjectResult(profesor);
     }
 
-    [HttpGet("{profesorId:int}/asignaturas/{asignaturaId:int}/alumnos")]
-    public async Task<IActionResult> GetAlumnosDeAsignatura(int profesorId, int asignaturaId)
+    public async Task<IActionResult> GetAlumnosDeAsignaturaAsync(int profesorId, int asignaturaId, ClaimsPrincipal user)
     {
+        if (!UsuarioCoincideConProfesor(profesorId, user))
+        {
+            return new ForbidResult();
+        }
+
         var profesorExiste = await context.Profesores.AnyAsync(p => p.Id == profesorId);
         if (!profesorExiste)
         {
-            return NotFound("El profesor no existe.");
+            return new NotFoundObjectResult("El profesor no existe.");
         }
 
         var profesorImparteAsignatura = await context.ProfesorAsignaturaCursos
@@ -193,30 +204,30 @@ public class ProfesoresController(AppDbContext context) : ControllerBase
 
         if (!profesorImparteAsignatura)
         {
-            return BadRequest("El profesor no imparte esta asignatura.");
+            return new BadRequestObjectResult("El profesor no imparte esta asignatura.");
         }
 
         var asignaturaInfo = await context.Asignaturas
             .AsNoTracking()
             .Where(a => a.Id == asignaturaId)
-            .Select(a => new
+            .Select(a => new AsignaturaInfoDto
             {
-                a.Id,
-                a.Nombre,
-                a.CursoId,
+                Id = a.Id,
+                Nombre = a.Nombre,
+                CursoId = a.CursoId,
                 Curso = a.Curso!.Nombre
             })
             .FirstOrDefaultAsync();
 
         if (asignaturaInfo is null)
         {
-            return NotFound("La asignatura no existe.");
+            return new NotFoundObjectResult("La asignatura no existe.");
         }
 
         var alumnos = await context.EstudianteAsignaturas
             .AsNoTracking()
             .Where(ea => ea.AsignaturaId == asignaturaId)
-            .Select(ea => new
+            .Select(ea => new AsignaturaAlumnoDto
             {
                 EstudianteId = ea.EstudianteId,
                 Alumno = ea.Estudiante!.Nombre,
@@ -228,50 +239,48 @@ public class ProfesoresController(AppDbContext context) : ControllerBase
             .OrderBy(x => x.Alumno)
             .ToListAsync();
 
-        return Ok(new
+        return new OkObjectResult(new AsignaturaAlumnosResponseDto
         {
-            Asignatura = new
-            {
-                asignaturaInfo.Id,
-                asignaturaInfo.Nombre,
-                CursoId = asignaturaInfo.CursoId,
-                Curso = asignaturaInfo.Curso
-            },
+            Asignatura = asignaturaInfo,
             Alumnos = alumnos
         });
     }
 
-    [HttpPost("{profesorId:int}/imparticiones")]
-    public async Task<IActionResult> AsignarImparticion(int profesorId, AsignarImparticionDto dto)
+    public async Task<IActionResult> AsignarImparticionAsync(int profesorId, AsignarImparticionDto dto, ClaimsPrincipal user)
     {
+        if (!UsuarioCoincideConProfesor(profesorId, user))
+        {
+            return new ForbidResult();
+        }
+
         var profesorExiste = await context.Profesores.AnyAsync(p => p.Id == profesorId);
         if (!profesorExiste)
         {
-            return NotFound("El profesor no existe.");
+            return new NotFoundObjectResult("El profesor no existe.");
         }
 
         var asignatura = await context.Asignaturas.FirstOrDefaultAsync(a => a.Id == dto.AsignaturaId);
         if (asignatura is null)
         {
-            return NotFound("La asignatura no existe.");
+            return new NotFoundObjectResult("La asignatura no existe.");
         }
 
         var cursoExiste = await context.Cursos.AnyAsync(c => c.Id == dto.CursoId);
         if (!cursoExiste)
         {
-            return NotFound("El curso no existe.");
+            return new NotFoundObjectResult("El curso no existe.");
         }
 
         if (asignatura.CursoId != dto.CursoId)
         {
-            return BadRequest("La asignatura no pertenece a ese curso.");
+            return new BadRequestObjectResult("La asignatura no pertenece a ese curso.");
         }
 
         var asignaturaYaTieneProfesor = await context.ProfesorAsignaturaCursos
             .AnyAsync(x => x.AsignaturaId == dto.AsignaturaId && x.ProfesorId != profesorId);
         if (asignaturaYaTieneProfesor)
         {
-            return BadRequest("La asignatura ya tiene un profesor asignado.");
+            return new BadRequestObjectResult("La asignatura ya tiene un profesor asignado.");
         }
 
         var yaAsignado = await context.ProfesorAsignaturaCursos.AnyAsync(x =>
@@ -281,7 +290,7 @@ public class ProfesoresController(AppDbContext context) : ControllerBase
 
         if (yaAsignado)
         {
-            return BadRequest("La imparticion ya existe para ese profesor, asignatura y curso.");
+            return new BadRequestObjectResult("La imparticion ya existe para ese profesor, asignatura y curso.");
         }
 
         context.ProfesorAsignaturaCursos.Add(new ProfesorAsignaturaCurso
@@ -292,27 +301,31 @@ public class ProfesoresController(AppDbContext context) : ControllerBase
         });
 
         await context.SaveChangesAsync();
-        return Ok();
+        return new OkResult();
     }
 
-    [HttpPost("{profesorId:int}/notas")]
-    public async Task<IActionResult> PonerNota(int profesorId, PonerNotaDto dto)
+    public async Task<IActionResult> PonerNotaAsync(int profesorId, PonerNotaDto dto, ClaimsPrincipal user)
     {
+        if (!UsuarioCoincideConProfesor(profesorId, user))
+        {
+            return new ForbidResult();
+        }
+
         if (dto.Valor < 0 || dto.Valor > 10)
         {
-            return BadRequest("La nota debe estar entre 0 y 10.");
+            return new BadRequestObjectResult("La nota debe estar entre 0 y 10.");
         }
 
         var profesorExiste = await context.Profesores.AnyAsync(p => p.Id == profesorId);
         if (!profesorExiste)
         {
-            return NotFound("El profesor no existe.");
+            return new NotFoundObjectResult("El profesor no existe.");
         }
 
         var estudiante = await context.Estudiantes.FirstOrDefaultAsync(e => e.Id == dto.EstudianteId);
         if (estudiante is null)
         {
-            return NotFound("El estudiante no existe.");
+            return new NotFoundObjectResult("El estudiante no existe.");
         }
 
         var estudianteMatriculado = await context.EstudianteAsignaturas.AnyAsync(x =>
@@ -320,7 +333,7 @@ public class ProfesoresController(AppDbContext context) : ControllerBase
 
         if (!estudianteMatriculado)
         {
-            return BadRequest("El estudiante no esta matriculado en esa asignatura.");
+            return new BadRequestObjectResult("El estudiante no esta matriculado en esa asignatura.");
         }
 
         var profesorImparte = await context.ProfesorAsignaturaCursos.AnyAsync(x =>
@@ -330,7 +343,7 @@ public class ProfesoresController(AppDbContext context) : ControllerBase
 
         if (!profesorImparte)
         {
-            return BadRequest("El profesor no imparte esa asignatura al curso del estudiante.");
+            return new BadRequestObjectResult("El profesor no imparte esa asignatura al curso del estudiante.");
         }
 
         var notaExistente = await context.Notas
@@ -353,6 +366,17 @@ public class ProfesoresController(AppDbContext context) : ControllerBase
         }
 
         await context.SaveChangesAsync();
-        return Ok();
+        return new OkResult();
+    }
+
+    private static bool UsuarioCoincideConProfesor(int profesorId, ClaimsPrincipal user)
+    {
+        if (user.IsInRole("admin"))
+        {
+            return true;
+        }
+
+        var idClaim = user.FindFirstValue("id") ?? user.FindFirstValue(ClaimTypes.NameIdentifier);
+        return int.TryParse(idClaim, out var usuarioId) && usuarioId == profesorId;
     }
 }

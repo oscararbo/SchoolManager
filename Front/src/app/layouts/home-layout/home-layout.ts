@@ -5,6 +5,7 @@ import { SessionService, UserSession } from '../../core/services/session.service
 import { ProfesorHomeComponent } from '../../features/home/profesor-home/profesor-home';
 import { AlumnoHomeComponent } from '../../features/home/alumno-home/alumno-home';
 import { LogoutButton } from '../../shared/components/logout-button/logout-button';
+import { SchoolApiService } from '../../shared/services/school-api.service';
 
 @Component({
   selector: 'app-home-layout',
@@ -18,6 +19,7 @@ export class HomeLayout implements OnInit {
 
   private router = inject(Router);
   private sessionService = inject(SessionService);
+  private schoolApiService = inject(SchoolApiService);
 
   ngOnInit(): void {
     const currentSession = this.sessionService.getSession();
@@ -30,8 +32,8 @@ export class HomeLayout implements OnInit {
     this.session.set(currentSession);
   }
 
-  cerrarSesion(): void {
-    this.sessionService.clearSession();
+  async cerrarSesion(): Promise<void> {
+    await this.schoolApiService.logout();
     this.router.navigate(['']);
   }
 }

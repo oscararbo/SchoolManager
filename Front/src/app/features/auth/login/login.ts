@@ -72,6 +72,8 @@ export class Login implements OnInit {
                 id: data.id,
                 nombre: data.nombre,
                 correo: data.correo,
+                token: data.token,
+                refreshToken: data.refreshToken,
                 cursoId: data.cursoId,
                 curso: data.curso
             });

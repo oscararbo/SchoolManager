@@ -4,14 +4,11 @@ using Back.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace Back.Api.Controllers;
+namespace Back.Api.Services;
 
-[ApiController]
-[Route("api/[controller]")]
-public class AsignaturasController(AppDbContext context) : ControllerBase
+public class AsignaturasService(AppDbContext context) : IAsignaturasService
 {
-    [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAllAsync()
     {
         var asignaturasBase = await context.Asignaturas
             .AsNoTracking()
@@ -50,7 +47,7 @@ public class AsignaturasController(AppDbContext context) : ControllerBase
         {
             a.Id,
             a.Nombre,
-            Curso = new
+            Curso = new AsignaturaCursoDto
             {
                 Id = a.CursoId,
                 Nombre = a.CursoNombre
@@ -58,28 +55,34 @@ public class AsignaturasController(AppDbContext context) : ControllerBase
             Profesores = profesoresPorAsignatura
                 .Where(p => p.AsignaturaId == a.Id)
                 .OrderBy(p => p.ProfesorNombre)
-                .Select(p => new
+                .Select(p => new AsignaturaProfesorDto
                 {
-                    p.ProfesorId,
+                    ProfesorId = p.ProfesorId,
                     Nombre = p.ProfesorNombre
                 })
                 .ToList(),
             Alumnos = alumnosPorAsignatura
                 .Where(e => e.AsignaturaId == a.Id)
                 .OrderBy(e => e.EstudianteNombre)
-                .Select(e => new
+                .Select(e => new AsignaturaAlumnoSimpleDto
                 {
                     Id = e.EstudianteId,
                     Nombre = e.EstudianteNombre
                 })
                 .ToList()
+        }).Select(x => new AsignaturaResumenDto
+        {
+            Id = x.Id,
+            Nombre = x.Nombre,
+            Curso = x.Curso,
+            Profesores = x.Profesores,
+            Alumnos = x.Alumnos
         });
 
-        return Ok(asignaturas);
+        return new OkObjectResult(asignaturas);
     }
 
-    [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<IActionResult> GetByIdAsync(int id)
     {
         var asignatura = await context.Asignaturas
             .AsNoTracking()
@@ -95,15 +98,15 @@ public class AsignaturasController(AppDbContext context) : ControllerBase
 
         if (asignatura is null)
         {
-            return NotFound();
+            return new NotFoundResult();
         }
 
         var imparticiones = await context.ProfesorAsignaturaCursos
             .AsNoTracking()
             .Where(i => i.AsignaturaId == id)
-            .Select(i => new
+            .Select(i => new AsignaturaImparticionDto
             {
-                i.ProfesorId,
+                ProfesorId = i.ProfesorId,
                 Profesor = i.Profesor!.Nombre
             })
             .Distinct()
@@ -113,27 +116,27 @@ public class AsignaturasController(AppDbContext context) : ControllerBase
         var alumnos = await context.EstudianteAsignaturas
             .AsNoTracking()
             .Where(ea => ea.AsignaturaId == id)
-            .Select(ea => new
+            .Select(ea => new AsignaturaAlumnoDetalleDto
             {
-                ea.EstudianteId,
+                EstudianteId = ea.EstudianteId,
                 Alumno = ea.Estudiante!.Nombre,
                 Notas = ea.Estudiante.Notas
                     .Where(n => n.AsignaturaId == id)
-                    .Select(n => new
+                    .Select(n => new AsignaturaNotaSimpleDto
                     {
-                        n.Id,
-                        n.Valor
+                        Id = n.Id,
+                        Valor = n.Valor
                     })
                     .ToList()
             })
             .OrderBy(x => x.Alumno)
             .ToListAsync();
 
-        return Ok(new
+        return new OkObjectResult(new AsignaturaDetalleDto
         {
-            asignatura.Id,
-            asignatura.Nombre,
-            Curso = new
+            Id = asignatura.Id,
+            Nombre = asignatura.Nombre,
+            Curso = new AsignaturaCursoDto
             {
                 Id = asignatura.CursoId,
                 Nombre = asignatura.Curso
@@ -143,25 +146,24 @@ public class AsignaturasController(AppDbContext context) : ControllerBase
         });
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Create(CreateAsignaturaDto dto)
+    public async Task<IActionResult> CreateAsync(CreateAsignaturaDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Nombre))
         {
-            return BadRequest("El nombre de la asignatura es obligatorio.");
+            return new BadRequestObjectResult("El nombre de la asignatura es obligatorio.");
         }
 
         var cursoExiste = await context.Cursos.AnyAsync(c => c.Id == dto.CursoId);
         if (!cursoExiste)
         {
-            return BadRequest("El curso indicado no existe.");
+            return new BadRequestObjectResult("El curso indicado no existe.");
         }
 
         var nombre = dto.Nombre.Trim();
         var duplicada = await context.Asignaturas.AnyAsync(a => a.CursoId == dto.CursoId && a.Nombre == nombre);
         if (duplicada)
         {
-            return BadRequest("Ya existe esa asignatura en ese curso.");
+            return new BadRequestObjectResult("Ya existe esa asignatura en ese curso.");
         }
 
         var asignatura = new Asignatura
@@ -171,6 +173,6 @@ public class AsignaturasController(AppDbContext context) : ControllerBase
         };
         context.Asignaturas.Add(asignatura);
         await context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetById), new { id = asignatura.Id }, asignatura);
+        return new CreatedResult($"/api/asignaturas/{asignatura.Id}", asignatura);
     }
 }
