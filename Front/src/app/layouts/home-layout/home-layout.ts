@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { SessionService, UserSession } from '../../core/services/session.service';
 import { AuthStateService } from '../../core/services/auth-state.service';
@@ -24,6 +24,23 @@ export class HomeLayout implements OnInit {
   private sessionService = inject(SessionService);
   private schoolApiService = inject(SchoolApiService);
   protected authState = inject(AuthStateService);
+
+  panelTitulo = computed(() => {
+    const currentSession = this.session();
+    if (!currentSession) {
+      return 'Panel';
+    }
+
+    if (currentSession.rol === 'admin') {
+      return 'Panel de administracion';
+    }
+
+    if (currentSession.rol === 'profesor') {
+      return 'Panel de profesor';
+    }
+
+    return 'Panel de alumno';
+  });
 
   /**
    * Recupera la sesion activa y la asigna al Signal de vista.

@@ -132,6 +132,8 @@ Back/
 - `POST /api/admin/csv/asignaturas`
 - `POST /api/admin/csv/profesores`
 - `POST /api/admin/csv/estudiantes`
+- `POST /api/admin/csv/imparticiones`
+- `POST /api/admin/csv/matriculas`
 
 ### Profesor
 
@@ -160,8 +162,10 @@ Formatos:
 
 - cursos: `nombre`
 - asignaturas: `nombre,cursoNombre`
-- profesores: `nombre,correo,contrasena,esAdmin`
+- profesores: `nombre,correo,contrasena`
 - estudiantes: `nombre,correo,contrasena,cursoNombre`
+- imparticiones: `profesorCorreo,asignaturaNombre,cursoNombre`
+- matriculas: `estudianteCorreo,asignaturaNombre,cursoNombre`
 
 Comportamiento:
 
@@ -169,6 +173,17 @@ Comportamiento:
 - ignora cabecera
 - informa errores por linea
 - evita duplicados
+- en `asignaturas`, `estudiantes`, `imparticiones` y `matriculas`, si hay errores de validacion o referencias la importacion completa se cancela
+- en `profesores` y `estudiantes`, las contrasenas del CSV siempre se almacenan hasheadas
+
+Orden recomendado:
+
+1. cursos
+2. asignaturas
+3. profesores
+4. estudiantes
+5. imparticiones
+6. matriculas
 
 ## Manejo de errores
 

@@ -36,7 +36,14 @@ function getHttpErrorMessage(error: HttpErrorResponse): string {
         }
     }
 
-    return error.error?.detail ?? error.error?.title ?? error.message ?? 'Error de servidor.';
+    const csvErrors = error.error?.errores;
+    if (Array.isArray(csvErrors) && csvErrors.length > 0) {
+        const firstCsvError = String(csvErrors[0]);
+        const base = error.error?.detail ?? error.error?.mensaje ?? 'La importacion ha fallado.';
+        return `${base} ${firstCsvError}`;
+    }
+
+    return error.error?.detail ?? error.error?.mensaje ?? error.error?.title ?? error.message ?? 'Error de servidor.';
 }
 
 /**
@@ -45,11 +52,12 @@ function getHttpErrorMessage(error: HttpErrorResponse): string {
  */
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
     const toastService = inject(ToastService);
+    const esImportCsv = req.url.includes('/admin/csv/');
 
     return next(req).pipe(
         catchError((error: HttpErrorResponse) => {
             // 401 is handled by the auth refresh flow and the session-expired dialog.
-            if (error.status !== 401) {
+            if (error.status !== 401 && !esImportCsv) {
                 toastService.show(getHttpErrorMessage(error), 'error');
             }
             return throwError(() => error);

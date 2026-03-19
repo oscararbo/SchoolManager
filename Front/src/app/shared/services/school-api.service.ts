@@ -170,6 +170,15 @@ export interface CsvImportResult {
     omitidos?: number;
     detalles?: string[];
 }
+
+export class CsvImportError extends Error {
+    constructor(message: string, public readonly result?: CsvImportResult) {
+        super(message);
+        this.name = 'CsvImportError';
+    }
+}
+
+export type CsvImportEntity = 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matriculas' | 'imparticiones';
 //#endregion
 
 @Injectable({ providedIn: 'root' })
@@ -206,7 +215,14 @@ export class SchoolApiService {
                 }
             }
 
-            const msg = error.error?.detail ?? error.error?.title ?? error.message ?? 'Error de servidor.';
+            const csvErrors = error.error?.errores;
+            if (Array.isArray(csvErrors) && csvErrors.length > 0) {
+                const firstCsvError = String(csvErrors[0]);
+                const base = error.error?.detail ?? error.error?.mensaje ?? 'La operacion ha fallado.';
+                return new Error(`${base} ${firstCsvError}`);
+            }
+
+            const msg = error.error?.detail ?? error.error?.mensaje ?? error.error?.title ?? error.message ?? 'Error de servidor.';
             return new Error(msg);
         }
         return error instanceof Error ? error : new Error('Error desconocido.');
@@ -556,18 +572,42 @@ export class SchoolApiService {
     /**
      * Importa entidades desde un archivo CSV multiparte.
      *
-     * @param entidad - Tipo de entidad: `'cursos'`, `'asignaturas'`, `'profesores'` o `'estudiantes'`.
+     * @param entidad - Tipo de entidad: `'cursos'`, `'asignaturas'`, `'profesores'`, `'estudiantes'`, `'matriculas'` o `'imparticiones'`.
      * @param file - Archivo CSV a importar.
      * @returns Resumen de la importacion: entidades creadas, omitidas y errores por linea.
      */
-    async importarCsv(entidad: string, file: File): Promise<CsvImportResult> {
+    async importarCsv(entidad: CsvImportEntity, file: File): Promise<CsvImportResult> {
         const formData = new FormData();
         formData.append('file', file);
         try {
             return await firstValueFrom(
                 this.http.post<CsvImportResult>(`${this.apiUrl}/admin/csv/${entidad}`, formData)
             );
-        } catch (e) { throw this.extractError(e); }
+        } catch (e) {
+            if (e instanceof HttpErrorResponse) {
+                const csvErrors = Array.isArray(e.error?.errores)
+                    ? e.error.errores.map((x: unknown) => String(x))
+                    : [];
+
+                const result: CsvImportResult | undefined = csvErrors.length > 0
+                    ? {
+                        creados: Number(e.error?.creados ?? 0),
+                        omitidos: Number(e.error?.omitidos ?? 0),
+                        errores: csvErrors,
+                        detalles: Array.isArray(e.error?.detalles)
+                            ? e.error.detalles.map((x: unknown) => String(x))
+                            : []
+                    }
+                    : undefined;
+
+                if (result) {
+                    const base = e.error?.detail ?? e.error?.mensaje ?? `La importacion de ${entidad} ha fallado.`;
+                    throw new CsvImportError(`${base} ${result.errores[0]}`, result);
+                }
+            }
+
+            throw this.extractError(e);
+        }
     }
     //#endregion
 

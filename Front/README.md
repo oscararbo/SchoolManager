@@ -85,7 +85,17 @@ Front/
 - CRUD de cursos, asignaturas, profesores y estudiantes.
 - Matriculas e imparticiones.
 - Busqueda por texto.
-- Importacion CSV.
+- Importacion CSV de cursos, asignaturas, profesores, estudiantes, imparticiones y matriculas.
+- Indicador de carga "Por favor espere" durante importaciones CSV largas.
+
+Orden recomendado de carga CSV:
+
+1. cursos
+2. asignaturas
+3. profesores
+4. estudiantes
+5. imparticiones
+6. matriculas
 
 ### Profesor
 

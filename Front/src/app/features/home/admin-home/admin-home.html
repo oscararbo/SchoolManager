@@ -1,6 +1,5 @@
 <section class="vstack gap-3">
     <header>
-        <h2 class="h4 mb-1">Panel de administracion</h2>
         <p class="text-secondary mb-0">Gestion completa del centro escolar.</p>
     </header>
 
@@ -420,40 +419,56 @@
                     <div class="card shadow-sm border-0">
                         <div class="card-body">
                             <h5 class="card-title mb-1">Importar datos desde CSV</h5>
-                            <p class="text-secondary small mb-3">Importa cursos, asignaturas, profesores y estudiantes desde archivos CSV. Descarga la plantilla para ver el formato esperado.</p>
+                            <p class="text-secondary small mb-3">Importa cursos, asignaturas, profesores, estudiantes, imparticiones y matriculas desde archivos CSV. Sigue el orden sugerido para evitar referencias incompletas.</p>
                         </div>
                     </div>
                 </div>
 
-                @for (entidad of ['cursos', 'asignaturas', 'profesores', 'estudiantes']; track entidad) {
+                @for (item of csvImportItems; track item.entidad) {
                     <div class="col-12 col-md-6">
                         <div class="card shadow-sm border-0 h-100">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 class="card-title mb-0 text-capitalize">{{ entidad }}</h6>
-                                    <button class="btn btn-sm btn-outline-secondary" (click)="descargarPlantilla(entidad)">Descargar plantilla</button>
+                                    <h6 class="card-title mb-0">{{ item.orden }}. {{ item.titulo }}</h6>
+                                    <button class="btn btn-sm btn-outline-secondary" (click)="descargarPlantilla(item.entidad)">Descargar plantilla</button>
                                 </div>
+                                <p class="text-secondary small">{{ item.descripcion }}</p>
                                 <input class="form-control form-control-sm mb-2" type="file" accept=".csv"
-                                    (change)="onCsvFileChange($event, entidad)">
-                                <button class="btn btn-sm btn-primary" [disabled]="csvCargando"
-                                    (click)="importarCsv(entidad)">
-                                    {{ csvCargando && csvEntidadActual === entidad ? 'Importando...' : 'Importar' }}
+                                    (change)="onCsvFileChange($event, item.entidad)">
+                                <button class="btn btn-sm btn-primary" [disabled]="csvCargando()"
+                                    (click)="importarCsv(item.entidad)">
+                                    {{ csvCargando() && csvEntidadActual() === item.entidad ? 'Importando...' : 'Importar' }}
                                 </button>
                             </div>
                         </div>
                     </div>
                 }
 
-                @if (csvResultado) {
+                @if (csvResultado()) {
                     <div class="col-12">
-                        <div class="alert" [class.alert-success]="csvResultado.errores.length === 0" [class.alert-warning]="csvResultado.errores.length > 0">
-                            <strong>Resultado ({{ csvEntidadActual }}):</strong>
-                            {{ csvResultado.creados }} registros creados.
-                            @if (csvResultado.omitidos) { {{ csvResultado.omitidos }} omitidos (ya existian). }
-                            @if (csvResultado.errores.length > 0) {
-                                <ul class="mb-0 mt-1">
-                                    @for (err of csvResultado.errores; track err) { <li>{{ err }}</li> }
-                                </ul>
+                        <div class="alert" [class.alert-success]="csvResultado()!.errores.length === 0" [class.alert-warning]="csvResultado()!.errores.length > 0">
+                            <strong>Resultado ({{ csvEntidadActual() }}):</strong>
+                            {{ csvResultado()!.creados }} registros creados.
+                            @if (csvResultado()!.omitidos) { {{ csvResultado()!.omitidos }} omitidos (ya existian). }
+                            @if (csvResultado()!.errores.length > 0) {
+                                <div class="mt-2">
+                                    <p class="mb-2 fw-semibold">Errores detectados:</p>
+                                    <div class="vstack gap-2">
+                                        @for (grupo of csvErroresAgrupados(); track grupo.key) {
+                                            <div class="border rounded-3 bg-light p-2">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <span class="fw-semibold">{{ grupo.label }}</span>
+                                                    <span class="badge text-bg-danger">{{ grupo.errors.length }}</span>
+                                                </div>
+                                                <ul class="mb-0 small">
+                                                    @for (err of grupo.errors; track err) {
+                                                        <li>{{ err }}</li>
+                                                    }
+                                                </ul>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
                             }
                         </div>
                     </div>
@@ -463,6 +478,8 @@
 
     }
 </section>
+
+<app-loading-wait [visible]="csvCargando()" message="Importando datos, por favor espere..."></app-loading-wait>
 
     <app-confirm-dialog></app-confirm-dialog>
 

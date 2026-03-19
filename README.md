@@ -54,7 +54,7 @@ El backend asegura un administrador inicial (configurable en `Back/appsettings.j
 5. Asignar imparticiones profesor-asignatura-curso.
 6. Crear tareas y calificar desde profesor.
 7. Consultar progreso desde alumno.
-8. Cargar datos iniciales con importacion CSV desde admin.
+8. Cargar datos iniciales con importacion CSV desde admin en este orden: cursos, asignaturas, profesores, estudiantes, imparticiones y matriculas.
 
 ## Calidad y verificacion
 

@@ -4,17 +4,33 @@ import { FormsModule } from '@angular/forms';
 import {
     SchoolApiService,
     CursoItem, AsignaturaItem, ProfesorListItem, EstudianteItem,
-    UpdateProfesorData, UpdateEstudianteData, CsvImportResult
+    UpdateProfesorData, UpdateEstudianteData, CsvImportResult, CsvImportEntity, CsvImportError
 } from '../../../shared/services/school-api.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { LoadingWaitComponent } from '../../../shared/components/loading-wait/loading-wait.component';
 
 type AdminTab = 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matriculas' | 'imparticiones' | 'importar';
+
+type CsvErrorGroupKey =
+    | 'curso'
+    | 'asignatura'
+    | 'profesor'
+    | 'estudiante'
+    | 'duplicado'
+    | 'formato'
+    | 'otros';
+
+type CsvErrorGroup = {
+    key: CsvErrorGroupKey;
+    label: string;
+    errors: string[];
+};
 
 @Component({
     selector: 'app-admin-home',
     standalone: true,
-    imports: [CommonModule, FormsModule, ConfirmDialogComponent],
+    imports: [CommonModule, FormsModule, ConfirmDialogComponent, LoadingWaitComponent],
     templateUrl: './admin-home.html',
     styleUrl: './admin-home.scss'
 })
@@ -86,9 +102,83 @@ export class AdminHomeComponent implements OnInit {
     csvAsignaturasFile: File | null = null;
     csvProfesoresFile: File | null = null;
     csvEstudiantesFile: File | null = null;
-    csvResultado: CsvImportResult | null = null;
-    csvEntidadActual: string | null = null;
-    csvCargando = false;
+    csvMatriculasFile: File | null = null;
+    csvImparticionesFile: File | null = null;
+    csvResultado = signal<CsvImportResult | null>(null);
+    csvEntidadActual = signal<CsvImportEntity | null>(null);
+    csvCargando = signal(false);
+    readonly csvImportItems: Array<{ entidad: CsvImportEntity; titulo: string; descripcion: string; orden: string }> = [
+        { entidad: 'cursos', titulo: 'Cursos', descripcion: 'Alta masiva de cursos.', orden: '1' },
+        { entidad: 'asignaturas', titulo: 'Asignaturas', descripcion: 'Alta masiva de asignaturas ligadas a curso.', orden: '2' },
+        { entidad: 'profesores', titulo: 'Profesores', descripcion: 'Alta masiva de profesores.', orden: '3' },
+        { entidad: 'estudiantes', titulo: 'Estudiantes', descripcion: 'Alta masiva de estudiantes con su curso.', orden: '4' },
+        { entidad: 'imparticiones', titulo: 'Imparticiones', descripcion: 'Relaciona profesor, asignatura y curso.', orden: '5' },
+        { entidad: 'matriculas', titulo: 'Matriculas', descripcion: 'Relaciona estudiante con asignaturas de su curso.', orden: '6' }
+    ];
+
+    csvErroresAgrupados = computed<CsvErrorGroup[]>(() => {
+        const errores = this.csvResultado()?.errores ?? [];
+        if (errores.length === 0) {
+            return [];
+        }
+
+        const labels: Record<CsvErrorGroupKey, string> = {
+            curso: 'Curso no valido o no encontrado',
+            asignatura: 'Asignatura no valida o no encontrada',
+            profesor: 'Profesor no valido o no encontrado',
+            estudiante: 'Estudiante no valido o no encontrado',
+            duplicado: 'Registros duplicados o ya existentes',
+            formato: 'Formato o datos incompletos',
+            otros: 'Otros errores'
+        };
+
+        const grouped = new Map<CsvErrorGroupKey, string[]>();
+        for (const err of errores) {
+            const key = this.clasificarCsvError(err);
+            const current = grouped.get(key) ?? [];
+            current.push(err);
+            grouped.set(key, current);
+        }
+
+        const order: CsvErrorGroupKey[] = ['curso', 'asignatura', 'profesor', 'estudiante', 'duplicado', 'formato', 'otros'];
+        return order
+            .filter(key => grouped.has(key))
+            .map(key => ({
+                key,
+                label: labels[key],
+                errors: grouped.get(key) ?? []
+            }));
+    });
+
+    private clasificarCsvError(error: string): CsvErrorGroupKey {
+        const text = error.toLowerCase();
+
+        if (text.includes('curso no encontrado') || text.includes('su curso')) {
+            return 'curso';
+        }
+
+        if (text.includes('asignatura no encontrada') || text.includes('asignatura')) {
+            return 'asignatura';
+        }
+
+        if (text.includes('profesor no encontrado') || text.includes('profesor')) {
+            return 'profesor';
+        }
+
+        if (text.includes('estudiante no encontrado') || text.includes('estudiante')) {
+            return 'estudiante';
+        }
+
+        if (text.includes('duplicado') || text.includes('ya existe') || text.includes('ya esta matriculado') || text.includes('ya tiene un profesor asignado')) {
+            return 'duplicado';
+        }
+
+        if (text.includes('se esperaban') || text.includes('obligatori') || text.includes('datos incompletos') || text.includes('columnas')) {
+            return 'formato';
+        }
+
+        return 'otros';
+    }
 
     async ngOnInit(): Promise<void> {
         await this.cargarTodo();
@@ -596,56 +686,74 @@ export class AdminHomeComponent implements OnInit {
      * Captura el archivo seleccionado en el input de tipo file y lo almacena segun la entidad.
      *
      * @param event - Evento del input file.
-     * @param entidad - Tipo de entidad: `'cursos'`, `'asignaturas'`, `'profesores'` o `'estudiantes'`.
+     * @param entidad - Tipo de entidad a importar por CSV.
      */
-    onCsvFileChange(event: Event, entidad: string): void {
+    onCsvFileChange(event: Event, entidad: CsvImportEntity): void {
         const input = event.target as HTMLInputElement;
         const file = input.files?.[0] ?? null;
         if (entidad === 'cursos') this.csvCursosFile = file;
         else if (entidad === 'asignaturas') this.csvAsignaturasFile = file;
         else if (entidad === 'profesores') this.csvProfesoresFile = file;
-        else this.csvEstudiantesFile = file;
+        else if (entidad === 'estudiantes') this.csvEstudiantesFile = file;
+        else if (entidad === 'matriculas') this.csvMatriculasFile = file;
+        else this.csvImparticionesFile = file;
     }
 
     /**
      * Sube el archivo CSV seleccionado para la entidad indicada y muestra el resultado.
      *
-     * @param entidad - Tipo de entidad a importar: `'cursos'`, `'asignaturas'`, `'profesores'` o `'estudiantes'`.
+     * @param entidad - Tipo de entidad a importar.
      */
-    async importarCsv(entidad: string): Promise<void> {
+    async importarCsv(entidad: CsvImportEntity): Promise<void> {
         const file = entidad === 'cursos' ? this.csvCursosFile
             : entidad === 'asignaturas' ? this.csvAsignaturasFile
             : entidad === 'profesores' ? this.csvProfesoresFile
-            : this.csvEstudiantesFile;
+            : entidad === 'estudiantes' ? this.csvEstudiantesFile
+            : entidad === 'matriculas' ? this.csvMatriculasFile
+            : this.csvImparticionesFile;
 
         if (!file) { this.toast.show('Selecciona un archivo CSV.', 'warning'); return; }
 
-        this.csvCargando = true;
-        this.csvResultado = null;
-        this.csvEntidadActual = entidad;
+        this.csvCargando.set(true);
+        this.csvResultado.set(null);
+        this.csvEntidadActual.set(entidad);
         try {
             const resultado = await this.api.importarCsv(entidad, file);
-            this.csvResultado = resultado;
-            this.toast.show(`Importacion de ${entidad}: ${resultado.creados} creados.`, 'success');
+            this.csvResultado.set(resultado);
+            if (resultado.errores.length > 0) {
+                const primerError = resultado.errores[0];
+                this.toast.show(`Importacion de ${entidad} completada con incidencias. ${primerError}`, 'warning');
+            } else {
+                this.toast.show(`Importacion de ${entidad}: ${resultado.creados} creados.`, 'success');
+            }
             await this.cargarTodo();
         } catch (e) {
-            this.mostrarError(e, `No se pudo importar el CSV de ${entidad}.`);
+            if (e instanceof CsvImportError) {
+                if (e.result) {
+                    this.csvResultado.set(e.result);
+                }
+                this.toast.show(e.message, 'error');
+            } else {
+                this.mostrarError(e, `No se pudo importar el CSV de ${entidad}.`);
+            }
         } finally {
-            this.csvCargando = false;
+            this.csvCargando.set(false);
         }
     }
 
     /**
      * Genera y descarga una plantilla CSV de ejemplo para la entidad indicada.
      *
-     * @param entidad - Tipo de entidad: `'cursos'`, `'asignaturas'`, `'profesores'` o `'estudiantes'`.
+     * @param entidad - Tipo de entidad para la que se descarga la plantilla.
      */
-    descargarPlantilla(entidad: string): void {
-        const plantillas: Record<string, string> = {
+    descargarPlantilla(entidad: CsvImportEntity): void {
+        const plantillas: Record<CsvImportEntity, string> = {
             cursos: 'nombre\n1\u00baA\n1\u00baB\n2\u00baA',
             asignaturas: 'nombre,cursoNombre\nMatematicas,1\u00baA\nLengua,1\u00baA\nCiencias,1\u00baB',
             profesores: 'nombre,correo,contrasena\nJuan Garcia,juan@colegio.es,Pass123',
-            estudiantes: 'nombre,correo,contrasena,cursoNombre\nLucia Perez,lucia@colegio.es,Pass123,1\u00baA'
+            estudiantes: 'nombre,correo,contrasena,cursoNombre\nLucia Perez,lucia@colegio.es,Pass123,1\u00baA',
+            matriculas: 'estudianteCorreo,asignaturaNombre,cursoNombre\nlucia@colegio.es,Matematicas,1\u00baA',
+            imparticiones: 'profesorCorreo,asignaturaNombre,cursoNombre\njuan@colegio.es,Matematicas,1\u00baA'
         };
         const csv = plantillas[entidad];
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
