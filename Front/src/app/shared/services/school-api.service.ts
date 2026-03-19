@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { SessionService } from '../../core/services/session.service';
+import { environment } from '../../../environments/environment';
 
 //#region Interfaces
 export interface LoginResponse {
@@ -64,6 +65,21 @@ export interface AsignaturaAlumnos {
     alumnos: AsignaturaAlumno[];
 }
 
+export interface NotaAlumnoTarea {
+    estudianteId: number;
+    alumno: string;
+    valor: number | null;
+}
+
+export interface TareaConNotas {
+    tareaId: number;
+    nombre: string;
+    trimestre: number;
+    asignaturaId: number;
+    asignatura: string;
+    notas: NotaAlumnoTarea[];
+}
+
 export interface AlumnoTarea {
     tareaId: number;
     nombre: string;
@@ -111,7 +127,6 @@ export interface ProfesorListItem {
     id: number;
     nombre: string;
     correo: string;
-    esAdmin: boolean;
     imparticiones: ProfesorImparticion[];
 }
 
@@ -127,13 +142,11 @@ export interface CreateProfesorData {
     nombre: string;
     correo: string;
     contrasena: string;
-    esAdmin?: boolean;
 }
 
 export interface UpdateProfesorData {
     nombre: string;
     correo: string;
-    esAdmin: boolean;
     nuevaContrasena?: string;
 }
 
@@ -161,7 +174,7 @@ export interface CsvImportResult {
 
 @Injectable({ providedIn: 'root' })
 export class SchoolApiService {
-    private readonly apiUrl = 'http://localhost:5014/api';
+    private readonly apiUrl = environment.apiBaseUrl;
     private http = inject(HttpClient);
     private sessionService = inject(SessionService);
 
@@ -553,6 +566,24 @@ export class SchoolApiService {
         try {
             return await firstValueFrom(
                 this.http.post<CsvImportResult>(`${this.apiUrl}/admin/csv/${entidad}`, formData)
+            );
+        } catch (e) { throw this.extractError(e); }
+    }
+    //#endregion
+
+    //#region AdminTareas
+
+    /**
+     * Obtiene todas las tareas de una asignatura con las notas de todos los alumnos.
+     * Disponible solo para administradores.
+     *
+     * @param asignaturaId - Identificador de la asignatura.
+     * @returns Lista de tareas con las notas de todos los alumnos.
+     */
+    async getTareasConNotas(asignaturaId: number): Promise<TareaConNotas[]> {
+        try {
+            return await firstValueFrom(
+                this.http.get<TareaConNotas[]>(`${this.apiUrl}/profesores/asignaturas/${asignaturaId}/tareas-notas`)
             );
         } catch (e) { throw this.extractError(e); }
     }

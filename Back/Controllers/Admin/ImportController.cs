@@ -124,7 +124,7 @@ public class ImportController(AppDbContext context, IPasswordService passwordSer
     }
 
     /// <summary>
-    /// Importa profesores a partir de un CSV con cabecera: nombre,correo,contrasena,esAdmin.
+    /// Importa profesores a partir de un CSV con cabecera: nombre,correo,contrasena.
     /// </summary>
     [HttpPost("profesores")]
     public async Task<IActionResult> ImportarProfesores(IFormFile file)
@@ -147,7 +147,6 @@ public class ImportController(AppDbContext context, IPasswordService passwordSer
             var nombre = row.Columns[0].Trim();
             var correo = row.Columns[1].Trim().ToLowerInvariant();
             var contrasena = row.Columns[2].Trim();
-            var esAdmin = row.Columns.Length > 3 && row.Columns[3].Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
 
             if (string.IsNullOrWhiteSpace(correo) || string.IsNullOrWhiteSpace(contrasena))
             {
@@ -161,8 +160,7 @@ public class ImportController(AppDbContext context, IPasswordService passwordSer
             {
                 Nombre = nombre,
                 Correo = correo,
-                Contrasena = passwordService.Hash(contrasena),
-                EsAdmin = esAdmin
+                Contrasena = passwordService.Hash(contrasena)
             });
             creados++;
         }

@@ -42,7 +42,6 @@ public class ProfesorListItemDto
     public int Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public string Correo { get; set; } = string.Empty;
-    public bool EsAdmin { get; set; }
     public List<ProfesorImparticionDto> Imparticiones { get; set; } = new();
 }
 
@@ -64,7 +63,6 @@ public class ProfesorDetalleDto
     public int Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public string Correo { get; set; } = string.Empty;
-    public bool EsAdmin { get; set; }
     public List<ProfesorCursoPanelDto> Cursos { get; set; } = new();
 }
 

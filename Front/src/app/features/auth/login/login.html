@@ -1,8 +1,10 @@
-<form [formGroup]="formLogin" (ngSubmit)="iniciarSesion()" class="w-100 vstack gap-3">
+<form [formGroup]="formLogin" (ngSubmit)="iniciarSesion()" class="w-100 vstack gap-3" autocomplete="on">
     <!-- Error feedback -->
-    <div *ngIf="errorMessage()" class="mb-3">
-        <div class="alert alert-danger" role="alert">{{ errorMessage() }}</div>
-    </div>
+    @if (errorMessage()) {
+        <div class="mb-3">
+            <div class="alert alert-danger" role="alert">{{ errorMessage() }}</div>
+        </div>
+    }
 
     <!-- Form title -->
     <div class="border-bottom pb-2">
@@ -13,10 +15,12 @@
     <div class="form-floating">
         <input
         type="email"
+        name="email"
         formControlName="email"
         class="form-control"
         id="emailInput"
         placeholder="name@example.com"
+        autocomplete="email"
         [ngClass]="{
             'is-invalid': mostrarErrores && formLogin.get('email')?.touched && formLogin.get('email')?.errors,
             'is-valid': mostrarErrores && formLogin.get('email')?.touched && !formLogin.get('email')?.errors
@@ -37,10 +41,12 @@
     <div class="form-floating">
         <input
         type="password"
+        name="password"
         formControlName="password"
         class="form-control"
         id="passwordInput"
         placeholder="Password"
+        autocomplete="current-password"
         [ngClass]="{
             'is-invalid': mostrarErrores && formLogin.get('password')?.touched && formLogin.get('password')?.errors,
             'is-valid': mostrarErrores && formLogin.get('password')?.touched && !formLogin.get('password')?.errors

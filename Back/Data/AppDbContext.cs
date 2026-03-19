@@ -8,6 +8,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Curso> Cursos => Set<Curso>();
     public DbSet<Estudiante> Estudiantes => Set<Estudiante>();
     public DbSet<Profesor> Profesores => Set<Profesor>();
+    public DbSet<Admin> Admins => Set<Admin>();
     public DbSet<Asignatura> Asignaturas => Set<Asignatura>();
     public DbSet<EstudianteAsignatura> EstudianteAsignaturas => Set<EstudianteAsignatura>();
     public DbSet<ProfesorAsignaturaCurso> ProfesorAsignaturaCursos => Set<ProfesorAsignaturaCurso>();
@@ -19,6 +20,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         modelBuilder.Entity<Profesor>()
             .HasIndex(p => p.Correo)
+            .IsUnique();
+
+        modelBuilder.Entity<Admin>()
+            .HasIndex(a => a.Correo)
             .IsUnique();
 
         modelBuilder.Entity<Estudiante>()

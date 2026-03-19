@@ -1,6 +1,9 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { SessionService } from './session.service';
+import { environment } from '../../../environments/environment';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AuthStateService {
@@ -13,6 +16,7 @@ export class AuthStateService {
 
     private sessionService = inject(SessionService);
     private router = inject(Router);
+    private http = inject(HttpClient);
 
     /**
      * Inicia el flujo de refresco de token si no hay ya uno en curso.
@@ -64,18 +68,10 @@ export class AuthStateService {
         }
 
         try {
-            const resp = await fetch('http://localhost:5014/api/auth/refresh', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refreshToken: session.refreshToken })
-            });
-
-            if (!resp.ok) {
-                this.sessionService.clearSession();
-                return false;
-            }
-
-            const data = await resp.json() as { token: string; refreshToken: string };
+            const data = await firstValueFrom(this.http.post<{ token: string; refreshToken: string }>(
+                `${environment.apiBaseUrl}/auth/refresh`,
+                { refreshToken: session.refreshToken }
+            ));
             this.sessionService.setSession({ ...session, token: data.token, refreshToken: data.refreshToken });
             return true;
         } catch {

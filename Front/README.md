@@ -62,7 +62,6 @@ Front/
         ├── features/
         │   ├── auth/
         │   │   ├── login/
-        │   │   └── register/
         │   └── home/
         │       ├── admin-home/
         │       ├── alumno-home/

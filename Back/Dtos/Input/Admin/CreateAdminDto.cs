@@ -1,6 +1,6 @@
 namespace Back.Api.Dtos;
 
-public class CreateProfesorDto
+public class CreateAdminDto
 {
     public string Nombre { get; set; } = string.Empty;
     public string Correo { get; set; } = string.Empty;

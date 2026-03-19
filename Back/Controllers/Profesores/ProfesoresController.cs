@@ -86,4 +86,11 @@ public class ProfesoresController(IProfesoresService profesoresService) : Contro
     {
         return await profesoresService.GetTareasDeAsignaturaAsync(profesorId, asignaturaId, User);
     }
+
+    [HttpGet("asignaturas/{asignaturaId:int}/tareas-notas")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> GetTareasConNotas(int asignaturaId)
+    {
+        return await profesoresService.GetTareasConNotasAsync(asignaturaId, User);
+    }
 }

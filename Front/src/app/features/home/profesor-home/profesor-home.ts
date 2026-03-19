@@ -8,6 +8,7 @@ import {
     AsignaturaAlumno,
     TareaResumen,
 } from '../../../shared/services/school-api.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 type ProfesorDetalleView = 'resumen' | 'calificar';
 
@@ -43,6 +44,7 @@ export class ProfesorHomeComponent implements OnInit {
     alumnosExpandidos = new Set<number>();
 
     private api = inject(SchoolApiService);
+    private toast = inject(ToastService);
 
     /** Carga el panel del profesor al inicializar el componente. */
     async ngOnInit(): Promise<void> {
@@ -146,7 +148,6 @@ export class ProfesorHomeComponent implements OnInit {
      */
     async guardarNota(estudianteId: number): Promise<void> {
         const tarea = this.tareaActiva();
-        const asignaturaId = this.asignaturaActivaId();
         const valor = this.notaInputs()[estudianteId];
 
         if (!tarea || valor === null || valor === undefined || Number.isNaN(valor)) {
@@ -158,12 +159,22 @@ export class ProfesorHomeComponent implements OnInit {
             return;
         }
 
+        const valorActual = this.detalleAsignatura()?.alumnos
+            .find(a => a.estudianteId === estudianteId)
+            ?.notas.find(n => n.tareaId === tarea.tareaId)
+            ?.valor;
+
+        // Evita llamadas redundantes cuando la nota no cambia.
+        if (valorActual !== null && valorActual !== undefined && valorActual === valor) {
+            this.toast.show('La nota no ha cambiado.', 'info');
+            return;
+        }
+
         this.guardandoNota.set(true);
         this.error.set(null);
         try {
             await this.api.ponerNota(this.profesorId, estudianteId, tarea.tareaId, valor);
-            if (asignaturaId) await this.cargarAlumnos(asignaturaId);
-            if (tarea) this.seleccionarTarea(tarea);
+            this.actualizarNotaEnDetalle(estudianteId, tarea.tareaId, valor);
         } catch (e) {
             this.error.set((e as Error).message);
         } finally {
@@ -185,13 +196,28 @@ export class ProfesorHomeComponent implements OnInit {
             return;
         }
 
+        // Validar duplicados localmente
+        const tareasDuplicadas = this.detalleAsignatura()?.tareas.filter(t =>
+            t.nombre === nombre && t.trimestre === trimestre
+        );
+
+        if (tareasDuplicadas && tareasDuplicadas.length > 0) {
+            this.toast.show(`Ya existe una tarea con el nombre "${nombre}" en este trimestre.`, 'warning');
+            return;
+        }
+
         this.creandoTarea.set(true);
         this.error.set(null);
         try {
-            await this.api.crearTarea(this.profesorId, nombre, trimestre, asignaturaId);
+            const tareaCreada = await this.api.crearTarea(this.profesorId, nombre, trimestre, asignaturaId);
+            this.insertarTareaEnDetalle({
+                tareaId: tareaCreada.id,
+                nombre: tareaCreada.nombre,
+                trimestre: tareaCreada.trimestre
+            });
             this.nuevaTareaNombre.set('');
             this.nuevaTareaTrimestre.set(1);
-            await this.cargarAlumnos(asignaturaId);
+            this.toast.show(`Tarea "${nombre}" creada.`, 'success');
         } catch (e) {
             this.error.set((e as Error).message);
         } finally {
@@ -272,5 +298,130 @@ export class ProfesorHomeComponent implements OnInit {
      */
     tieneTareasEnTrimestre(trimestre: number): boolean {
         return this.detalleAsignatura()?.tareas.some(tarea => tarea.trimestre === trimestre) ?? false;
+    }
+
+    /**
+     * Actualiza una nota en el estado local y recalcula medias y nota final del alumno.
+     *
+     * @param estudianteId - Identificador del alumno.
+     * @param tareaId - Identificador de la tarea.
+     * @param valor - Nuevo valor de nota.
+     */
+    private actualizarNotaEnDetalle(estudianteId: number, tareaId: number, valor: number): void {
+        this.detalleAsignatura.update(detalle => {
+            if (!detalle) {
+                return detalle;
+            }
+
+            const tareasById = new Map(detalle.tareas.map(t => [t.tareaId, t]));
+
+            const alumnos = detalle.alumnos.map(alumno => {
+                if (alumno.estudianteId !== estudianteId) {
+                    return alumno;
+                }
+
+                const notas = alumno.notas.some(n => n.tareaId === tareaId)
+                    ? alumno.notas.map(n => n.tareaId === tareaId ? { ...n, valor } : n)
+                    : [...alumno.notas, { tareaId, valor }];
+
+                return this.recalcularMediasYFinal(alumno, notas, tareasById);
+            });
+
+            return { ...detalle, alumnos };
+        });
+    }
+
+    /**
+     * Inserta una nueva tarea en el estado local y prepara la nota vacia para cada alumno.
+     *
+     * @param tarea - Tarea creada en backend adaptada al formato de resumen.
+     */
+    private insertarTareaEnDetalle(tarea: TareaResumen): void {
+        this.detalleAsignatura.update(detalle => {
+            if (!detalle || detalle.tareas.some(t => t.tareaId === tarea.tareaId)) {
+                return detalle;
+            }
+
+            const tareas = [...detalle.tareas, tarea]
+                .sort((a, b) => a.trimestre - b.trimestre || a.nombre.localeCompare(b.nombre));
+
+            const alumnos = detalle.alumnos.map(alumno => ({
+                ...alumno,
+                notas: alumno.notas.some(n => n.tareaId === tarea.tareaId)
+                    ? alumno.notas
+                    : [...alumno.notas, { tareaId: tarea.tareaId, valor: null }]
+            }));
+
+            return { ...detalle, tareas, alumnos };
+        });
+    }
+
+    /**
+     * Recalcula medias trimestrales y nota final de un alumno a partir de sus notas.
+     *
+     * @param alumno - Alumno original.
+     * @param notas - Coleccion de notas actualizada.
+     * @param tareasById - Diccionario tareaId -> tarea.
+     * @returns Alumno con medias y nota final actualizadas.
+     */
+    private recalcularMediasYFinal(
+        alumno: AsignaturaAlumno,
+        notas: AsignaturaAlumno['notas'],
+        tareasById: Map<number, TareaResumen>
+    ): AsignaturaAlumno {
+        const mediaT1 = this.calcularMediaTrimestre(notas, tareasById, 1);
+        const mediaT2 = this.calcularMediaTrimestre(notas, tareasById, 2);
+        const mediaT3 = this.calcularMediaTrimestre(notas, tareasById, 3);
+
+        const notaFinal = mediaT1 !== null && mediaT2 !== null && mediaT3 !== null
+            ? this.redondear2((mediaT1 + mediaT2 + mediaT3) / 3)
+            : null;
+
+        return {
+            ...alumno,
+            notas,
+            medias: {
+                t1: mediaT1,
+                t2: mediaT2,
+                t3: mediaT3
+            },
+            notaFinal
+        };
+    }
+
+    /**
+     * Calcula la media de un trimestre sobre las tareas calificadas.
+     *
+     * @param notas - Notas del alumno.
+     * @param tareasById - Diccionario tareaId -> tarea.
+     * @param trimestre - Trimestre objetivo.
+     * @returns Media del trimestre o `null` si no hay ninguna nota numerica.
+     */
+    private calcularMediaTrimestre(
+        notas: AsignaturaAlumno['notas'],
+        tareasById: Map<number, TareaResumen>,
+        trimestre: number
+    ): number | null {
+        const valores = notas
+            .filter(nota => tareasById.get(nota.tareaId)?.trimestre === trimestre)
+            .map(nota => nota.valor)
+            .filter((valor): valor is number => valor !== null);
+
+        if (valores.length === 0) {
+            return null;
+        }
+
+        const suma = valores.reduce((acc, current) => acc + current, 0);
+        return this.redondear2(suma / valores.length);
+    }
+
+    /**
+     * Redondea un numero a dos decimales.
+     *
+     * @param valor - Valor a redondear.
+     * @returns Valor redondeado a dos decimales.
+     */
+    private redondear2(valor: number): number {
+        return Math.round(valor * 100) / 100;
     }
 }

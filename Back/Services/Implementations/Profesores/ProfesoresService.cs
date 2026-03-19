@@ -18,7 +18,6 @@ public class ProfesoresService(AppDbContext context, IPasswordService passwordSe
                 Id = p.Id,
                 Nombre = p.Nombre,
                 Correo = p.Correo,
-                EsAdmin = p.EsAdmin,
                 Imparticiones = p.ProfesorAsignaturaCursos.Select(i => new ProfesorImparticionDto
                 {
                     AsignaturaId = i.AsignaturaId,
@@ -41,8 +40,7 @@ public class ProfesoresService(AppDbContext context, IPasswordService passwordSe
             {
                 Id = p.Id,
                 Nombre = p.Nombre,
-                Correo = p.Correo,
-                EsAdmin = p.EsAdmin
+                Correo = p.Correo
             })
             .FirstOrDefaultAsync();
 
@@ -104,7 +102,7 @@ public class ProfesoresService(AppDbContext context, IPasswordService passwordSe
         var correo = dto.Correo.Trim().ToLowerInvariant();
 
         var correoDuplicado = await context.Profesores
-            .AnyAsync(p => p.Correo.ToLower() == correo);
+            .AnyAsync(p => p.Correo == correo);
 
         if (correoDuplicado)
         {
@@ -115,8 +113,7 @@ public class ProfesoresService(AppDbContext context, IPasswordService passwordSe
         {
             Nombre = dto.Nombre.Trim(),
             Correo = correo,
-            Contrasena = passwordService.Hash(dto.Contrasena.Trim()),
-            EsAdmin = dto.EsAdmin
+            Contrasena = passwordService.Hash(dto.Contrasena.Trim())
         };
         context.Profesores.Add(profesor);
         await context.SaveChangesAsync();
@@ -126,7 +123,6 @@ public class ProfesoresService(AppDbContext context, IPasswordService passwordSe
             Id = profesor.Id,
             Nombre = profesor.Nombre,
             Correo = profesor.Correo,
-            EsAdmin = profesor.EsAdmin,
             Imparticiones = new()
         });
     }
@@ -450,9 +446,20 @@ public class ProfesoresService(AppDbContext context, IPasswordService passwordSe
             return new NotFoundObjectResult("La asignatura no existe.");
         }
 
+        var nombreNormalizado = dto.Nombre.Trim();
+        var tareaDuplicada = await context.Tareas.AnyAsync(t =>
+            t.AsignaturaId == dto.AsignaturaId &&
+            t.Trimestre == dto.Trimestre &&
+            t.Nombre == nombreNormalizado);
+
+        if (tareaDuplicada)
+        {
+            return new BadRequestObjectResult($"Ya existe una tarea con el nombre '{nombreNormalizado}' en este trimestre para esta asignatura.");
+        }
+
         var tarea = new Tarea
         {
-            Nombre = dto.Nombre.Trim(),
+            Nombre = nombreNormalizado,
             Trimestre = dto.Trimestre,
             AsignaturaId = dto.AsignaturaId,
             ProfesorId = profesorId
@@ -512,13 +519,12 @@ public class ProfesoresService(AppDbContext context, IPasswordService passwordSe
             return new NotFoundObjectResult("El profesor no existe.");
 
         var correo = dto.Correo.Trim().ToLowerInvariant();
-        var correoUsado = await context.Profesores.AnyAsync(p => p.Correo.ToLower() == correo && p.Id != id);
+        var correoUsado = await context.Profesores.AnyAsync(p => p.Correo == correo && p.Id != id);
         if (correoUsado)
             return new BadRequestObjectResult("Ya existe otro profesor con ese correo.");
 
         profesor.Nombre = dto.Nombre.Trim();
         profesor.Correo = correo;
-        profesor.EsAdmin = dto.EsAdmin;
         if (!string.IsNullOrWhiteSpace(dto.NuevaContrasena))
             profesor.Contrasena = passwordService.Hash(dto.NuevaContrasena.Trim());
 
@@ -529,7 +535,6 @@ public class ProfesoresService(AppDbContext context, IPasswordService passwordSe
             Id = profesor.Id,
             Nombre = profesor.Nombre,
             Correo = profesor.Correo,
-            EsAdmin = profesor.EsAdmin,
             Imparticiones = await context.ProfesorAsignaturaCursos
                 .AsNoTracking()
                 .Where(i => i.ProfesorId == id)
@@ -564,5 +569,55 @@ public class ProfesoresService(AppDbContext context, IPasswordService passwordSe
         context.Profesores.Remove(profesor);
         await context.SaveChangesAsync();
         return new NoContentResult();
+    }
+
+    public async Task<IActionResult> GetTareasConNotasAsync(int asignaturaId, ClaimsPrincipal user)
+    {
+        if (!user.IsInRole("admin"))
+        {
+            return new ForbidResult();
+        }
+
+        var asignatura = await context.Asignaturas.FirstOrDefaultAsync(a => a.Id == asignaturaId);
+        if (asignatura is null)
+        {
+            return new NotFoundObjectResult("La asignatura no existe.");
+        }
+
+        var tareas = await context.Tareas
+            .AsNoTracking()
+            .Where(t => t.AsignaturaId == asignaturaId)
+            .OrderBy(t => t.Trimestre)
+            .ThenBy(t => t.Nombre)
+            .ToListAsync();
+
+        var tareaIds = tareas.Select(t => t.Id).ToList();
+
+        var notas = await context.Notas
+            .AsNoTracking()
+            .Where(n => tareaIds.Contains(n.TareaId))
+            .Include(n => n.Estudiante)
+            .ToListAsync();
+
+        var result = tareas.Select(t => new
+        {
+            TareaId = t.Id,
+            Nombre = t.Nombre,
+            Trimestre = t.Trimestre,
+            AsignaturaId = t.AsignaturaId,
+            Asignatura = asignatura.Nombre,
+            Notas = notas
+                .Where(n => n.TareaId == t.Id)
+                .Select(n => new
+                {
+                    EstudianteId = n.EstudianteId,
+                    Alumno = n.Estudiante!.Nombre,
+                    Valor = n.Valor
+                })
+                .OrderBy(x => x.Alumno)
+                .ToList()
+        }).ToList();
+
+        return new OkObjectResult(result);
     }
 }

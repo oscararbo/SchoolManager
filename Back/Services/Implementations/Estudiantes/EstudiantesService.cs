@@ -93,7 +93,7 @@ public class EstudiantesService(AppDbContext context, IPasswordService passwordS
         var correo = dto.Correo.Trim().ToLowerInvariant();
 
         var correoDuplicado = await context.Estudiantes
-            .AnyAsync(e => e.Correo.ToLower() == correo);
+            .AnyAsync(e => e.Correo == correo);
 
         if (correoDuplicado)
         {
@@ -292,7 +292,7 @@ public class EstudiantesService(AppDbContext context, IPasswordService passwordS
             return new NotFoundObjectResult("El estudiante no existe.");
 
         var correo = dto.Correo.Trim().ToLowerInvariant();
-        var correoUsado = await context.Estudiantes.AnyAsync(e => e.Correo.ToLower() == correo && e.Id != id);
+        var correoUsado = await context.Estudiantes.AnyAsync(e => e.Correo == correo && e.Id != id);
         if (correoUsado)
             return new BadRequestObjectResult("Ya existe otro estudiante con ese correo.");
 

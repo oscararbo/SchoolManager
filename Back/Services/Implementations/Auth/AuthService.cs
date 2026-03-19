@@ -22,18 +22,38 @@ public class AuthService(AppDbContext context, IConfiguration configuration, IPa
         var correo = request.Correo.Trim().ToLowerInvariant();
         var contrasena = request.Contrasena.Trim();
 
-        var profesor = await context.Profesores
-            .FirstOrDefaultAsync(p => p.Correo.ToLower() == correo);
+        // Buscar admin
+        var admin = await context.Admins
+            .FirstOrDefaultAsync(a => a.Correo == correo);
 
-        if (profesor is not null && passwordService.Verify(profesor.Contrasena, contrasena))
+        if (admin is not null && passwordService.Verify(admin.Contrasena, contrasena))
         {
-            var rol = profesor.EsAdmin ? "admin" : "profesor";
-            var token = GenerarToken(profesor.Id, correo, rol);
-            var refreshToken = await CrearRefreshTokenAsync(profesor.Id, rol);
+            var token = GenerarToken(admin.Id, correo, "admin");
+            var refreshToken = await CrearRefreshTokenAsync(admin.Id, "admin");
 
             return new OkObjectResult(new LoginResponseDto
             {
-                Rol = rol,
+                Rol = "admin",
+                Id = admin.Id,
+                Nombre = admin.Nombre,
+                Correo = correo,
+                Token = token,
+                RefreshToken = refreshToken
+            });
+        }
+
+        // Buscar profesor
+        var profesor = await context.Profesores
+            .FirstOrDefaultAsync(p => p.Correo == correo);
+
+        if (profesor is not null && passwordService.Verify(profesor.Contrasena, contrasena))
+        {
+            var token = GenerarToken(profesor.Id, correo, "profesor");
+            var refreshToken = await CrearRefreshTokenAsync(profesor.Id, "profesor");
+
+            return new OkObjectResult(new LoginResponseDto
+            {
+                Rol = "profesor",
                 Id = profesor.Id,
                 Nombre = profesor.Nombre,
                 Correo = correo,
@@ -42,9 +62,10 @@ public class AuthService(AppDbContext context, IConfiguration configuration, IPa
             });
         }
 
+        // Buscar estudiante
         var estudiante = await context.Estudiantes
             .Include(e => e.Curso)
-            .FirstOrDefaultAsync(e => e.Correo.ToLower() == correo);
+            .FirstOrDefaultAsync(e => e.Correo == correo);
 
         if (estudiante is not null && passwordService.Verify(estudiante.Contrasena, contrasena))
         {

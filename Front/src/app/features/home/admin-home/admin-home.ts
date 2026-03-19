@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, ViewChild } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -35,48 +35,52 @@ export class AdminHomeComponent implements OnInit {
     nuevoCursoNombre = '';
     editandoCursoId: number | null = null;
     editCursoNombre = '';
-    busquedaCursos = '';
+    busquedaCursos = signal('');
 
     nuevaAsignaturaNombre = '';
     nuevaAsignaturaCursoId: number | null = null;
-    filtroAsignaturasCursoId: number | null = null;
+    filtroAsignaturasCursoId = signal<number | null>(null);
     editandoAsignaturaId: number | null = null;
     editAsignaturaNombre = '';
     editAsignaturaCursoId: number | null = null;
-    busquedaAsignaturas = '';
+    busquedaAsignaturas = signal('');
 
     nuevoProfesorNombre = '';
     nuevoProfesorCorreo = '';
     nuevoProfesorContrasena = '';
-    nuevoProfesorEsAdmin = false;
-    filtroProfesoresCursoId: number | null = null;
+    filtroProfesoresCursoId = signal<number | null>(null);
     editandoProfesorId: number | null = null;
     editProfesorNombre = '';
     editProfesorCorreo = '';
-    editProfesorEsAdmin = false;
     editProfesorContrasena = '';
-    busquedaProfesores = '';
+    busquedaProfesores = signal('');
 
     nuevoEstudianteNombre = '';
     nuevoEstudianteCorreo = '';
     nuevoEstudianteContrasena = '';
     nuevoEstudianteCursoId: number | null = null;
-    filtroEstudiantesCursoId: number | null = null;
+    filtroEstudiantesCursoId = signal<number | null>(null);
     editandoEstudianteId: number | null = null;
     editEstudianteNombre = '';
     editEstudianteCorreo = '';
     editEstudianteCursoId: number | null = null;
     editEstudianteContrasena = '';
-    busquedaEstudiantes = '';
+    busquedaEstudiantes = signal('');
 
-    matriculaEstudianteId: number | null = null;
-    matriculaAsignaturaId: number | null = null;
-    filtroMatriculasCursoId: number | null = null;
+    matriculaEstudianteId = signal<number | null>(null);
+    matriculaAsignaturaId = signal<number | null>(null);
+    filtroMatriculasCursoId = signal<number | null>(null);
 
-    imparticionProfesorId: number | null = null;
-    imparticionAsignaturaId: number | null = null;
-    imparticionCursoId: number | null = null;
-    filtroImparticionesCursoId: number | null = null;
+    imparticionProfesorId = signal<number | null>(null);
+    imparticionAsignaturaId = signal<number | null>(null);
+    imparticionCursoId = signal<number | null>(null);
+    filtroImparticionesCursoId = signal<number | null>(null);
+
+    // Vista de tareas para admin
+    mostrarModalTareas = signal(false);
+    tareasConNotas = signal<any[]>([]);
+    tareaEnDetalle = signal<any | null>(null);
+    cargandoTareas = signal(false);
 
     csvCursosFile: File | null = null;
     csvAsignaturasFile: File | null = null;
@@ -113,10 +117,22 @@ export class AdminHomeComponent implements OnInit {
             this.asignaturas.set(asignaturas);
             this.profesores.set(profesores);
             this.estudiantes.set(estudiantes);
-        } catch {
+        } catch (e) {
+            this.mostrarError(e, 'No se pudieron cargar los datos iniciales.');
         } finally {
             this.cargando.set(false);
         }
+    }
+
+    /**
+     * Muestra de forma consistente los errores de operaciones CRUD en el panel de admin.
+     *
+     * @param error - Error capturado en la operacion.
+     * @param fallback - Mensaje de respaldo cuando no hay detalle disponible.
+     */
+    private mostrarError(error: unknown, fallback = 'No se pudo completar la operacion.'): void {
+        const message = error instanceof Error ? error.message : fallback;
+        this.toast.show(message || fallback, 'error');
     }
 
     /** Cancela cualquier edicion activa en todas las entidades. */
@@ -132,10 +148,11 @@ export class AdminHomeComponent implements OnInit {
      *
      * @returns Cursos que coinciden con el filtro actual.
      */
-    cursosVista(): CursoItem[] {
-        const q = this.busquedaCursos.trim().toLowerCase();
-        return q ? this.cursos().filter(c => c.nombre.toLowerCase().includes(q)) : this.cursos();
-    }
+    cursosVista = computed<CursoItem[]>(() => {
+        const q = this.busquedaCursos().trim().toLowerCase();
+        const cursos = this.cursos();
+        return q ? cursos.filter(c => c.nombre.toLowerCase().includes(q)) : cursos;
+    });
 
     /** Valida el formulario y crea un nuevo curso. Actualiza la lista local si tiene exito. */
     async crearCurso(): Promise<void> {
@@ -145,7 +162,7 @@ export class AdminHomeComponent implements OnInit {
             this.cursos.set([...this.cursos(), c]);
             this.nuevoCursoNombre = '';
             this.toast.show(`Curso "${c.nombre}" creado.`, 'success');
-        } catch { }
+        } catch (e) { this.mostrarError(e); }
     }
 
     /**
@@ -166,7 +183,7 @@ export class AdminHomeComponent implements OnInit {
             this.cursos.update(list => list.map(c => c.id === updated.id ? updated : c));
             this.editandoCursoId = null;
             this.toast.show('Curso actualizado.', 'success');
-        } catch { }
+        } catch (e) { this.mostrarError(e); }
     }
 
     /**
@@ -185,7 +202,7 @@ export class AdminHomeComponent implements OnInit {
             await this.api.deleteCurso(id);
             this.cursos.update(list => list.filter(c => c.id !== id));
             this.toast.show(`Curso "${nombre}" eliminado.`, 'success');
-        } catch { }
+        } catch (e) { this.mostrarError(e); }
     }
 
     /**
@@ -193,14 +210,15 @@ export class AdminHomeComponent implements OnInit {
      *
      * @returns Asignaturas que cumplen los filtros activos.
      */
-    asignaturasVista(): AsignaturaItem[] {
+    asignaturasVista = computed<AsignaturaItem[]>(() => {
         let result = this.asignaturas();
-        if (this.filtroAsignaturasCursoId)
-            result = result.filter(a => a.curso.id === Number(this.filtroAsignaturasCursoId));
-        const q = this.busquedaAsignaturas.trim().toLowerCase();
+        const cursoId = this.filtroAsignaturasCursoId();
+        if (cursoId)
+            result = result.filter(a => a.curso.id === Number(cursoId));
+        const q = this.busquedaAsignaturas().trim().toLowerCase();
         if (q) result = result.filter(a => a.nombre.toLowerCase().includes(q));
         return result;
-    }
+    });
 
     /** Valida el formulario y crea una nueva asignatura vinculada al curso seleccionado. */
     async crearAsignatura(): Promise<void> {
@@ -213,7 +231,7 @@ export class AdminHomeComponent implements OnInit {
             this.nuevaAsignaturaNombre = '';
             this.nuevaAsignaturaCursoId = null;
             this.toast.show(`Asignatura "${a.nombre}" creada.`, 'success');
-        } catch { }
+        } catch (e) { this.mostrarError(e); }
     }
 
     /**
@@ -236,7 +254,7 @@ export class AdminHomeComponent implements OnInit {
             this.asignaturas.update(list => list.map(a => a.id === updated.id ? updated : a));
             this.editandoAsignaturaId = null;
             this.toast.show('Asignatura actualizada.', 'success');
-        } catch { }
+        } catch (e) { this.mostrarError(e); }
     }
 
     /**
@@ -255,7 +273,7 @@ export class AdminHomeComponent implements OnInit {
             await this.api.deleteAsignatura(id);
             this.asignaturas.update(list => list.filter(a => a.id !== id));
             this.toast.show(`Asignatura "${nombre}" eliminada.`, 'success');
-        } catch { }
+        } catch (e) { this.mostrarError(e); }
     }
 
     /**
@@ -263,16 +281,17 @@ export class AdminHomeComponent implements OnInit {
      *
      * @returns Profesores que cumplen los filtros activos.
      */
-    profesoresVista(): ProfesorListItem[] {
+    profesoresVista = computed<ProfesorListItem[]>(() => {
         let result = this.profesores();
-        if (this.filtroProfesoresCursoId) {
-            const cursoId = Number(this.filtroProfesoresCursoId);
+        const cursoIdFiltro = this.filtroProfesoresCursoId();
+        if (cursoIdFiltro) {
+            const cursoId = Number(cursoIdFiltro);
             result = result.filter(p => p.imparticiones.some(i => i.cursoId === cursoId));
         }
-        const q = this.busquedaProfesores.trim().toLowerCase();
+        const q = this.busquedaProfesores().trim().toLowerCase();
         if (q) result = result.filter(p => p.nombre.toLowerCase().includes(q) || p.correo.toLowerCase().includes(q));
         return result;
-    }
+    });
 
     /** Valida el formulario y crea un nuevo profesor. Limpia el formulario si tiene exito. */
     async crearProfesor(): Promise<void> {
@@ -283,16 +302,14 @@ export class AdminHomeComponent implements OnInit {
             const p = await this.api.createProfesor({
                 nombre: this.nuevoProfesorNombre.trim(),
                 correo: this.nuevoProfesorCorreo.trim(),
-                contrasena: this.nuevoProfesorContrasena,
-                esAdmin: this.nuevoProfesorEsAdmin
+                contrasena: this.nuevoProfesorContrasena
             });
             this.profesores.set([...this.profesores(), p]);
             this.nuevoProfesorNombre = '';
             this.nuevoProfesorCorreo = '';
             this.nuevoProfesorContrasena = '';
-            this.nuevoProfesorEsAdmin = false;
             this.toast.show(`Profesor "${p.nombre}" creado.`, 'success');
-        } catch { }
+        } catch (e) { this.mostrarError(e); }
     }
 
     /**
@@ -304,7 +321,6 @@ export class AdminHomeComponent implements OnInit {
         this.editandoProfesorId = p.id;
         this.editProfesorNombre = p.nombre;
         this.editProfesorCorreo = p.correo;
-        this.editProfesorEsAdmin = p.esAdmin;
         this.editProfesorContrasena = '';
     }
 
@@ -314,7 +330,6 @@ export class AdminHomeComponent implements OnInit {
         const data: UpdateProfesorData = {
             nombre: this.editProfesorNombre.trim(),
             correo: this.editProfesorCorreo.trim(),
-            esAdmin: this.editProfesorEsAdmin,
             nuevaContrasena: this.editProfesorContrasena || undefined
         };
         try {
@@ -322,7 +337,7 @@ export class AdminHomeComponent implements OnInit {
             this.profesores.update(list => list.map(p => p.id === updated.id ? updated : p));
             this.editandoProfesorId = null;
             this.toast.show('Profesor actualizado.', 'success');
-        } catch { }
+        } catch (e) { this.mostrarError(e); }
     }
 
     /**
@@ -341,7 +356,7 @@ export class AdminHomeComponent implements OnInit {
             await this.api.deleteProfesor(id);
             this.profesores.update(list => list.filter(p => p.id !== id));
             this.toast.show(`Profesor "${nombre}" eliminado.`, 'success');
-        } catch { }
+        } catch (e) { this.mostrarError(e); }
     }
 
     /**
@@ -349,14 +364,15 @@ export class AdminHomeComponent implements OnInit {
      *
      * @returns Estudiantes que cumplen los filtros activos.
      */
-    estudiantesVista(): EstudianteItem[] {
+    estudiantesVista = computed<EstudianteItem[]>(() => {
         let result = this.estudiantes();
-        if (this.filtroEstudiantesCursoId)
-            result = result.filter(e => e.cursoId === Number(this.filtroEstudiantesCursoId));
-        const q = this.busquedaEstudiantes.trim().toLowerCase();
+        const cursoId = this.filtroEstudiantesCursoId();
+        if (cursoId)
+            result = result.filter(e => e.cursoId === Number(cursoId));
+        const q = this.busquedaEstudiantes().trim().toLowerCase();
         if (q) result = result.filter(e => e.nombre.toLowerCase().includes(q) || e.correo.toLowerCase().includes(q));
         return result;
-    }
+    });
 
     /** Valida el formulario y crea un nuevo estudiante asignado al curso seleccionado. */
     async crearEstudiante(): Promise<void> {
@@ -377,7 +393,7 @@ export class AdminHomeComponent implements OnInit {
             this.nuevoEstudianteContrasena = '';
             this.nuevoEstudianteCursoId = null;
             this.toast.show(`Estudiante "${e.nombre}" creado.`, 'success');
-        } catch { }
+        } catch (e) { this.mostrarError(e); }
     }
 
     /**
@@ -408,7 +424,7 @@ export class AdminHomeComponent implements OnInit {
             this.estudiantes.update(list => list.map(e => e.id === updated.id ? updated : e));
             this.editandoEstudianteId = null;
             this.toast.show('Estudiante actualizado.', 'success');
-        } catch { }
+        } catch (e) { this.mostrarError(e); }
     }
 
     /**
@@ -427,7 +443,7 @@ export class AdminHomeComponent implements OnInit {
             await this.api.deleteEstudiante(id);
             this.estudiantes.update(list => list.filter(e => e.id !== id));
             this.toast.show(`Estudiante "${nombre}" eliminado.`, 'success');
-        } catch { }
+        } catch (e) { this.mostrarError(e); }
     }
 
     /**
@@ -435,27 +451,46 @@ export class AdminHomeComponent implements OnInit {
      *
      * @returns Asignaturas del curso del estudiante, o todas si no hay estudiante seleccionado.
      */
-    asignaturasFiltradas(): AsignaturaItem[] {
-        if (!this.matriculaEstudianteId) return this.asignaturas();
-        const est = this.estudiantes().find(e => e.id === Number(this.matriculaEstudianteId));
+    asignaturasFiltradas = computed<AsignaturaItem[]>(() => {
+        const estudianteId = this.matriculaEstudianteId();
+        if (!estudianteId) return this.asignaturas();
+        const est = this.estudiantes().find(e => e.id === Number(estudianteId));
         if (!est) return this.asignaturas();
         return this.asignaturas().filter(a => a.curso.id === est.cursoId);
-    }
+    });
 
     /** Matricula al estudiante seleccionado en la asignatura seleccionada. */
     async matricularEstudiante(): Promise<void> {
-        if (!this.matriculaEstudianteId || !this.matriculaAsignaturaId) {
+        if (!this.matriculaEstudianteId() || !this.matriculaAsignaturaId()) {
             this.toast.show('Selecciona un estudiante y una asignatura.', 'warning'); return;
         }
+
+        const estudianteId = Number(this.matriculaEstudianteId());
+        const asignaturaId = Number(this.matriculaAsignaturaId());
         try {
-            await this.api.matricularEstudiante(
-                Number(this.matriculaEstudianteId), Number(this.matriculaAsignaturaId)
-            );
-            this.matriculaAsignaturaId = null;
+            await this.api.matricularEstudiante(estudianteId, asignaturaId);
+
+            const estudiante = this.estudiantes().find(e => e.id === estudianteId);
+            if (estudiante) {
+                this.asignaturas.update(list => list.map(asignatura => {
+                    if (asignatura.id !== asignaturaId) {
+                        return asignatura;
+                    }
+
+                    if (asignatura.alumnos.some(alumno => alumno.id === estudianteId)) {
+                        return asignatura;
+                    }
+
+                    return {
+                        ...asignatura,
+                        alumnos: [...asignatura.alumnos, { id: estudiante.id, nombre: estudiante.nombre }]
+                    };
+                }));
+            }
+
+            this.matriculaAsignaturaId.set(null);
             this.toast.show('Matricula realizada correctamente.', 'success');
-            const asignaturas = await this.api.getAsignaturas();
-            this.asignaturas.set(asignaturas);
-        } catch { }
+        } catch (e) { this.mostrarError(e); }
     }
 
     /**
@@ -463,8 +498,9 @@ export class AdminHomeComponent implements OnInit {
      *
      * @returns Lista de estudiantes con sus asignaturas matriculadas.
      */
-    matriculasVista(): Array<{ estudianteId: number; estudiante: string; curso: string | null; asignaturas: string[] }> {
-        const cursoFiltro = this.filtroMatriculasCursoId ? Number(this.filtroMatriculasCursoId) : null;
+    matriculasVista = computed<Array<{ estudianteId: number; estudiante: string; curso: string | null; asignaturas: string[] }>>(() => {
+        const cursoFiltroRaw = this.filtroMatriculasCursoId();
+        const cursoFiltro = cursoFiltroRaw ? Number(cursoFiltroRaw) : null;
         const estudiantes = this.estudiantes().filter(e => !cursoFiltro || e.cursoId === cursoFiltro);
         return estudiantes
             .map(e => ({
@@ -477,34 +513,63 @@ export class AdminHomeComponent implements OnInit {
                     .sort((a, b) => a.localeCompare(b))
             }))
             .sort((a, b) => a.estudiante.localeCompare(b.estudiante));
-    }
+    });
 
     /**
      * Devuelve las asignaturas disponibles para imparticion segun el curso seleccionado.
      *
      * @returns Asignaturas del curso seleccionado, o todas si no hay curso seleccionado.
      */
-    asignaturasDeImparticion(): AsignaturaItem[] {
-        if (!this.imparticionCursoId) return this.asignaturas();
-        return this.asignaturas().filter(a => a.curso.id === Number(this.imparticionCursoId));
-    }
+    asignaturasDeImparticion = computed<AsignaturaItem[]>(() => {
+        const cursoId = this.imparticionCursoId();
+        if (!cursoId) return this.asignaturas();
+        return this.asignaturas().filter(a => a.curso.id === Number(cursoId));
+    });
 
     /** Asigna al profesor seleccionado la imparticion de la asignatura y curso elegidos. */
     async asignarImparticion(): Promise<void> {
-        if (!this.imparticionProfesorId || !this.imparticionAsignaturaId || !this.imparticionCursoId) {
+        if (!this.imparticionProfesorId() || !this.imparticionAsignaturaId() || !this.imparticionCursoId()) {
             this.toast.show('Selecciona profesor, asignatura y curso.', 'warning'); return;
         }
+
+        const profesorId = Number(this.imparticionProfesorId());
+        const asignaturaId = Number(this.imparticionAsignaturaId());
+        const cursoId = Number(this.imparticionCursoId());
         try {
-            await this.api.asignarImparticion(
-                Number(this.imparticionProfesorId),
-                Number(this.imparticionAsignaturaId),
-                Number(this.imparticionCursoId)
-            );
-            this.imparticionAsignaturaId = null;
+            await this.api.asignarImparticion(profesorId, asignaturaId, cursoId);
+
+            const asignatura = this.asignaturas().find(a => a.id === asignaturaId);
+            const curso = this.cursos().find(c => c.id === cursoId);
+
+            if (asignatura && curso) {
+                this.profesores.update(list => list.map(profesor => {
+                    if (profesor.id !== profesorId) {
+                        return profesor;
+                    }
+
+                    const yaExiste = profesor.imparticiones.some(i => i.asignaturaId === asignaturaId && i.cursoId === cursoId);
+                    if (yaExiste) {
+                        return profesor;
+                    }
+
+                    return {
+                        ...profesor,
+                        imparticiones: [
+                            ...profesor.imparticiones,
+                            {
+                                asignaturaId,
+                                asignatura: asignatura.nombre,
+                                cursoId,
+                                curso: curso.nombre
+                            }
+                        ]
+                    };
+                }));
+            }
+
+            this.imparticionAsignaturaId.set(null);
             this.toast.show('Imparticion asignada correctamente.', 'success');
-            const profesores = await this.api.getProfesores();
-            this.profesores.set(profesores);
-        } catch { }
+        } catch (e) { this.mostrarError(e); }
     }
 
     /**
@@ -512,8 +577,9 @@ export class AdminHomeComponent implements OnInit {
      *
      * @returns Imparticiones que coinciden con el filtro de curso activo.
      */
-    imparticionesVista(): Array<{ profesorId: number; profesor: string; asignatura: string; cursoId: number; curso: string }> {
-        const cursoFiltro = this.filtroImparticionesCursoId ? Number(this.filtroImparticionesCursoId) : null;
+    imparticionesVista = computed<Array<{ profesorId: number; profesor: string; asignatura: string; cursoId: number; curso: string }>>(() => {
+        const cursoFiltroRaw = this.filtroImparticionesCursoId();
+        const cursoFiltro = cursoFiltroRaw ? Number(cursoFiltroRaw) : null;
         return this.profesores()
             .flatMap(p => p.imparticiones.map(i => ({
                 profesorId: p.id,
@@ -524,7 +590,7 @@ export class AdminHomeComponent implements OnInit {
             })))
             .filter(x => !cursoFiltro || x.cursoId === cursoFiltro)
             .sort((a, b) => a.curso.localeCompare(b.curso) || a.asignatura.localeCompare(b.asignatura));
-    }
+    });
 
     /**
      * Captura el archivo seleccionado en el input de tipo file y lo almacena segun la entidad.
@@ -562,7 +628,8 @@ export class AdminHomeComponent implements OnInit {
             this.csvResultado = resultado;
             this.toast.show(`Importacion de ${entidad}: ${resultado.creados} creados.`, 'success');
             await this.cargarTodo();
-        } catch {
+        } catch (e) {
+            this.mostrarError(e, `No se pudo importar el CSV de ${entidad}.`);
         } finally {
             this.csvCargando = false;
         }
@@ -577,7 +644,7 @@ export class AdminHomeComponent implements OnInit {
         const plantillas: Record<string, string> = {
             cursos: 'nombre\n1\u00baA\n1\u00baB\n2\u00baA',
             asignaturas: 'nombre,cursoNombre\nMatematicas,1\u00baA\nLengua,1\u00baA\nCiencias,1\u00baB',
-            profesores: 'nombre,correo,contrasena,esAdmin\nJuan Garcia,juan@colegio.es,Pass123,false',
+            profesores: 'nombre,correo,contrasena\nJuan Garcia,juan@colegio.es,Pass123',
             estudiantes: 'nombre,correo,contrasena,cursoNombre\nLucia Perez,lucia@colegio.es,Pass123,1\u00baA'
         };
         const csv = plantillas[entidad];
@@ -589,4 +656,31 @@ export class AdminHomeComponent implements OnInit {
         link.click();
         URL.revokeObjectURL(url);
     }
+
+    /** Abre el modal para ver las tareas de una asignatura con todas las notas. */
+    async verTareasAsignatura(asignaturaId: number): Promise<void> {
+        this.cargandoTareas.set(true);
+        try {
+            const tareas = await this.api.getTareasConNotas(asignaturaId);
+            this.tareasConNotas.set(tareas);
+            this.mostrarModalTareas.set(true);
+        } catch (e) {
+            this.mostrarError(e, 'No se pudieron cargar las tareas.');
+        } finally {
+            this.cargandoTareas.set(false);
+        }
+    }
+
+    /** Selecciona una tarea para verla en detalle en el modal. */
+    seleccionarTarea(tarea: any): void {
+        this.tareaEnDetalle.set(tarea);
+    }
+
+    /** Cierra el modal de tareas. */
+    cerrarModalTareas(): void {
+        this.mostrarModalTareas.set(false);
+        this.tareaEnDetalle.set(null);
+        this.tareasConNotas.set([]);
+    }
 }
+

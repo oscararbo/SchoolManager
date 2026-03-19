@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { NgClass, CommonModule, NgIf } from '@angular/common';
+import { NgClass, CommonModule } from '@angular/common';
 import { emailValidator } from '../../../core/validators/auth.validators';
 import { Router } from '@angular/router';
 import { SchoolApiService } from '../../../shared/services/school-api.service';
@@ -8,7 +8,7 @@ import { SessionService } from '../../../core/services/session.service';
 
 @Component({
     selector: 'app-login',
-    imports: [ReactiveFormsModule, NgClass, CommonModule, NgIf],
+    imports: [ReactiveFormsModule, NgClass, CommonModule],
     templateUrl: './login.html',
     styleUrls: ['./login.scss'],
     standalone: true,

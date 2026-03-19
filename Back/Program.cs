@@ -1,8 +1,8 @@
 using Back.Api.Data;
+using Back.Api.Infrastructure;
 using Back.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Core web API services.
 builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -110,6 +111,7 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IProfesoresService, ProfesoresService>();
 builder.Services.AddScoped<IEstudiantesService, EstudiantesService>();
 builder.Services.AddScoped<ICursosService, CursosService>();
@@ -130,30 +132,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
-app.UseExceptionHandler(handler =>
-{
-    handler.Run(async context =>
-    {
-        var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("GlobalExceptionHandler");
-        var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
-
-        if (exception is not null)
-        {
-            logger.LogError(exception, "Error no controlado procesando {Method} {Path}", context.Request.Method, context.Request.Path);
-        }
-
-        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-        context.Response.ContentType = "application/problem+json";
-
-        await context.Response.WriteAsJsonAsync(new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Se produjo un error interno en el servidor.",
-            Detail = app.Environment.IsDevelopment() ? exception?.Message : "Consulta los logs del backend para mas detalle.",
-            Instance = context.Request.Path
-        });
-    });
-});
+app.UseExceptionHandler();
 
 using (var scope = app.Services.CreateScope())
 {
@@ -163,18 +142,24 @@ using (var scope = app.Services.CreateScope())
     var seedAdminEmail = (builder.Configuration["SeedAdmin:Correo"] ?? "admin@prueba.com").Trim().ToLowerInvariant();
     var seedAdminPassword = builder.Configuration["SeedAdmin:Contrasena"] ?? "Prueba1";
 
-    db.Database.EnsureCreated();
+    if (db.Database.GetMigrations().Any())
+    {
+        db.Database.Migrate();
+    }
+    else
+    {
+        db.Database.EnsureCreated();
+    }
 
-    var adminExistente = db.Profesores.FirstOrDefault(p => p.Correo.ToLower() == seedAdminEmail);
+    var adminExistente = db.Admins.FirstOrDefault(a => a.Correo == seedAdminEmail);
 
     if (adminExistente is null)
     {
-        db.Profesores.Add(new()
+        db.Admins.Add(new()
         {
             Nombre = seedAdminName,
             Correo = seedAdminEmail,
-            Contrasena = passwordService.Hash(seedAdminPassword),
-            EsAdmin = true
+            Contrasena = passwordService.Hash(seedAdminPassword)
         });
     }
     else
@@ -182,7 +167,6 @@ using (var scope = app.Services.CreateScope())
         adminExistente.Nombre = seedAdminName;
         adminExistente.Correo = seedAdminEmail;
         adminExistente.Contrasena = passwordService.Hash(seedAdminPassword);
-        adminExistente.EsAdmin = true;
     }
 
     db.SaveChanges();
