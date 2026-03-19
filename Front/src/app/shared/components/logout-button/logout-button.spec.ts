@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { LogoutButton } from './logout-button';
+import { LogoutButtonComponent } from './logout-button.component';
 
-describe('LogoutButton', () => {
-    let component: LogoutButton;
-    let fixture: ComponentFixture<LogoutButton>;
+describe('LogoutButtonComponent', () => {
+    let component: LogoutButtonComponent;
+    let fixture: ComponentFixture<LogoutButtonComponent>;
     let logoutCalls = 0;
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
-            imports: [LogoutButton],
+            imports: [LogoutButtonComponent],
         }).compileComponents();
 
-        fixture = TestBed.createComponent(LogoutButton);
+        fixture = TestBed.createComponent(LogoutButtonComponent);
         component = fixture.componentInstance;
         logoutCalls = 0;
         component.logout.subscribe(() => {
@@ -26,22 +26,16 @@ describe('LogoutButton', () => {
     });
 
     it('should emit logout when user confirms', () => {
-        const originalConfirm = window.confirm;
-        window.confirm = () => true;
-
         component.solicitarCierreSesion();
+        component.confirmarCierreSesion();
 
         expect(logoutCalls).toBe(1);
-        window.confirm = originalConfirm;
     });
 
     it('should not emit logout when user cancels', () => {
-        const originalConfirm = window.confirm;
-        window.confirm = () => false;
-
         component.solicitarCierreSesion();
+        component.cancelarCierreSesion();
 
         expect(logoutCalls).toBe(0);
-        window.confirm = originalConfirm;
     });
 });

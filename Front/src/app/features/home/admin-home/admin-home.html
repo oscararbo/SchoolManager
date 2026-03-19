@@ -1,45 +1,25 @@
 <section class="vstack gap-3">
     <header>
-        <h2 class="h4 mb-1">Panel de administración</h2>
-        <p class="text-secondary mb-0">Gestión completa del centro escolar.</p>
+        <h2 class="h4 mb-1">Panel de administracion</h2>
+        <p class="text-secondary mb-0">Gestion completa del centro escolar.</p>
     </header>
 
     @if (cargando()) {
         <div class="alert alert-secondary" role="status">Cargando datos...</div>
     } @else {
-        @if (error()) {
-            <div class="alert alert-danger alert-dismissible" role="alert">
-                {{ error() }}
-                <button type="button" class="btn-close" (click)="error.set(null)"></button>
-            </div>
-        }
-        @if (exito()) {
-            <div class="alert alert-success" role="alert">{{ exito() }}</div>
-        }
 
         <!-- Tabs -->
         <ul class="nav nav-tabs flex-wrap">
-            <li class="nav-item">
-                <button class="nav-link" [class.active]="tabActiva() === 'cursos'" (click)="cambiarTab('cursos')">Cursos</button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" [class.active]="tabActiva() === 'asignaturas'" (click)="cambiarTab('asignaturas')">Asignaturas</button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" [class.active]="tabActiva() === 'profesores'" (click)="cambiarTab('profesores')">Profesores</button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" [class.active]="tabActiva() === 'estudiantes'" (click)="cambiarTab('estudiantes')">Estudiantes</button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" [class.active]="tabActiva() === 'matriculas'" (click)="cambiarTab('matriculas')">Matrículas</button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" [class.active]="tabActiva() === 'imparticiones'" (click)="cambiarTab('imparticiones')">Imparticiones</button>
-            </li>
+            <li class="nav-item"><button class="nav-link" [class.active]="tabActiva()==='cursos'" (click)="cambiarTab('cursos')">Cursos</button></li>
+            <li class="nav-item"><button class="nav-link" [class.active]="tabActiva()==='asignaturas'" (click)="cambiarTab('asignaturas')">Asignaturas</button></li>
+            <li class="nav-item"><button class="nav-link" [class.active]="tabActiva()==='profesores'" (click)="cambiarTab('profesores')">Profesores</button></li>
+            <li class="nav-item"><button class="nav-link" [class.active]="tabActiva()==='estudiantes'" (click)="cambiarTab('estudiantes')">Estudiantes</button></li>
+            <li class="nav-item"><button class="nav-link" [class.active]="tabActiva()==='matriculas'" (click)="cambiarTab('matriculas')">Matriculas</button></li>
+            <li class="nav-item"><button class="nav-link" [class.active]="tabActiva()==='imparticiones'" (click)="cambiarTab('imparticiones')">Imparticiones</button></li>
+            <li class="nav-item"><button class="nav-link" [class.active]="tabActiva()==='importar'" (click)="cambiarTab('importar')"><i class="bi bi-upload me-1"></i>Importar CSV</button></li>
         </ul>
 
-        <!-- ── Cursos ── -->
+        <!-- CURSOS -->
         @if (tabActiva() === 'cursos') {
             <div class="row g-3">
                 <div class="col-12 col-lg-5">
@@ -47,8 +27,8 @@
                         <div class="card-body">
                             <h5 class="card-title">Nuevo curso</h5>
                             <div class="mb-3">
-                                <label class="form-label" for="cursoNombre">Nombre</label>
-                                <input id="cursoNombre" class="form-control" type="text" placeholder="Ej: 1ºA"
+                                <label class="form-label">Nombre</label>
+                                <input class="form-control" type="text" placeholder="Ej: 1°A"
                                     [(ngModel)]="nuevoCursoNombre" (keydown.enter)="crearCurso()">
                             </div>
                             <button class="btn btn-primary" (click)="crearCurso()">Crear curso</button>
@@ -58,15 +38,31 @@
                 <div class="col-12 col-lg-7">
                     <div class="card shadow-sm border-0">
                         <div class="card-body">
-                            <h5 class="card-title">Cursos ({{ cursos().length }})</h5>
-                            @if (cursos().length === 0) {
-                                <p class="text-secondary mb-0">No hay cursos registrados.</p>
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                                <h5 class="card-title mb-0">Cursos ({{ cursosVista().length }})</h5>
+                                <input class="form-control form-control-sm" style="max-width:200px" type="text" placeholder="Buscar..." [(ngModel)]="busquedaCursos">
+                            </div>
+                            @if (cursosVista().length === 0) {
+                                <p class="text-secondary mb-0">No hay cursos.</p>
                             } @else {
                                 <ul class="list-group list-group-flush">
-                                    @for (c of cursos(); track c.id) {
-                                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                                            <span>{{ c.nombre }}</span>
-                                            <span class="badge text-bg-secondary rounded-pill">ID {{ c.id }}</span>
+                                    @for (c of cursosVista(); track c.id) {
+                                        <li class="list-group-item px-0">
+                                            @if (editandoCursoId === c.id) {
+                                                <div class="d-flex gap-2 align-items-center">
+                                                    <input class="form-control form-control-sm" [(ngModel)]="editCursoNombre" (keydown.enter)="guardarCurso()">
+                                                    <button class="btn btn-sm btn-success" (click)="guardarCurso()">Guardar</button>
+                                                    <button class="btn btn-sm btn-outline-secondary" (click)="editandoCursoId=null">Cancelar</button>
+                                                </div>
+                                            } @else {
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span>{{ c.nombre }}</span>
+                                                    <div class="d-flex gap-1">
+                                                        <button class="btn btn-sm btn-outline-primary" (click)="iniciarEditarCurso(c)">Editar</button>
+                                                        <button class="btn btn-sm btn-outline-danger" (click)="eliminarCurso(c.id, c.nombre)">Eliminar</button>
+                                                    </div>
+                                                </div>
+                                            }
                                         </li>
                                     }
                                 </ul>
@@ -77,28 +73,43 @@
             </div>
         }
 
-        <!-- ── Asignaturas ── -->
+        <!-- ASIGNATURAS -->
         @if (tabActiva() === 'asignaturas') {
             <div class="row g-3">
                 <div class="col-12 col-lg-5">
                     <div class="card shadow-sm border-0">
                         <div class="card-body">
-                            <h5 class="card-title">Nueva asignatura</h5>
-                            <div class="mb-3">
-                                <label class="form-label" for="asigNombre">Nombre</label>
-                                <input id="asigNombre" class="form-control" type="text" placeholder="Ej: Matemáticas"
-                                    [(ngModel)]="nuevaAsignaturaNombre">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label" for="asigCurso">Curso</label>
-                                <select id="asigCurso" class="form-select" [(ngModel)]="nuevaAsignaturaCursoId">
-                                    <option [ngValue]="null" disabled>Selecciona un curso</option>
-                                    @for (c of cursos(); track c.id) {
-                                        <option [value]="c.id">{{ c.nombre }}</option>
-                                    }
-                                </select>
-                            </div>
-                            <button class="btn btn-primary" (click)="crearAsignatura()">Crear asignatura</button>
+                            @if (editandoAsignaturaId !== null) {
+                                <h5 class="card-title">Editar asignatura</h5>
+                                <div class="mb-2">
+                                    <label class="form-label">Nombre</label>
+                                    <input class="form-control" type="text" [(ngModel)]="editAsignaturaNombre">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Curso</label>
+                                    <select class="form-select" [(ngModel)]="editAsignaturaCursoId">
+                                        @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
+                                    </select>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-success" (click)="guardarAsignatura()">Guardar</button>
+                                    <button class="btn btn-outline-secondary" (click)="editandoAsignaturaId=null">Cancelar</button>
+                                </div>
+                            } @else {
+                                <h5 class="card-title">Nueva asignatura</h5>
+                                <div class="mb-2">
+                                    <label class="form-label">Nombre</label>
+                                    <input class="form-control" type="text" [(ngModel)]="nuevaAsignaturaNombre">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Curso</label>
+                                    <select class="form-select" [(ngModel)]="nuevaAsignaturaCursoId">
+                                        <option [ngValue]="null" disabled>Selecciona un curso</option>
+                                        @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
+                                    </select>
+                                </div>
+                                <button class="btn btn-primary" (click)="crearAsignatura()">Crear asignatura</button>
+                            }
                         </div>
                     </div>
                 </div>
@@ -107,18 +118,17 @@
                         <div class="card-body">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                                 <h5 class="card-title mb-0">Asignaturas ({{ asignaturasVista().length }})</h5>
-                                <select class="form-select form-select-sm" style="max-width: 220px" [(ngModel)]="filtroAsignaturasCursoId">
-                                    <option [ngValue]="null">Todos los cursos</option>
-                                    @for (c of cursos(); track c.id) {
-                                        <option [value]="c.id">{{ c.nombre }}</option>
-                                    }
-                                </select>
+                                <div class="d-flex gap-2">
+                                    <input class="form-control form-control-sm" style="max-width:150px" type="text" placeholder="Buscar..." [(ngModel)]="busquedaAsignaturas">
+                                    <select class="form-select form-select-sm" style="max-width:160px" [(ngModel)]="filtroAsignaturasCursoId">
+                                        <option [ngValue]="null">Todos los cursos</option>
+                                        @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
+                                    </select>
+                                </div>
                             </div>
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover mb-0">
-                                    <thead>
-                                        <tr><th>Nombre</th><th>Curso</th><th>Profesores</th><th>Alumnos</th></tr>
-                                    </thead>
+                                    <thead><tr><th>Nombre</th><th>Curso</th><th>Profs</th><th>Alumnos</th><th></th></tr></thead>
                                     <tbody>
                                         @for (a of asignaturasVista(); track a.id) {
                                             <tr>
@@ -126,10 +136,14 @@
                                                 <td>{{ a.curso.nombre }}</td>
                                                 <td>{{ a.profesores.length }}</td>
                                                 <td>{{ a.alumnos.length }}</td>
+                                                <td class="text-end">
+                                                    <button class="btn btn-xs btn-outline-primary me-1" (click)="iniciarEditarAsignatura(a)">Editar</button>
+                                                    <button class="btn btn-xs btn-outline-danger" (click)="eliminarAsignatura(a.id, a.nombre)">Eliminar</button>
+                                                </td>
                                             </tr>
                                         }
                                         @if (asignaturasVista().length === 0) {
-                                            <tr><td colspan="4" class="text-secondary">Sin asignaturas.</td></tr>
+                                            <tr><td colspan="5" class="text-secondary">Sin asignaturas.</td></tr>
                                         }
                                     </tbody>
                                 </table>
@@ -140,30 +154,30 @@
             </div>
         }
 
-        <!-- ── Profesores ── -->
+        <!-- PROFESORES -->
         @if (tabActiva() === 'profesores') {
             <div class="row g-3">
                 <div class="col-12 col-lg-5">
                     <div class="card shadow-sm border-0">
                         <div class="card-body">
-                            <h5 class="card-title">Nuevo profesor</h5>
-                            <div class="mb-2">
-                                <label class="form-label" for="profNombre">Nombre</label>
-                                <input id="profNombre" class="form-control" type="text" [(ngModel)]="nuevoProfesorNombre">
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label" for="profCorreo">Correo</label>
-                                <input id="profCorreo" class="form-control" type="email" [(ngModel)]="nuevoProfesorCorreo">
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label" for="profPass">Contraseña</label>
-                                <input id="profPass" class="form-control" type="password" [(ngModel)]="nuevoProfesorContrasena">
-                            </div>
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="checkbox" id="profAdmin" [(ngModel)]="nuevoProfesorEsAdmin">
-                                <label class="form-check-label" for="profAdmin">¿Es administrador?</label>
-                            </div>
-                            <button class="btn btn-primary" (click)="crearProfesor()">Crear profesor</button>
+                            @if (editandoProfesorId !== null) {
+                                <h5 class="card-title">Editar profesor</h5>
+                                <div class="mb-2"><label class="form-label">Nombre</label><input class="form-control" type="text" [(ngModel)]="editProfesorNombre"></div>
+                                <div class="mb-2"><label class="form-label">Correo</label><input class="form-control" type="email" [(ngModel)]="editProfesorCorreo"></div>
+                                <div class="mb-2"><label class="form-label">Nueva contraseña (opcional)</label><input class="form-control" type="password" [(ngModel)]="editProfesorContrasena" placeholder="Dejar en blanco para no cambiar"></div>
+                                <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="editAdmin" [(ngModel)]="editProfesorEsAdmin"><label class="form-check-label" for="editAdmin">Es administrador</label></div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-success" (click)="guardarProfesor()">Guardar</button>
+                                    <button class="btn btn-outline-secondary" (click)="editandoProfesorId=null">Cancelar</button>
+                                </div>
+                            } @else {
+                                <h5 class="card-title">Nuevo profesor</h5>
+                                <div class="mb-2"><label class="form-label">Nombre</label><input class="form-control" type="text" [(ngModel)]="nuevoProfesorNombre"></div>
+                                <div class="mb-2"><label class="form-label">Correo</label><input class="form-control" type="email" [(ngModel)]="nuevoProfesorCorreo"></div>
+                                <div class="mb-2"><label class="form-label">Contrasena</label><input class="form-control" type="password" [(ngModel)]="nuevoProfesorContrasena"></div>
+                                <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="profAdmin" [(ngModel)]="nuevoProfesorEsAdmin"><label class="form-check-label" for="profAdmin">Es administrador</label></div>
+                                <button class="btn btn-primary" (click)="crearProfesor()">Crear profesor</button>
+                            }
                         </div>
                     </div>
                 </div>
@@ -172,36 +186,31 @@
                         <div class="card-body">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                                 <h5 class="card-title mb-0">Profesores ({{ profesoresVista().length }})</h5>
-                                <select class="form-select form-select-sm" style="max-width: 220px" [(ngModel)]="filtroProfesoresCursoId">
-                                    <option [ngValue]="null">Todos los cursos</option>
-                                    @for (c of cursos(); track c.id) {
-                                        <option [value]="c.id">{{ c.nombre }}</option>
-                                    }
-                                </select>
+                                <div class="d-flex gap-2">
+                                    <input class="form-control form-control-sm" style="max-width:150px" type="text" placeholder="Buscar..." [(ngModel)]="busquedaProfesores">
+                                    <select class="form-select form-select-sm" style="max-width:160px" [(ngModel)]="filtroProfesoresCursoId">
+                                        <option [ngValue]="null">Todos los cursos</option>
+                                        @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
+                                    </select>
+                                </div>
                             </div>
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover mb-0">
-                                    <thead>
-                                        <tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Asignaturas</th></tr>
-                                    </thead>
+                                    <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Asig.</th><th></th></tr></thead>
                                     <tbody>
                                         @for (p of profesoresVista(); track p.id) {
                                             <tr>
                                                 <td>{{ p.nombre }}</td>
                                                 <td class="text-secondary small">{{ p.correo }}</td>
-                                                <td>
-                                                    @if (p.esAdmin) {
-                                                        <span class="badge text-bg-danger">Admin</span>
-                                                    } @else {
-                                                        <span class="badge text-bg-success">Profesor</span>
-                                                    }
-                                                </td>
+                                                <td>@if (p.esAdmin) { <span class="badge text-bg-danger">Admin</span> } @else { <span class="badge text-bg-success">Profesor</span> }</td>
                                                 <td>{{ p.imparticiones.length }}</td>
+                                                <td class="text-end">
+                                                    <button class="btn btn-xs btn-outline-primary me-1" (click)="iniciarEditarProfesor(p)">Editar</button>
+                                                    <button class="btn btn-xs btn-outline-danger" (click)="eliminarProfesor(p.id, p.nombre)">Eliminar</button>
+                                                </td>
                                             </tr>
                                         }
-                                        @if (profesoresVista().length === 0) {
-                                            <tr><td colspan="4" class="text-secondary">Sin profesores.</td></tr>
-                                        }
+                                        @if (profesoresVista().length === 0) { <tr><td colspan="5" class="text-secondary">Sin profesores.</td></tr> }
                                     </tbody>
                                 </table>
                             </div>
@@ -211,35 +220,41 @@
             </div>
         }
 
-        <!-- ── Estudiantes ── -->
+        <!-- ESTUDIANTES -->
         @if (tabActiva() === 'estudiantes') {
             <div class="row g-3">
                 <div class="col-12 col-lg-5">
                     <div class="card shadow-sm border-0">
                         <div class="card-body">
-                            <h5 class="card-title">Nuevo estudiante</h5>
-                            <div class="mb-2">
-                                <label class="form-label" for="estNombre">Nombre</label>
-                                <input id="estNombre" class="form-control" type="text" [(ngModel)]="nuevoEstudianteNombre">
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label" for="estCorreo">Correo</label>
-                                <input id="estCorreo" class="form-control" type="email" [(ngModel)]="nuevoEstudianteCorreo">
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label" for="estPass">Contraseña</label>
-                                <input id="estPass" class="form-control" type="password" [(ngModel)]="nuevoEstudianteContrasena">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label" for="estCurso">Curso</label>
-                                <select id="estCurso" class="form-select" [(ngModel)]="nuevoEstudianteCursoId">
-                                    <option [ngValue]="null" disabled>Selecciona un curso</option>
-                                    @for (c of cursos(); track c.id) {
-                                        <option [value]="c.id">{{ c.nombre }}</option>
-                                    }
-                                </select>
-                            </div>
-                            <button class="btn btn-primary" (click)="crearEstudiante()">Crear estudiante</button>
+                            @if (editandoEstudianteId !== null) {
+                                <h5 class="card-title">Editar estudiante</h5>
+                                <div class="mb-2"><label class="form-label">Nombre</label><input class="form-control" type="text" [(ngModel)]="editEstudianteNombre"></div>
+                                <div class="mb-2"><label class="form-label">Correo</label><input class="form-control" type="email" [(ngModel)]="editEstudianteCorreo"></div>
+                                <div class="mb-2"><label class="form-label">Nueva contraseña (opcional)</label><input class="form-control" type="password" [(ngModel)]="editEstudianteContrasena" placeholder="Dejar en blanco para no cambiar"></div>
+                                <div class="mb-3">
+                                    <label class="form-label">Curso</label>
+                                    <select class="form-select" [(ngModel)]="editEstudianteCursoId">
+                                        @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
+                                    </select>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-success" (click)="guardarEstudiante()">Guardar</button>
+                                    <button class="btn btn-outline-secondary" (click)="editandoEstudianteId=null">Cancelar</button>
+                                </div>
+                            } @else {
+                                <h5 class="card-title">Nuevo estudiante</h5>
+                                <div class="mb-2"><label class="form-label">Nombre</label><input class="form-control" type="text" [(ngModel)]="nuevoEstudianteNombre"></div>
+                                <div class="mb-2"><label class="form-label">Correo</label><input class="form-control" type="email" [(ngModel)]="nuevoEstudianteCorreo"></div>
+                                <div class="mb-2"><label class="form-label">Contrasena</label><input class="form-control" type="password" [(ngModel)]="nuevoEstudianteContrasena"></div>
+                                <div class="mb-3">
+                                    <label class="form-label">Curso</label>
+                                    <select class="form-select" [(ngModel)]="nuevoEstudianteCursoId">
+                                        <option [ngValue]="null" disabled>Selecciona un curso</option>
+                                        @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
+                                    </select>
+                                </div>
+                                <button class="btn btn-primary" (click)="crearEstudiante()">Crear estudiante</button>
+                            }
                         </div>
                     </div>
                 </div>
@@ -248,29 +263,30 @@
                         <div class="card-body">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                                 <h5 class="card-title mb-0">Estudiantes ({{ estudiantesVista().length }})</h5>
-                                <select class="form-select form-select-sm" style="max-width: 220px" [(ngModel)]="filtroEstudiantesCursoId">
-                                    <option [ngValue]="null">Todos los cursos</option>
-                                    @for (c of cursos(); track c.id) {
-                                        <option [value]="c.id">{{ c.nombre }}</option>
-                                    }
-                                </select>
+                                <div class="d-flex gap-2">
+                                    <input class="form-control form-control-sm" style="max-width:150px" type="text" placeholder="Buscar..." [(ngModel)]="busquedaEstudiantes">
+                                    <select class="form-select form-select-sm" style="max-width:160px" [(ngModel)]="filtroEstudiantesCursoId">
+                                        <option [ngValue]="null">Todos los cursos</option>
+                                        @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
+                                    </select>
+                                </div>
                             </div>
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover mb-0">
-                                    <thead>
-                                        <tr><th>Nombre</th><th>Correo</th><th>Curso</th></tr>
-                                    </thead>
+                                    <thead><tr><th>Nombre</th><th>Correo</th><th>Curso</th><th></th></tr></thead>
                                     <tbody>
                                         @for (e of estudiantesVista(); track e.id) {
                                             <tr>
                                                 <td>{{ e.nombre }}</td>
                                                 <td class="text-secondary small">{{ e.correo }}</td>
                                                 <td>{{ e.curso ?? '—' }}</td>
+                                                <td class="text-end">
+                                                    <button class="btn btn-xs btn-outline-primary me-1" (click)="iniciarEditarEstudiante(e)">Editar</button>
+                                                    <button class="btn btn-xs btn-outline-danger" (click)="eliminarEstudiante(e.id, e.nombre)">Eliminar</button>
+                                                </td>
                                             </tr>
                                         }
-                                        @if (estudiantesVista().length === 0) {
-                                            <tr><td colspan="3" class="text-secondary">Sin estudiantes.</td></tr>
-                                        }
+                                        @if (estudiantesVista().length === 0) { <tr><td colspan="4" class="text-secondary">Sin estudiantes.</td></tr> }
                                     </tbody>
                                 </table>
                             </div>
@@ -280,7 +296,7 @@
             </div>
         }
 
-        <!-- ── Matrículas ── -->
+        <!-- MATRICULAS -->
         @if (tabActiva() === 'matriculas') {
             <div class="row g-3">
                 <div class="col-12 col-lg-5">
@@ -288,21 +304,17 @@
                         <div class="card-body">
                             <h5 class="card-title">Matricular alumno en asignatura</h5>
                             <div class="mb-3">
-                                <label class="form-label" for="matEst">Estudiante</label>
-                                <select id="matEst" class="form-select" [(ngModel)]="matriculaEstudianteId">
+                                <label class="form-label">Estudiante</label>
+                                <select class="form-select" [(ngModel)]="matriculaEstudianteId">
                                     <option [ngValue]="null" disabled>Selecciona un estudiante</option>
-                                    @for (e of estudiantes(); track e.id) {
-                                        <option [value]="e.id">{{ e.nombre }} — {{ e.curso ?? 'Sin curso' }}</option>
-                                    }
+                                    @for (e of estudiantes(); track e.id) { <option [value]="e.id">{{ e.nombre }} — {{ e.curso ?? 'Sin curso' }}</option> }
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label" for="matAsig">Asignatura</label>
-                                <select id="matAsig" class="form-select" [(ngModel)]="matriculaAsignaturaId">
+                                <label class="form-label">Asignatura</label>
+                                <select class="form-select" [(ngModel)]="matriculaAsignaturaId">
                                     <option [ngValue]="null" disabled>Selecciona una asignatura</option>
-                                    @for (a of asignaturasFiltradas(); track a.id) {
-                                        <option [value]="a.id">{{ a.nombre }} — {{ a.curso.nombre }}</option>
-                                    }
+                                    @for (a of asignaturasFiltradas(); track a.id) { <option [value]="a.id">{{ a.nombre }} — {{ a.curso.nombre }}</option> }
                                 </select>
                             </div>
                             <button class="btn btn-primary" (click)="matricularEstudiante()">Matricular</button>
@@ -314,36 +326,24 @@
                     <div class="card shadow-sm border-0">
                         <div class="card-body">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                                <h5 class="card-title mb-0">Listado de matrículas</h5>
-                                <select class="form-select form-select-sm" style="max-width: 220px" [(ngModel)]="filtroMatriculasCursoId">
+                                <h5 class="card-title mb-0">Listado de matriculas</h5>
+                                <select class="form-select form-select-sm" style="max-width:220px" [(ngModel)]="filtroMatriculasCursoId">
                                     <option [ngValue]="null">Todos los cursos</option>
-                                    @for (c of cursos(); track c.id) {
-                                        <option [value]="c.id">{{ c.nombre }}</option>
-                                    }
+                                    @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
                                 </select>
                             </div>
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover mb-0">
-                                    <thead>
-                                        <tr><th>Alumno</th><th>Curso</th><th>Asignaturas matriculadas</th></tr>
-                                    </thead>
+                                    <thead><tr><th>Alumno</th><th>Curso</th><th>Asignaturas matriculadas</th></tr></thead>
                                     <tbody>
                                         @for (m of matriculasVista(); track m.estudianteId) {
                                             <tr>
                                                 <td>{{ m.estudiante }}</td>
                                                 <td>{{ m.curso ?? '—' }}</td>
-                                                <td>
-                                                    @if (m.asignaturas.length) {
-                                                        {{ m.asignaturas.join(', ') }}
-                                                    } @else {
-                                                        <span class="text-secondary">Sin matrículas</span>
-                                                    }
-                                                </td>
+                                                <td>@if (m.asignaturas.length) { {{ m.asignaturas.join(', ') }} } @else { <span class="text-secondary">Sin matriculas</span> }</td>
                                             </tr>
                                         }
-                                        @if (matriculasVista().length === 0) {
-                                            <tr><td colspan="3" class="text-secondary">No hay alumnos para este filtro.</td></tr>
-                                        }
+                                        @if (matriculasVista().length === 0) { <tr><td colspan="3" class="text-secondary">No hay alumnos.</td></tr> }
                                     </tbody>
                                 </table>
                             </div>
@@ -353,7 +353,7 @@
             </div>
         }
 
-        <!-- ── Imparticiones ── -->
+        <!-- IMPARTICIONES -->
         @if (tabActiva() === 'imparticiones') {
             <div class="row g-3">
                 <div class="col-12 col-lg-5">
@@ -361,34 +361,27 @@
                         <div class="card-body">
                             <h5 class="card-title">Asignar profesor a asignatura</h5>
                             <div class="mb-3">
-                                <label class="form-label" for="impProf">Profesor</label>
-                                <select id="impProf" class="form-select" [(ngModel)]="imparticionProfesorId">
+                                <label class="form-label">Profesor</label>
+                                <select class="form-select" [(ngModel)]="imparticionProfesorId">
                                     <option [ngValue]="null" disabled>Selecciona un profesor</option>
-                                    @for (p of profesores(); track p.id) {
-                                        <option [value]="p.id">{{ p.nombre }}</option>
-                                    }
+                                    @for (p of profesores(); track p.id) { <option [value]="p.id">{{ p.nombre }}</option> }
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label" for="impCurso">Curso</label>
-                                <select id="impCurso" class="form-select" [(ngModel)]="imparticionCursoId">
+                                <label class="form-label">Curso</label>
+                                <select class="form-select" [(ngModel)]="imparticionCursoId">
                                     <option [ngValue]="null" disabled>Selecciona un curso</option>
-                                    @for (c of cursos(); track c.id) {
-                                        <option [value]="c.id">{{ c.nombre }}</option>
-                                    }
+                                    @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label" for="impAsig">Asignatura</label>
-                                <select id="impAsig" class="form-select" [(ngModel)]="imparticionAsignaturaId">
+                                <label class="form-label">Asignatura</label>
+                                <select class="form-select" [(ngModel)]="imparticionAsignaturaId">
                                     <option [ngValue]="null" disabled>Selecciona una asignatura</option>
-                                    @for (a of asignaturasDeImparticion(); track a.id) {
-                                        <option [value]="a.id">{{ a.nombre }}</option>
-                                    }
+                                    @for (a of asignaturasDeImparticion(); track a.id) { <option [value]="a.id">{{ a.nombre }}</option> }
                                 </select>
                             </div>
                             <button class="btn btn-primary" (click)="asignarImparticion()">Asignar</button>
-                            <p class="form-text text-secondary mt-2">La asignatura debe pertenecer al curso seleccionado.</p>
                         </div>
                     </div>
                 </div>
@@ -397,29 +390,19 @@
                         <div class="card-body">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                                 <h5 class="card-title mb-0">Listado de imparticiones</h5>
-                                <select class="form-select form-select-sm" style="max-width: 220px" [(ngModel)]="filtroImparticionesCursoId">
+                                <select class="form-select form-select-sm" style="max-width:220px" [(ngModel)]="filtroImparticionesCursoId">
                                     <option [ngValue]="null">Todos los cursos</option>
-                                    @for (c of cursos(); track c.id) {
-                                        <option [value]="c.id">{{ c.nombre }}</option>
-                                    }
+                                    @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
                                 </select>
                             </div>
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover mb-0">
-                                    <thead>
-                                        <tr><th>Profesor</th><th>Curso</th><th>Asignatura</th></tr>
-                                    </thead>
+                                    <thead><tr><th>Profesor</th><th>Curso</th><th>Asignatura</th></tr></thead>
                                     <tbody>
                                         @for (i of imparticionesVista(); track i.profesorId + '-' + i.cursoId + '-' + i.asignatura) {
-                                            <tr>
-                                                <td>{{ i.profesor }}</td>
-                                                <td>{{ i.curso }}</td>
-                                                <td>{{ i.asignatura }}</td>
-                                            </tr>
+                                            <tr><td>{{ i.profesor }}</td><td>{{ i.curso }}</td><td>{{ i.asignatura }}</td></tr>
                                         }
-                                        @if (imparticionesVista().length === 0) {
-                                            <tr><td colspan="3" class="text-secondary">Sin imparticiones para este filtro.</td></tr>
-                                        }
+                                        @if (imparticionesVista().length === 0) { <tr><td colspan="3" class="text-secondary">Sin imparticiones.</td></tr> }
                                     </tbody>
                                 </table>
                             </div>
@@ -428,5 +411,54 @@
                 </div>
             </div>
         }
+
+        <!-- IMPORTAR CSV -->
+        @if (tabActiva() === 'importar') {
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body">
+                            <h5 class="card-title mb-1">Importar datos desde CSV</h5>
+                            <p class="text-secondary small mb-3">Importa cursos, asignaturas, profesores y estudiantes desde archivos CSV. Descarga la plantilla para ver el formato esperado.</p>
+                        </div>
+                    </div>
+                </div>
+
+                @for (entidad of ['cursos', 'asignaturas', 'profesores', 'estudiantes']; track entidad) {
+                    <div class="col-12 col-md-6">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="card-title mb-0 text-capitalize">{{ entidad }}</h6>
+                                    <button class="btn btn-sm btn-outline-secondary" (click)="descargarPlantilla(entidad)">Descargar plantilla</button>
+                                </div>
+                                <input class="form-control form-control-sm mb-2" type="file" accept=".csv"
+                                    (change)="onCsvFileChange($event, entidad)">
+                                <button class="btn btn-sm btn-primary" [disabled]="csvCargando"
+                                    (click)="importarCsv(entidad)">
+                                    {{ csvCargando && csvEntidadActual === entidad ? 'Importando...' : 'Importar' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @if (csvResultado) {
+                    <div class="col-12">
+                        <div class="alert" [class.alert-success]="csvResultado.errores.length === 0" [class.alert-warning]="csvResultado.errores.length > 0">
+                            <strong>Resultado ({{ csvEntidadActual }}):</strong>
+                            {{ csvResultado.creados }} registros creados.
+                            @if (csvResultado.omitidos) { {{ csvResultado.omitidos }} omitidos (ya existian). }
+                            @if (csvResultado.errores.length > 0) {
+                                <ul class="mb-0 mt-1">
+                                    @for (err of csvResultado.errores; track err) { <li>{{ err }}</li> }
+                                </ul>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
     }
 </section>

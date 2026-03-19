@@ -6,22 +6,68 @@
     cursor: pointer;
 }
 
-.panel-card {
-    max-height: calc(100vh - 180px);
+.task-list {
+    max-height: 360px;
     overflow-y: auto;
 }
 
-.tabla-scroll {
-    overflow-y: auto;
-    max-height: calc(100vh - 360px);
+.task-chip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #dbe3f0;
+    border-radius: 12px;
+    background: #f8fafc;
+    text-align: left;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
-.fila-seleccionada {
-    > td {
-        background-color: #dbeafe !important;
-    }
+.task-chip:hover {
+    background: #eef4ff;
+    border-color: #93c5fd;
+}
 
-    > td:first-child {
-        font-weight: 600;
+.task-chip-active {
+    background: #dbeafe;
+    border-color: #3b82f6;
+}
+
+.student-grade-card,
+.student-summary-card,
+.trimester-card {
+    background: #ffffff;
+}
+
+.student-summary-toggle {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    border: 0;
+    background: transparent;
+    padding: 0;
+}
+
+.task-result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.empty-state {
+    min-height: 320px;
+    display: grid;
+    place-items: center;
+}
+
+@media (max-width: 991.98px) {
+    .student-summary-toggle {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }

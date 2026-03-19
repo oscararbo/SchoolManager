@@ -201,4 +201,61 @@ public class AsignaturasService(AppDbContext context) : IAsignaturasService
 
         return new CreatedResult($"/api/asignaturas/{asignatura.Id}", response);
     }
+
+    public async Task<IActionResult> UpdateAsync(int id, UpdateAsignaturaDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Nombre))
+            return new BadRequestObjectResult("El nombre de la asignatura es obligatorio.");
+
+        var asignatura = await context.Asignaturas.FindAsync(id);
+        if (asignatura is null)
+            return new NotFoundObjectResult("La asignatura no existe.");
+
+        var cursoExiste = await context.Cursos.AnyAsync(c => c.Id == dto.CursoId);
+        if (!cursoExiste)
+            return new BadRequestObjectResult("El curso indicado no existe.");
+
+        asignatura.Nombre = dto.Nombre.Trim();
+        asignatura.CursoId = dto.CursoId;
+        await context.SaveChangesAsync();
+
+        var cursoNombre = (await context.Cursos.AsNoTracking().Where(c => c.Id == dto.CursoId)
+            .Select(c => c.Nombre).FirstOrDefaultAsync())!;
+
+        return new OkObjectResult(new AsignaturaResumenDto
+        {
+            Id = asignatura.Id,
+            Nombre = asignatura.Nombre,
+            Curso = new AsignaturaCursoDto { Id = dto.CursoId, Nombre = cursoNombre },
+            Profesores = new(),
+            Alumnos = new()
+        });
+    }
+
+    public async Task<IActionResult> DeleteAsync(int id)
+    {
+        var asignatura = await context.Asignaturas.FindAsync(id);
+        if (asignatura is null)
+            return new NotFoundObjectResult("La asignatura no existe.");
+
+        // Remove related records manually (EF may not cascade everything)
+        var imparticiones = await context.ProfesorAsignaturaCursos.Where(i => i.AsignaturaId == id).ToListAsync();
+        context.ProfesorAsignaturaCursos.RemoveRange(imparticiones);
+
+        var matriculas = await context.EstudianteAsignaturas.Where(ea => ea.AsignaturaId == id).ToListAsync();
+        context.EstudianteAsignaturas.RemoveRange(matriculas);
+
+        var tareaIds = await context.Tareas.Where(t => t.AsignaturaId == id).Select(t => t.Id).ToListAsync();
+        if (tareaIds.Count > 0)
+        {
+            var notas = await context.Notas.Where(n => tareaIds.Contains(n.TareaId)).ToListAsync();
+            context.Notas.RemoveRange(notas);
+            var tareas = await context.Tareas.Where(t => t.AsignaturaId == id).ToListAsync();
+            context.Tareas.RemoveRange(tareas);
+        }
+
+        context.Asignaturas.Remove(asignatura);
+        await context.SaveChangesAsync();
+        return new NoContentResult();
+    }
 }

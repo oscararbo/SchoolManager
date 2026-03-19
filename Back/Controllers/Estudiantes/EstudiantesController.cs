@@ -31,6 +31,20 @@ public class EstudiantesController(IEstudiantesService estudiantesService) : Con
         return await estudiantesService.CreateAsync(dto);
     }
 
+    [HttpPut("{id:int}")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> Update(int id, UpdateEstudianteDto dto)
+    {
+        return await estudiantesService.UpdateAsync(id, dto);
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        return await estudiantesService.DeleteAsync(id);
+    }
+
     [HttpPost("{id:int}/asignaturas/{asignaturaId:int}")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Matricular(int id, int asignaturaId)

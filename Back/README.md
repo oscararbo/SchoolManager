@@ -1,145 +1,193 @@
-# School Manager API (Back)
+# Back
 
-Backend API en ASP.NET Core (.NET 10) para gestionar cursos, estudiantes, profesores, asignaturas y notas.
+API REST del sistema de gestion escolar. Expone autenticacion, administracion academica, panel del profesor, panel del alumno e importacion masiva por CSV.
 
-## Tecnologias
+## Stack
 
-- ASP.NET Core Web API (.NET 10)
-- Entity Framework Core
-- SQLite
+- ASP.NET Core 10
+- Entity Framework Core + SQLite
+- JWT Bearer
+- Swagger UI
 
-## Requisitos
-
-- .NET SDK 10
-
-## Ejecutar el proyecto
-
-Desde la carpeta Back:
+## Arranque local
 
 ```bash
+cd Back
 dotnet restore Back.Api.csproj
 dotnet run --project Back.Api.csproj
 ```
 
-La API queda disponible en:
+URL de desarrollo:
 
-- http://localhost:5014
-- https://localhost:7166
+- API: `http://localhost:5014`
+- Swagger UI: `http://localhost:5014/swagger`
 
 ## Configuracion
 
-La configuracion principal esta en appsettings.json.
+Archivo principal: `appsettings.json`.
 
-- ConnectionStrings.DefaultConnection: Data Source=school.db
+Claves relevantes:
 
-## Base de datos local
+- `ConnectionStrings:DefaultConnection`
+- `Jwt:Key`, `Jwt:Issuer`, `Jwt:Audience`
+- `SeedAdmin:Nombre`, `SeedAdmin:Correo`, `SeedAdmin:Contrasena`
 
-El proyecto usa SQLite con esta cadena en appsettings.json:
+## Administrador semilla
 
-- Data Source=school.db
+Al iniciar la API, `Program.cs` crea/actualiza un usuario admin con la configuracion de `SeedAdmin`.
 
-La base de datos se crea automaticamente al iniciar la API si no existe.
+Valores por defecto:
 
-Los archivos de base de datos (*.db, *.db-shm, *.db-wal) estan ignorados por Git en .gitignore, por lo que puedes tenerlos en local sin subirlos al repositorio.
+- nombre: `Administrador`
+- correo: `admin@prueba.com`
+- contrasena: `Prueba1`
 
-## Estructura ampliada
+## Estructura de archivos
 
 ```text
 Back/
-	Back.Api.csproj
-	Back.slnx
-	Program.cs
-	appsettings.json
-	README.md
-	Properties/
-		launchSettings.json
-	Controllers/
-		AsignaturasController.cs
-		CursosController.cs
-		EstudiantesController.cs
-		ProfesoresController.cs
-	Data/
-		AppDbContext.cs
-	Dtos/
-		AsignarImparticionDto.cs
-		CreateAsignaturaDto.cs
-		CreateCursoDto.cs
-		CreateEstudianteDto.cs
-		CreateProfesorDto.cs
-		PonerNotaDto.cs
-	Models/
-		Asignatura.cs
-		Curso.cs
-		Estudiante.cs
-		EstudianteAsignatura.cs
-		Nota.cs
-		Profesor.cs
-		ProfesorAsignaturaCurso.cs
+├── Back.Api.csproj
+├── Back.slnx
+├── Program.cs
+├── appsettings.json
+├── README.md
+├── Properties/
+│   └── launchSettings.json
+├── Controllers/
+│   ├── Admin/
+│   │   └── ImportController.cs
+│   ├── Auth/
+│   │   └── AuthController.cs
+│   ├── Asignaturas/
+│   │   └── AsignaturasController.cs
+│   ├── Cursos/
+│   │   └── CursosController.cs
+│   ├── Estudiantes/
+│   │   └── EstudiantesController.cs
+│   └── Profesores/
+│       └── ProfesoresController.cs
+├── Data/
+│   └── AppDbContext.cs
+├── Dtos/
+│   ├── Input/
+│   │   ├── Asignaturas/
+│   │   ├── Auth/
+│   │   ├── Cursos/
+│   │   ├── Estudiantes/
+│   │   └── Profesores/
+│   └── Output/
+│       ├── Asignaturas/
+│       ├── Auth/
+│       ├── Cursos/
+│       ├── Estudiantes/
+│       └── Profesores/
+├── Models/
+│   ├── Asignatura.cs
+│   ├── Curso.cs
+│   ├── Estudiante.cs
+│   ├── EstudianteAsignatura.cs
+│   ├── Nota.cs
+│   ├── Profesor.cs
+│   ├── ProfesorAsignaturaCurso.cs
+│   ├── RefreshToken.cs
+│   └── Tarea.cs
+└── Services/
+	├── Interfaces/
+	│   ├── Asignaturas/
+	│   ├── Auth/
+	│   ├── Cursos/
+	│   ├── Estudiantes/
+	│   ├── Profesores/
+	│   └── Security/
+	└── Implementations/
+		├── Asignaturas/
+		├── Auth/
+		├── Cursos/
+		├── Estudiantes/
+		├── Profesores/
+		└── Security/
 ```
 
-## Responsabilidad por capa
+## Responsabilidad por capas
 
-- Controllers: exponen endpoints REST y validan reglas de negocio.
-- Dtos: definen contratos de entrada de peticiones.
-- Models: entidades del dominio academico.
-- Data/AppDbContext: mapeo EF Core, claves compuestas, indices unicos y relaciones.
-- Program.cs: inyeccion de dependencias, configuracion EF Core, arranque de la API.
+- `Controllers`: entrada HTTP y delegacion en servicios.
+- `Services/Implementations`: reglas de negocio y validaciones.
+- `Dtos`: contratos de entrada/salida entre API y cliente.
+- `Models`: entidades persistidas.
+- `Data/AppDbContext`: mapeo EF, relaciones e indices.
+- `Program.cs`: DI, auth, CORS, swagger, excepciones globales.
 
-## Endpoints principales
+## Endpoints clave
 
-### Cursos
+### Auth
 
-- GET /api/cursos
-- GET /api/cursos/{id}
-- POST /api/cursos
+- `POST /api/auth/login`
+- `POST /api/auth/refresh`
+- `POST /api/auth/logout`
 
-### Estudiantes
+### Admin
 
-- GET /api/estudiantes
-- GET /api/estudiantes/{id}
-- POST /api/estudiantes
-- POST /api/estudiantes/{id}/asignaturas/{asignaturaId}
+- CRUD de cursos, asignaturas, profesores y estudiantes.
+- `POST /api/admin/csv/cursos`
+- `POST /api/admin/csv/asignaturas`
+- `POST /api/admin/csv/profesores`
+- `POST /api/admin/csv/estudiantes`
 
-### Profesores
+### Profesor
 
-- GET /api/profesores
-- GET /api/profesores/{id}
-- POST /api/profesores
-- POST /api/profesores/{profesorId}/imparticiones
-- POST /api/profesores/{profesorId}/notas
+- `GET /api/profesores/{id}/panel`
+- `GET /api/profesores/{profesorId}/asignaturas/{asignaturaId}/alumnos`
+- `POST /api/profesores/{profesorId}/tareas`
+- `POST /api/profesores/{profesorId}/notas`
+- `POST /api/profesores/{profesorId}/imparticiones`
 
-### Asignaturas
+### Alumno
 
-- GET /api/asignaturas
-- GET /api/asignaturas/{id}
-- POST /api/asignaturas
+- `GET /api/estudiantes/{id}/panel`
+- `POST /api/estudiantes/{id}/asignaturas/{asignaturaId}`
 
-## Flujo recomendado de uso
+## Uso de Swagger
 
-1. Crear cursos.
-2. Crear asignaturas asociadas a curso.
-3. Crear profesores.
-4. Crear estudiantes en su curso.
-5. Matricular estudiantes en asignaturas de su curso.
-6. Asignar imparticiones profesor-asignatura-curso.
-7. Registrar notas.
+1. Ejecuta la API.
+2. Abre `http://localhost:5014/swagger`.
+3. Haz login con `POST /api/auth/login`.
+4. Usa `Authorize` con `Bearer TU_TOKEN`.
+5. Prueba endpoints protegidos.
 
-## Reglas de negocio implementadas
+## Importacion CSV
 
-- Nota entre 0 y 10.
-- Un estudiante pertenece a un unico curso.
-- Una asignatura pertenece a un unico curso.
-- Un estudiante solo puede matricularse en asignaturas de su curso.
-- No se puede duplicar una asignatura con el mismo nombre en el mismo curso.
-- Una asignatura solo puede tener un profesor asignado.
-- Un profesor solo puede poner nota si imparte esa asignatura al curso del estudiante.
-- Un estudiante solo puede tener una nota por asignatura (se actualiza si se vuelve a registrar).
+Formatos:
 
-## Solucion de problemas
+- cursos: `nombre`
+- asignaturas: `nombre,cursoNombre`
+- profesores: `nombre,correo,contrasena,esAdmin`
+- estudiantes: `nombre,correo,contrasena,cursoNombre`
 
-- Si Visual Studio Code muestra errores CS0234 o CS1061 en EntityFrameworkCore, ejecuta:
+Comportamiento:
+
+- valida extension `.csv`
+- ignora cabecera
+- informa errores por linea
+- evita duplicados
+
+## Manejo de errores
+
+### Errores de negocio
+
+Mensajes claros en `400`, `404` y `403` segun regla violada.
+
+### Errores globales
+
+`Program.cs` transforma excepciones no controladas a `ProblemDetails` (`application/problem+json`) y las registra en logs.
+
+### Errores de autorizacion
+
+- `401`: `Necesitas iniciar sesion para acceder a este recurso.`
+- `403`: `No tienes permisos suficientes para realizar esta accion.`
+
+## Verificacion
 
 ```bash
-dotnet restore Back.Api.csproj
-dotnet build Back.Api.csproj -c Debug
+cd Back
+dotnet build Back.Api.csproj
 ```

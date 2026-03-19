@@ -33,7 +33,7 @@ export class Login implements OnInit {
 // #region LIFECYCLE
 
     /**
-     * Pre-fill form when coming from register flow
+     * Precarga correo y contrasena si se viene del flujo de registro.
      */
     ngOnInit() {
         const state = (history as any).state;
@@ -49,7 +49,8 @@ export class Login implements OnInit {
 // #region AUTH FLOW
 
     /**
-     * Validate and submit login credentials
+     * Valida el formulario y autentica al usuario contra la API.
+     * Si el login es correcto, persiste la sesion y redirige al panel principal.
      */
     async iniciarSesion() {
         this.mostrarErrores = true;

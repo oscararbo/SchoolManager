@@ -1,0 +1,14 @@
+.app-toast-container {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 1100;
+    padding: 1rem;
+    pointer-events: none;
+}
+
+.app-toast {
+    pointer-events: auto;
+    min-width: 280px;
+    max-width: 420px;
+}

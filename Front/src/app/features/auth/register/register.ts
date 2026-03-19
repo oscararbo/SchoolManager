@@ -35,6 +35,12 @@ export class Register {
 
 // #region HELPERS
 
+    /**
+     * Genera el hash SHA-256 de la contrasena en formato hexadecimal.
+     *
+     * @param password - Contrasena en texto plano.
+     * @returns Hash hexadecimal de 64 caracteres.
+     */
     private async hashPassword(password: string): Promise<string> {
         const enc = new TextEncoder();
         const data = enc.encode(password);
@@ -47,7 +53,8 @@ export class Register {
 // #region AVAILABILITY CHECKS
 
     /**
-     * Debounced email availability check
+     * Comprueba con debounce la disponibilidad del correo electronico.
+     * Espera 1 segundo desde el ultimo cambio antes de consultar la API.
      */
     checkEmailAvailability() {
         const email = this.formRegister.get('email')?.value?.trim();
@@ -77,7 +84,8 @@ export class Register {
     }
 
     /**
-     * Debounced username availability check
+     * Comprueba con debounce la disponibilidad del nombre de usuario.
+     * Espera 1 segundo desde el ultimo cambio antes de consultar la API.
      */
     checkUsernameAvailability() {
         const username = this.formRegister.get('username')?.value?.trim();

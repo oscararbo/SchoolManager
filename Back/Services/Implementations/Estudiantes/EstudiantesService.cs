@@ -277,4 +277,64 @@ public class EstudiantesService(AppDbContext context, IPasswordService passwordS
         var idClaim = user.FindFirstValue("id") ?? user.FindFirstValue(ClaimTypes.NameIdentifier);
         return int.TryParse(idClaim, out var usuarioId) && usuarioId == estudianteId;
     }
+
+    public async Task<IActionResult> UpdateAsync(int id, UpdateEstudianteDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Nombre))
+            return new BadRequestObjectResult("El nombre del estudiante es obligatorio.");
+        if (string.IsNullOrWhiteSpace(dto.Correo))
+            return new BadRequestObjectResult("El correo del estudiante es obligatorio.");
+        if (dto.CursoId <= 0)
+            return new BadRequestObjectResult("El curso del estudiante es obligatorio.");
+
+        var estudiante = await context.Estudiantes.FindAsync(id);
+        if (estudiante is null)
+            return new NotFoundObjectResult("El estudiante no existe.");
+
+        var correo = dto.Correo.Trim().ToLowerInvariant();
+        var correoUsado = await context.Estudiantes.AnyAsync(e => e.Correo.ToLower() == correo && e.Id != id);
+        if (correoUsado)
+            return new BadRequestObjectResult("Ya existe otro estudiante con ese correo.");
+
+        var cursoExiste = await context.Cursos.AnyAsync(c => c.Id == dto.CursoId);
+        if (!cursoExiste)
+            return new BadRequestObjectResult("El curso indicado no existe.");
+
+        estudiante.Nombre = dto.Nombre.Trim();
+        estudiante.Correo = correo;
+        estudiante.CursoId = dto.CursoId;
+        if (!string.IsNullOrWhiteSpace(dto.NuevaContrasena))
+            estudiante.Contrasena = passwordService.Hash(dto.NuevaContrasena.Trim());
+
+        await context.SaveChangesAsync();
+
+        var cursoNombre = (await context.Cursos.AsNoTracking().Where(c => c.Id == dto.CursoId)
+            .Select(c => c.Nombre).FirstOrDefaultAsync())!;
+
+        return new OkObjectResult(new EstudianteListItemDto
+        {
+            Id = estudiante.Id,
+            Nombre = estudiante.Nombre,
+            Correo = estudiante.Correo,
+            CursoId = estudiante.CursoId,
+            Curso = cursoNombre
+        });
+    }
+
+    public async Task<IActionResult> DeleteAsync(int id)
+    {
+        var estudiante = await context.Estudiantes.FindAsync(id);
+        if (estudiante is null)
+            return new NotFoundObjectResult("El estudiante no existe.");
+
+        var matriculas = await context.EstudianteAsignaturas.Where(ea => ea.EstudianteId == id).ToListAsync();
+        context.EstudianteAsignaturas.RemoveRange(matriculas);
+
+        var notas = await context.Notas.Where(n => n.EstudianteId == id).ToListAsync();
+        context.Notas.RemoveRange(notas);
+
+        context.Estudiantes.Remove(estudiante);
+        await context.SaveChangesAsync();
+        return new NoContentResult();
+    }
 }

@@ -6,14 +6,14 @@ import { AuthStateService } from '../../core/services/auth-state.service';
 import { ProfesorHomeComponent } from '../../features/home/profesor-home/profesor-home';
 import { AlumnoHomeComponent } from '../../features/home/alumno-home/alumno-home';
 import { AdminHomeComponent } from '../../features/home/admin-home/admin-home';
-import { LogoutButton } from '../../shared/components/logout-button/logout-button';
+import { LogoutButtonComponent } from '../../shared/components/logout-button/logout-button.component';
 import { SchoolApiService } from '../../shared/services/school-api.service';
-import { SessionExpiredDialogComponent } from '../../shared/components/session-expired-dialog/session-expired-dialog';
+import { SessionExpiredDialogComponent } from '../../shared/components/session-expired-dialog/session-expired-dialog.component';
 
 @Component({
   selector: 'app-home-layout',
   standalone: true,
-  imports: [CommonModule, ProfesorHomeComponent, AlumnoHomeComponent, AdminHomeComponent, LogoutButton, SessionExpiredDialogComponent],
+  imports: [CommonModule, ProfesorHomeComponent, AlumnoHomeComponent, AdminHomeComponent, LogoutButtonComponent, SessionExpiredDialogComponent],
   templateUrl: './home-layout.html',
   styleUrl: './home-layout.scss',
 })
@@ -25,6 +25,10 @@ export class HomeLayout implements OnInit {
   private schoolApiService = inject(SchoolApiService);
   protected authState = inject(AuthStateService);
 
+  /**
+   * Recupera la sesion activa y la asigna al Signal de vista.
+   * Redirige al login si no hay sesion.
+   */
   ngOnInit(): void {
     const currentSession = this.sessionService.getSession();
 
@@ -36,6 +40,10 @@ export class HomeLayout implements OnInit {
     this.session.set(currentSession);
   }
 
+  /**
+   * Invalida el refreshToken en el servidor, limpia la sesion local
+   * y redirige al login.
+   */
   async cerrarSesion(): Promise<void> {
     await this.schoolApiService.logout();
     this.router.navigate(['']);

@@ -31,6 +31,20 @@ public class ProfesoresController(IProfesoresService profesoresService) : Contro
         return await profesoresService.CreateAsync(dto);
     }
 
+    [HttpPut("{id:int}")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> Update(int id, UpdateProfesorDto dto)
+    {
+        return await profesoresService.UpdateAsync(id, dto);
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        return await profesoresService.DeleteAsync(id);
+    }
+
     [HttpGet("{id:int}/panel")]
     [Authorize(Policy = "ProfesorOrAdmin")]
     public async Task<IActionResult> GetPanelProfesor(int id)

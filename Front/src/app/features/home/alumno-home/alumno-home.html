@@ -14,32 +14,63 @@
         } @else {
             <article class="card shadow-sm border-0 panel-card">
                 <div class="card-body">
-                    <h3 class="h5">Resumen academico</h3>
-                    <div class="table-responsive tabla-scroll">
-                        <table class="table table-striped table-hover align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Asignatura</th>
-                                    <th>Profesor</th>
-                                    <th class="text-center">Media T1</th>
-                                    <th class="text-center">Media T2</th>
-                                    <th class="text-center">Media T3</th>
-                                    <th class="text-center">Nota final</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @for (materia of panel()!.materias; track materia.asignaturaId) {
-                                    <tr>
-                                        <td>{{ materia.asignatura }}</td>
-                                        <td>{{ materia.profesor ?? 'Pendiente' }}</td>
-                                        <td class="text-center">{{ materia.medias.t1 !== null ? materia.medias.t1.toFixed(2) : '-' }}</td>
-                                        <td class="text-center">{{ materia.medias.t2 !== null ? materia.medias.t2.toFixed(2) : '-' }}</td>
-                                        <td class="text-center">{{ materia.medias.t3 !== null ? materia.medias.t3.toFixed(2) : '-' }}</td>
-                                        <td class="text-center fw-bold">{{ materia.notaFinal !== null ? materia.notaFinal!.toFixed(2) : '-' }}</td>
-                                    </tr>
+                    <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+                        <h3 class="h5 mb-0">Resumen academico</h3>
+                        <span class="badge text-bg-light border">{{ panel()!.materias.length }} asignaturas</span>
+                    </div>
+
+                    <div class="vstack gap-3 tabla-scroll">
+                        @for (materia of panel()!.materias; track materia.asignaturaId) {
+                            <article class="subject-card border rounded-3 p-3">
+                                <button class="subject-toggle" type="button" (click)="toggleExpandir(materia.asignaturaId)">
+                                    <div>
+                                        <h4 class="h6 mb-1 text-start">{{ materia.asignatura }}</h4>
+                                        <p class="text-secondary small mb-0 text-start">Profesor: {{ materia.profesor ?? 'Pendiente' }}</p>
+                                    </div>
+                                    <div class="d-flex flex-wrap justify-content-end gap-2">
+                                        <span class="badge text-bg-light border">T1 {{ formatNota(materia.medias.t1) }}</span>
+                                        <span class="badge text-bg-light border">T2 {{ formatNota(materia.medias.t2) }}</span>
+                                        <span class="badge text-bg-light border">T3 {{ formatNota(materia.medias.t3) }}</span>
+                                        <span class="badge text-bg-primary">Final {{ formatNota(materia.notaFinal) }}</span>
+                                    </div>
+                                </button>
+
+                                @if (estaExpandida(materia.asignaturaId)) {
+                                    <div class="row g-3 mt-1">
+                                        @for (trimestre of [1, 2, 3]; track trimestre) {
+                                            @if (tieneTareasEnTrimestre(materia, trimestre)) {
+                                                <div class="col-12 col-lg-4">
+                                                    <section class="trimester-card rounded-3 border h-100 p-3">
+                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                            <h5 class="h6 mb-0">Trimestre {{ trimestre }}</h5>
+                                                            <span class="badge text-bg-light border">Media {{ formatNota(trimestre === 1 ? materia.medias.t1 : trimestre === 2 ? materia.medias.t2 : materia.medias.t3) }}</span>
+                                                        </div>
+
+                                                        <div class="vstack gap-2">
+                                                            @for (tarea of tareasPorTrimestre(materia, trimestre); track tarea.tareaId) {
+                                                                <div class="task-result-row rounded-3 bg-light px-3 py-2">
+                                                                    <span class="small fw-medium">{{ tarea.nombre }}</span>
+                                                                    <span class="badge"
+                                                                        [class.text-bg-success]="tarea.valor !== null && tarea.valor >= 5"
+                                                                        [class.text-bg-danger]="tarea.valor !== null && tarea.valor < 5"
+                                                                        [class.text-bg-secondary]="tarea.valor === null">
+                                                                        {{ tarea.valor === null ? 'Pendiente' : formatNota(tarea.valor) }}
+                                                                    </span>
+                                                                </div>
+                                                            } @empty {
+                                                                <div class="text-secondary small">Sin tareas registradas.</div>
+                                                            }
+                                                        </div>
+                                                    </section>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
                                 }
-                            </tbody>
-                        </table>
+                            </article>
+                        } @empty {
+                            <div class="alert alert-info mb-0">Todavia no tienes asignaturas matriculadas.</div>
+                        }
                     </div>
                 </div>
             </article>

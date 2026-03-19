@@ -3,10 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
     SchoolApiService,
-    CursoItem, AsignaturaItem, ProfesorListItem, EstudianteItem
+    CursoItem, AsignaturaItem, ProfesorListItem, EstudianteItem,
+    UpdateProfesorData, UpdateEstudianteData, CsvImportResult
 } from '../../../shared/services/school-api.service';
+import { ToastService } from '../../../core/services/toast.service';
 
-type AdminTab = 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matriculas' | 'imparticiones';
+type AdminTab = 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matriculas' | 'imparticiones' | 'importar';
 
 @Component({
     selector: 'app-admin-home',
@@ -17,59 +19,82 @@ type AdminTab = 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matri
 })
 export class AdminHomeComponent implements OnInit {
     private api = inject(SchoolApiService);
+    private toast = inject(ToastService);
 
     tabActiva = signal<AdminTab>('cursos');
     cargando = signal(false);
-    error = signal<string | null>(null);
-    exito = signal<string | null>(null);
 
-    // Data
     cursos = signal<CursoItem[]>([]);
     asignaturas = signal<AsignaturaItem[]>([]);
     profesores = signal<ProfesorListItem[]>([]);
     estudiantes = signal<EstudianteItem[]>([]);
 
-    // Curso form
     nuevoCursoNombre = '';
+    editandoCursoId: number | null = null;
+    editCursoNombre = '';
+    busquedaCursos = '';
 
-    // Asignatura form
     nuevaAsignaturaNombre = '';
     nuevaAsignaturaCursoId: number | null = null;
     filtroAsignaturasCursoId: number | null = null;
+    editandoAsignaturaId: number | null = null;
+    editAsignaturaNombre = '';
+    editAsignaturaCursoId: number | null = null;
+    busquedaAsignaturas = '';
 
-    // Profesor form
     nuevoProfesorNombre = '';
     nuevoProfesorCorreo = '';
     nuevoProfesorContrasena = '';
     nuevoProfesorEsAdmin = false;
     filtroProfesoresCursoId: number | null = null;
+    editandoProfesorId: number | null = null;
+    editProfesorNombre = '';
+    editProfesorCorreo = '';
+    editProfesorEsAdmin = false;
+    editProfesorContrasena = '';
+    busquedaProfesores = '';
 
-    // Estudiante form
     nuevoEstudianteNombre = '';
     nuevoEstudianteCorreo = '';
     nuevoEstudianteContrasena = '';
     nuevoEstudianteCursoId: number | null = null;
     filtroEstudiantesCursoId: number | null = null;
+    editandoEstudianteId: number | null = null;
+    editEstudianteNombre = '';
+    editEstudianteCorreo = '';
+    editEstudianteCursoId: number | null = null;
+    editEstudianteContrasena = '';
+    busquedaEstudiantes = '';
 
-    // Matrícula form
     matriculaEstudianteId: number | null = null;
     matriculaAsignaturaId: number | null = null;
     filtroMatriculasCursoId: number | null = null;
 
-    // Impartición form
     imparticionProfesorId: number | null = null;
     imparticionAsignaturaId: number | null = null;
     imparticionCursoId: number | null = null;
     filtroImparticionesCursoId: number | null = null;
 
+    csvCursosFile: File | null = null;
+    csvAsignaturasFile: File | null = null;
+    csvProfesoresFile: File | null = null;
+    csvEstudiantesFile: File | null = null;
+    csvResultado: CsvImportResult | null = null;
+    csvEntidadActual: string | null = null;
+    csvCargando = false;
+
     async ngOnInit(): Promise<void> {
         await this.cargarTodo();
     }
 
+    /**
+     * Activa la pestana indicada y cancela cualquier edicion en curso.
+     *
+     * @param tab - Pestana a seleccionar.
+     */
     cambiarTab(tab: AdminTab): void {
         this.tabActiva.set(tab);
-        this.error.set(null);
-        this.exito.set(null);
+        this.cancelarEdicion();
     }
 
     private async cargarTodo(): Promise<void> {
@@ -85,65 +110,164 @@ export class AdminHomeComponent implements OnInit {
             this.asignaturas.set(asignaturas);
             this.profesores.set(profesores);
             this.estudiantes.set(estudiantes);
-        } catch (e) {
-            this.error.set((e as Error).message);
+        } catch {
         } finally {
             this.cargando.set(false);
         }
     }
 
-    private mostrarExito(msg: string): void {
-        this.exito.set(msg);
-        this.error.set(null);
-        setTimeout(() => this.exito.set(null), 3000);
+    /** Cancela cualquier edicion activa en todas las entidades. */
+    cancelarEdicion(): void {
+        this.editandoCursoId = null;
+        this.editandoAsignaturaId = null;
+        this.editandoProfesorId = null;
+        this.editandoEstudianteId = null;
     }
 
-    // ── Cursos ────────────────────────────────────────────────────────────────
+    /**
+     * Devuelve la lista de cursos filtrada por el texto de busqueda.
+     *
+     * @returns Cursos que coinciden con el filtro actual.
+     */
+    cursosVista(): CursoItem[] {
+        const q = this.busquedaCursos.trim().toLowerCase();
+        return q ? this.cursos().filter(c => c.nombre.toLowerCase().includes(q)) : this.cursos();
+    }
 
+    /** Valida el formulario y crea un nuevo curso. Actualiza la lista local si tiene exito. */
     async crearCurso(): Promise<void> {
-        if (!this.nuevoCursoNombre.trim()) {
-            this.error.set('El nombre del curso es obligatorio.');
-            return;
-        }
-        this.error.set(null);
+        if (!this.nuevoCursoNombre.trim()) { this.toast.show('El nombre del curso es obligatorio.', 'warning'); return; }
         try {
             const c = await this.api.createCurso(this.nuevoCursoNombre.trim());
             this.cursos.set([...this.cursos(), c]);
             this.nuevoCursoNombre = '';
-            this.mostrarExito(`Curso "${c.nombre}" creado.`);
-        } catch (e) { this.error.set((e as Error).message); }
+            this.toast.show(`Curso "${c.nombre}" creado.`, 'success');
+        } catch { }
     }
 
-    // ── Asignaturas ───────────────────────────────────────────────────────────
+    /**
+     * Activa el modo edicion para el curso indicado.
+     *
+     * @param c - Curso que se va a editar.
+     */
+    iniciarEditarCurso(c: CursoItem): void {
+        this.editandoCursoId = c.id;
+        this.editCursoNombre = c.nombre;
+    }
 
+    /** Guarda los cambios del curso en edicion y actualiza la lista local. */
+    async guardarCurso(): Promise<void> {
+        if (!this.editandoCursoId || !this.editCursoNombre.trim()) return;
+        try {
+            const updated = await this.api.updateCurso(this.editandoCursoId, this.editCursoNombre.trim());
+            this.cursos.update(list => list.map(c => c.id === updated.id ? updated : c));
+            this.editandoCursoId = null;
+            this.toast.show('Curso actualizado.', 'success');
+        } catch { }
+    }
+
+    /**
+     * Pide confirmacion y elimina el curso con sus dependencias.
+     *
+     * @param id - Identificador del curso.
+     * @param nombre - Nombre del curso (para el dialogo de confirmacion).
+     */
+    async eliminarCurso(id: number, nombre: string): Promise<void> {
+        if (!confirm(`¿Eliminar el curso "${nombre}"? Esta accion no se puede deshacer.`)) return;
+        try {
+            await this.api.deleteCurso(id);
+            this.cursos.update(list => list.filter(c => c.id !== id));
+            this.toast.show(`Curso "${nombre}" eliminado.`, 'success');
+        } catch { }
+    }
+
+    /**
+     * Devuelve las asignaturas filtradas por curso y texto de busqueda.
+     *
+     * @returns Asignaturas que cumplen los filtros activos.
+     */
+    asignaturasVista(): AsignaturaItem[] {
+        let result = this.asignaturas();
+        if (this.filtroAsignaturasCursoId)
+            result = result.filter(a => a.curso.id === Number(this.filtroAsignaturasCursoId));
+        const q = this.busquedaAsignaturas.trim().toLowerCase();
+        if (q) result = result.filter(a => a.nombre.toLowerCase().includes(q));
+        return result;
+    }
+
+    /** Valida el formulario y crea una nueva asignatura vinculada al curso seleccionado. */
     async crearAsignatura(): Promise<void> {
         if (!this.nuevaAsignaturaNombre.trim() || !this.nuevaAsignaturaCursoId) {
-            this.error.set('Nombre y curso son obligatorios para la asignatura.');
-            return;
+            this.toast.show('Nombre y curso son obligatorios.', 'warning'); return;
         }
-        this.error.set(null);
         try {
             const a = await this.api.createAsignatura(this.nuevaAsignaturaNombre.trim(), this.nuevaAsignaturaCursoId);
             this.asignaturas.set([...this.asignaturas(), a]);
             this.nuevaAsignaturaNombre = '';
             this.nuevaAsignaturaCursoId = null;
-            this.mostrarExito(`Asignatura "${a.nombre}" creada.`);
-        } catch (e) { this.error.set((e as Error).message); }
+            this.toast.show(`Asignatura "${a.nombre}" creada.`, 'success');
+        } catch { }
     }
 
-    asignaturasVista(): AsignaturaItem[] {
-        if (!this.filtroAsignaturasCursoId) return this.asignaturas();
-        return this.asignaturas().filter(a => a.curso.id === Number(this.filtroAsignaturasCursoId));
+    /**
+     * Activa el modo edicion para la asignatura indicada.
+     *
+     * @param a - Asignatura que se va a editar.
+     */
+    iniciarEditarAsignatura(a: AsignaturaItem): void {
+        this.editandoAsignaturaId = a.id;
+        this.editAsignaturaNombre = a.nombre;
+        this.editAsignaturaCursoId = a.curso.id;
     }
 
-    // ── Profesores ────────────────────────────────────────────────────────────
+    /** Guarda los cambios de la asignatura en edicion y actualiza la lista local. */
+    async guardarAsignatura(): Promise<void> {
+        if (!this.editandoAsignaturaId || !this.editAsignaturaNombre.trim() || !this.editAsignaturaCursoId) return;
+        try {
+            const updated = await this.api.updateAsignatura(
+                this.editandoAsignaturaId, this.editAsignaturaNombre.trim(), this.editAsignaturaCursoId);
+            this.asignaturas.update(list => list.map(a => a.id === updated.id ? updated : a));
+            this.editandoAsignaturaId = null;
+            this.toast.show('Asignatura actualizada.', 'success');
+        } catch { }
+    }
 
+    /**
+     * Pide confirmacion y elimina la asignatura con sus tareas y notas.
+     *
+     * @param id - Identificador de la asignatura.
+     * @param nombre - Nombre de la asignatura (para el dialogo de confirmacion).
+     */
+    async eliminarAsignatura(id: number, nombre: string): Promise<void> {
+        if (!confirm(`¿Eliminar la asignatura "${nombre}"? Se eliminaran sus tareas y notas.`)) return;
+        try {
+            await this.api.deleteAsignatura(id);
+            this.asignaturas.update(list => list.filter(a => a.id !== id));
+            this.toast.show(`Asignatura "${nombre}" eliminada.`, 'success');
+        } catch { }
+    }
+
+    /**
+     * Devuelve los profesores filtrados por curso y texto de busqueda.
+     *
+     * @returns Profesores que cumplen los filtros activos.
+     */
+    profesoresVista(): ProfesorListItem[] {
+        let result = this.profesores();
+        if (this.filtroProfesoresCursoId) {
+            const cursoId = Number(this.filtroProfesoresCursoId);
+            result = result.filter(p => p.imparticiones.some(i => i.cursoId === cursoId));
+        }
+        const q = this.busquedaProfesores.trim().toLowerCase();
+        if (q) result = result.filter(p => p.nombre.toLowerCase().includes(q) || p.correo.toLowerCase().includes(q));
+        return result;
+    }
+
+    /** Valida el formulario y crea un nuevo profesor. Limpia el formulario si tiene exito. */
     async crearProfesor(): Promise<void> {
         if (!this.nuevoProfesorNombre.trim() || !this.nuevoProfesorCorreo.trim() || !this.nuevoProfesorContrasena) {
-            this.error.set('Nombre, correo y contraseña son obligatorios.');
-            return;
+            this.toast.show('Nombre, correo y contrasena son obligatorios.', 'warning'); return;
         }
-        this.error.set(null);
         try {
             const p = await this.api.createProfesor({
                 nombre: this.nuevoProfesorNombre.trim(),
@@ -156,25 +280,75 @@ export class AdminHomeComponent implements OnInit {
             this.nuevoProfesorCorreo = '';
             this.nuevoProfesorContrasena = '';
             this.nuevoProfesorEsAdmin = false;
-            this.mostrarExito(`Profesor "${p.nombre}" creado.`);
-        } catch (e) { this.error.set((e as Error).message); }
+            this.toast.show(`Profesor "${p.nombre}" creado.`, 'success');
+        } catch { }
     }
 
-    profesoresVista(): ProfesorListItem[] {
-        if (!this.filtroProfesoresCursoId) return this.profesores();
-        const cursoId = Number(this.filtroProfesoresCursoId);
-        return this.profesores().filter(p => p.imparticiones.some(i => i.cursoId === cursoId));
+    /**
+     * Activa el modo edicion para el profesor indicado.
+     *
+     * @param p - Profesor que se va a editar.
+     */
+    iniciarEditarProfesor(p: ProfesorListItem): void {
+        this.editandoProfesorId = p.id;
+        this.editProfesorNombre = p.nombre;
+        this.editProfesorCorreo = p.correo;
+        this.editProfesorEsAdmin = p.esAdmin;
+        this.editProfesorContrasena = '';
     }
 
-    // ── Estudiantes ───────────────────────────────────────────────────────────
+    /** Guarda los cambios del profesor en edicion y actualiza la lista local. */
+    async guardarProfesor(): Promise<void> {
+        if (!this.editandoProfesorId || !this.editProfesorNombre.trim() || !this.editProfesorCorreo.trim()) return;
+        const data: UpdateProfesorData = {
+            nombre: this.editProfesorNombre.trim(),
+            correo: this.editProfesorCorreo.trim(),
+            esAdmin: this.editProfesorEsAdmin,
+            nuevaContrasena: this.editProfesorContrasena || undefined
+        };
+        try {
+            const updated = await this.api.updateProfesor(this.editandoProfesorId, data);
+            this.profesores.update(list => list.map(p => p.id === updated.id ? updated : p));
+            this.editandoProfesorId = null;
+            this.toast.show('Profesor actualizado.', 'success');
+        } catch { }
+    }
 
+    /**
+     * Pide confirmacion y elimina el profesor con sus imparticiones y tareas.
+     *
+     * @param id - Identificador del profesor.
+     * @param nombre - Nombre del profesor (para el dialogo de confirmacion).
+     */
+    async eliminarProfesor(id: number, nombre: string): Promise<void> {
+        if (!confirm(`¿Eliminar al profesor "${nombre}"? Se eliminaran sus imparticiones y tareas.`)) return;
+        try {
+            await this.api.deleteProfesor(id);
+            this.profesores.update(list => list.filter(p => p.id !== id));
+            this.toast.show(`Profesor "${nombre}" eliminado.`, 'success');
+        } catch { }
+    }
+
+    /**
+     * Devuelve los estudiantes filtrados por curso y texto de busqueda.
+     *
+     * @returns Estudiantes que cumplen los filtros activos.
+     */
+    estudiantesVista(): EstudianteItem[] {
+        let result = this.estudiantes();
+        if (this.filtroEstudiantesCursoId)
+            result = result.filter(e => e.cursoId === Number(this.filtroEstudiantesCursoId));
+        const q = this.busquedaEstudiantes.trim().toLowerCase();
+        if (q) result = result.filter(e => e.nombre.toLowerCase().includes(q) || e.correo.toLowerCase().includes(q));
+        return result;
+    }
+
+    /** Valida el formulario y crea un nuevo estudiante asignado al curso seleccionado. */
     async crearEstudiante(): Promise<void> {
         if (!this.nuevoEstudianteNombre.trim() || !this.nuevoEstudianteCorreo.trim() ||
             !this.nuevoEstudianteContrasena || !this.nuevoEstudianteCursoId) {
-            this.error.set('Todos los campos del estudiante son obligatorios.');
-            return;
+            this.toast.show('Todos los campos del estudiante son obligatorios.', 'warning'); return;
         }
-        this.error.set(null);
         try {
             const e = await this.api.createEstudiante({
                 nombre: this.nuevoEstudianteNombre.trim(),
@@ -187,17 +361,61 @@ export class AdminHomeComponent implements OnInit {
             this.nuevoEstudianteCorreo = '';
             this.nuevoEstudianteContrasena = '';
             this.nuevoEstudianteCursoId = null;
-            this.mostrarExito(`Estudiante "${e.nombre}" creado.`);
-        } catch (e) { this.error.set((e as Error).message); }
+            this.toast.show(`Estudiante "${e.nombre}" creado.`, 'success');
+        } catch { }
     }
 
-    estudiantesVista(): EstudianteItem[] {
-        if (!this.filtroEstudiantesCursoId) return this.estudiantes();
-        return this.estudiantes().filter(e => e.cursoId === Number(this.filtroEstudiantesCursoId));
+    /**
+     * Activa el modo edicion para el estudiante indicado.
+     *
+     * @param e - Estudiante que se va a editar.
+     */
+    iniciarEditarEstudiante(e: EstudianteItem): void {
+        this.editandoEstudianteId = e.id;
+        this.editEstudianteNombre = e.nombre;
+        this.editEstudianteCorreo = e.correo;
+        this.editEstudianteCursoId = e.cursoId;
+        this.editEstudianteContrasena = '';
     }
 
-    // ── Matrículas ────────────────────────────────────────────────────────────
+    /** Guarda los cambios del estudiante en edicion y actualiza la lista local. */
+    async guardarEstudiante(): Promise<void> {
+        if (!this.editandoEstudianteId || !this.editEstudianteNombre.trim() ||
+            !this.editEstudianteCorreo.trim() || !this.editEstudianteCursoId) return;
+        const data: UpdateEstudianteData = {
+            nombre: this.editEstudianteNombre.trim(),
+            correo: this.editEstudianteCorreo.trim(),
+            cursoId: this.editEstudianteCursoId,
+            nuevaContrasena: this.editEstudianteContrasena || undefined
+        };
+        try {
+            const updated = await this.api.updateEstudiante(this.editandoEstudianteId, data);
+            this.estudiantes.update(list => list.map(e => e.id === updated.id ? updated : e));
+            this.editandoEstudianteId = null;
+            this.toast.show('Estudiante actualizado.', 'success');
+        } catch { }
+    }
 
+    /**
+     * Pide confirmacion y elimina el estudiante con sus matriculas y notas.
+     *
+     * @param id - Identificador del estudiante.
+     * @param nombre - Nombre del estudiante (para el dialogo de confirmacion).
+     */
+    async eliminarEstudiante(id: number, nombre: string): Promise<void> {
+        if (!confirm(`¿Eliminar al estudiante "${nombre}"? Se eliminaran sus matriculas y notas.`)) return;
+        try {
+            await this.api.deleteEstudiante(id);
+            this.estudiantes.update(list => list.filter(e => e.id !== id));
+            this.toast.show(`Estudiante "${nombre}" eliminado.`, 'success');
+        } catch { }
+    }
+
+    /**
+     * Devuelve las asignaturas disponibles para matricular segun el curso del estudiante seleccionado.
+     *
+     * @returns Asignaturas del curso del estudiante, o todas si no hay estudiante seleccionado.
+     */
     asignaturasFiltradas(): AsignaturaItem[] {
         if (!this.matriculaEstudianteId) return this.asignaturas();
         const est = this.estudiantes().find(e => e.id === Number(this.matriculaEstudianteId));
@@ -205,57 +423,58 @@ export class AdminHomeComponent implements OnInit {
         return this.asignaturas().filter(a => a.curso.id === est.cursoId);
     }
 
+    /** Matricula al estudiante seleccionado en la asignatura seleccionada. */
     async matricularEstudiante(): Promise<void> {
         if (!this.matriculaEstudianteId || !this.matriculaAsignaturaId) {
-            this.error.set('Selecciona un estudiante y una asignatura.');
-            return;
+            this.toast.show('Selecciona un estudiante y una asignatura.', 'warning'); return;
         }
-        this.error.set(null);
         try {
             await this.api.matricularEstudiante(
                 Number(this.matriculaEstudianteId), Number(this.matriculaAsignaturaId)
             );
             this.matriculaAsignaturaId = null;
-            this.mostrarExito('Matrícula realizada correctamente.');
+            this.toast.show('Matricula realizada correctamente.', 'success');
             const asignaturas = await this.api.getAsignaturas();
             this.asignaturas.set(asignaturas);
-        } catch (e) { this.error.set((e as Error).message); }
+        } catch { }
     }
 
+    /**
+     * Devuelve el resumen de matriculas agrupado por estudiante y filtrado por curso.
+     *
+     * @returns Lista de estudiantes con sus asignaturas matriculadas.
+     */
     matriculasVista(): Array<{ estudianteId: number; estudiante: string; curso: string | null; asignaturas: string[] }> {
         const cursoFiltro = this.filtroMatriculasCursoId ? Number(this.filtroMatriculasCursoId) : null;
         const estudiantes = this.estudiantes().filter(e => !cursoFiltro || e.cursoId === cursoFiltro);
-
         return estudiantes
-            .map(e => {
-                const asignaturas = this.asignaturas()
+            .map(e => ({
+                estudianteId: e.id,
+                estudiante: e.nombre,
+                curso: e.curso,
+                asignaturas: this.asignaturas()
                     .filter(a => a.alumnos.some(al => al.id === e.id))
                     .map(a => a.nombre)
-                    .sort((a, b) => a.localeCompare(b));
-
-                return {
-                    estudianteId: e.id,
-                    estudiante: e.nombre,
-                    curso: e.curso,
-                    asignaturas
-                };
-            })
+                    .sort((a, b) => a.localeCompare(b))
+            }))
             .sort((a, b) => a.estudiante.localeCompare(b.estudiante));
     }
 
-    // ── Imparticiones ─────────────────────────────────────────────────────────
-
+    /**
+     * Devuelve las asignaturas disponibles para imparticion segun el curso seleccionado.
+     *
+     * @returns Asignaturas del curso seleccionado, o todas si no hay curso seleccionado.
+     */
     asignaturasDeImparticion(): AsignaturaItem[] {
         if (!this.imparticionCursoId) return this.asignaturas();
         return this.asignaturas().filter(a => a.curso.id === Number(this.imparticionCursoId));
     }
 
+    /** Asigna al profesor seleccionado la imparticion de la asignatura y curso elegidos. */
     async asignarImparticion(): Promise<void> {
         if (!this.imparticionProfesorId || !this.imparticionAsignaturaId || !this.imparticionCursoId) {
-            this.error.set('Selecciona profesor, asignatura y curso.');
-            return;
+            this.toast.show('Selecciona profesor, asignatura y curso.', 'warning'); return;
         }
-        this.error.set(null);
         try {
             await this.api.asignarImparticion(
                 Number(this.imparticionProfesorId),
@@ -263,15 +482,19 @@ export class AdminHomeComponent implements OnInit {
                 Number(this.imparticionCursoId)
             );
             this.imparticionAsignaturaId = null;
-            this.mostrarExito('Impartición asignada correctamente.');
+            this.toast.show('Imparticion asignada correctamente.', 'success');
             const profesores = await this.api.getProfesores();
             this.profesores.set(profesores);
-        } catch (e) { this.error.set((e as Error).message); }
+        } catch { }
     }
 
+    /**
+     * Devuelve el listado de imparticiones activas filtrado por curso.
+     *
+     * @returns Imparticiones que coinciden con el filtro de curso activo.
+     */
     imparticionesVista(): Array<{ profesorId: number; profesor: string; asignatura: string; cursoId: number; curso: string }> {
         const cursoFiltro = this.filtroImparticionesCursoId ? Number(this.filtroImparticionesCursoId) : null;
-
         return this.profesores()
             .flatMap(p => p.imparticiones.map(i => ({
                 profesorId: p.id,
@@ -281,6 +504,70 @@ export class AdminHomeComponent implements OnInit {
                 curso: i.curso
             })))
             .filter(x => !cursoFiltro || x.cursoId === cursoFiltro)
-            .sort((a, b) => a.curso.localeCompare(b.curso) || a.asignatura.localeCompare(b.asignatura) || a.profesor.localeCompare(b.profesor));
+            .sort((a, b) => a.curso.localeCompare(b.curso) || a.asignatura.localeCompare(b.asignatura));
+    }
+
+    /**
+     * Captura el archivo seleccionado en el input de tipo file y lo almacena segun la entidad.
+     *
+     * @param event - Evento del input file.
+     * @param entidad - Tipo de entidad: `'cursos'`, `'asignaturas'`, `'profesores'` o `'estudiantes'`.
+     */
+    onCsvFileChange(event: Event, entidad: string): void {
+        const input = event.target as HTMLInputElement;
+        const file = input.files?.[0] ?? null;
+        if (entidad === 'cursos') this.csvCursosFile = file;
+        else if (entidad === 'asignaturas') this.csvAsignaturasFile = file;
+        else if (entidad === 'profesores') this.csvProfesoresFile = file;
+        else this.csvEstudiantesFile = file;
+    }
+
+    /**
+     * Sube el archivo CSV seleccionado para la entidad indicada y muestra el resultado.
+     *
+     * @param entidad - Tipo de entidad a importar: `'cursos'`, `'asignaturas'`, `'profesores'` o `'estudiantes'`.
+     */
+    async importarCsv(entidad: string): Promise<void> {
+        const file = entidad === 'cursos' ? this.csvCursosFile
+            : entidad === 'asignaturas' ? this.csvAsignaturasFile
+            : entidad === 'profesores' ? this.csvProfesoresFile
+            : this.csvEstudiantesFile;
+
+        if (!file) { this.toast.show('Selecciona un archivo CSV.', 'warning'); return; }
+
+        this.csvCargando = true;
+        this.csvResultado = null;
+        this.csvEntidadActual = entidad;
+        try {
+            const resultado = await this.api.importarCsv(entidad, file);
+            this.csvResultado = resultado;
+            this.toast.show(`Importacion de ${entidad}: ${resultado.creados} creados.`, 'success');
+            await this.cargarTodo();
+        } catch {
+        } finally {
+            this.csvCargando = false;
+        }
+    }
+
+    /**
+     * Genera y descarga una plantilla CSV de ejemplo para la entidad indicada.
+     *
+     * @param entidad - Tipo de entidad: `'cursos'`, `'asignaturas'`, `'profesores'` o `'estudiantes'`.
+     */
+    descargarPlantilla(entidad: string): void {
+        const plantillas: Record<string, string> = {
+            cursos: 'nombre\n1\u00baA\n1\u00baB\n2\u00baA',
+            asignaturas: 'nombre,cursoNombre\nMatematicas,1\u00baA\nLengua,1\u00baA\nCiencias,1\u00baB',
+            profesores: 'nombre,correo,contrasena,esAdmin\nJuan Garcia,juan@colegio.es,Pass123,false',
+            estudiantes: 'nombre,correo,contrasena,cursoNombre\nLucia Perez,lucia@colegio.es,Pass123,1\u00baA'
+        };
+        const csv = plantillas[entidad];
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `plantilla_${entidad}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
     }
 }

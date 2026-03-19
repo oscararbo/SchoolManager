@@ -30,4 +30,18 @@ public class AsignaturasController(IAsignaturasService asignaturasService) : Con
     {
         return await asignaturasService.CreateAsync(dto);
     }
+
+    [HttpPut("{id:int}")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> Update(int id, UpdateAsignaturaDto dto)
+    {
+        return await asignaturasService.UpdateAsync(id, dto);
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        return await asignaturasService.DeleteAsync(id);
+    }
 }

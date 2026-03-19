@@ -30,4 +30,18 @@ public class CursosController(ICursosService cursosService) : ControllerBase
     {
         return await cursosService.CreateAsync(dto);
     }
+
+    [HttpPut("{id:int}")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> Update(int id, UpdateCursoDto dto)
+    {
+        return await cursosService.UpdateAsync(id, dto);
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        return await cursosService.DeleteAsync(id);
+    }
 }

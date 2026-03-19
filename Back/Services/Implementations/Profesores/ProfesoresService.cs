@@ -499,4 +499,70 @@ public class ProfesoresService(AppDbContext context, IPasswordService passwordSe
         var idClaim = user.FindFirstValue("id") ?? user.FindFirstValue(ClaimTypes.NameIdentifier);
         return int.TryParse(idClaim, out var usuarioId) && usuarioId == profesorId;
     }
+
+    public async Task<IActionResult> UpdateAsync(int id, UpdateProfesorDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Nombre))
+            return new BadRequestObjectResult("El nombre del profesor es obligatorio.");
+        if (string.IsNullOrWhiteSpace(dto.Correo))
+            return new BadRequestObjectResult("El correo del profesor es obligatorio.");
+
+        var profesor = await context.Profesores.FindAsync(id);
+        if (profesor is null)
+            return new NotFoundObjectResult("El profesor no existe.");
+
+        var correo = dto.Correo.Trim().ToLowerInvariant();
+        var correoUsado = await context.Profesores.AnyAsync(p => p.Correo.ToLower() == correo && p.Id != id);
+        if (correoUsado)
+            return new BadRequestObjectResult("Ya existe otro profesor con ese correo.");
+
+        profesor.Nombre = dto.Nombre.Trim();
+        profesor.Correo = correo;
+        profesor.EsAdmin = dto.EsAdmin;
+        if (!string.IsNullOrWhiteSpace(dto.NuevaContrasena))
+            profesor.Contrasena = passwordService.Hash(dto.NuevaContrasena.Trim());
+
+        await context.SaveChangesAsync();
+
+        return new OkObjectResult(new ProfesorListItemDto
+        {
+            Id = profesor.Id,
+            Nombre = profesor.Nombre,
+            Correo = profesor.Correo,
+            EsAdmin = profesor.EsAdmin,
+            Imparticiones = await context.ProfesorAsignaturaCursos
+                .AsNoTracking()
+                .Where(i => i.ProfesorId == id)
+                .Select(i => new ProfesorImparticionDto
+                {
+                    AsignaturaId = i.AsignaturaId,
+                    Asignatura = i.Asignatura!.Nombre,
+                    CursoId = i.CursoId,
+                    Curso = i.Curso!.Nombre
+                }).ToListAsync()
+        });
+    }
+
+    public async Task<IActionResult> DeleteAsync(int id)
+    {
+        var profesor = await context.Profesores.FindAsync(id);
+        if (profesor is null)
+            return new NotFoundObjectResult("El profesor no existe.");
+
+        var imparticiones = await context.ProfesorAsignaturaCursos.Where(i => i.ProfesorId == id).ToListAsync();
+        context.ProfesorAsignaturaCursos.RemoveRange(imparticiones);
+
+        var tareaIds = await context.Tareas.Where(t => t.ProfesorId == id).Select(t => t.Id).ToListAsync();
+        if (tareaIds.Count > 0)
+        {
+            var notas = await context.Notas.Where(n => tareaIds.Contains(n.TareaId)).ToListAsync();
+            context.Notas.RemoveRange(notas);
+            var tareas = await context.Tareas.Where(t => t.ProfesorId == id).ToListAsync();
+            context.Tareas.RemoveRange(tareas);
+        }
+
+        context.Profesores.Remove(profesor);
+        await context.SaveChangesAsync();
+        return new NoContentResult();
+    }
 }

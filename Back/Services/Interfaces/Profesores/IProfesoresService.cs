@@ -9,6 +9,8 @@ public interface IProfesoresService
     Task<IActionResult> GetAllAsync();
     Task<IActionResult> GetByIdAsync(int id);
     Task<IActionResult> CreateAsync(CreateProfesorDto dto);
+    Task<IActionResult> UpdateAsync(int id, UpdateProfesorDto dto);
+    Task<IActionResult> DeleteAsync(int id);
     Task<IActionResult> GetPanelProfesorAsync(int id, ClaimsPrincipal user);
     Task<IActionResult> GetAlumnosDeAsignaturaAsync(int profesorId, int asignaturaId, ClaimsPrincipal user);
     Task<IActionResult> AsignarImparticionAsync(int profesorId, AsignarImparticionDto dto, ClaimsPrincipal user);

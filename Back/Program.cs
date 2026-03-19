@@ -1,14 +1,43 @@
 using Back.Api.Data;
 using Back.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
+// Core web API services.
+builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "School Manager API",
+        Version = "v1",
+        Description = "API para gestionar cursos, asignaturas, profesores, estudiantes, tareas y notas."
+    });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Description = "Introduce el token JWT en formato: Bearer {token}",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
+    });
+
+});
+
+// JWT authentication setup.
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key no esta configurado.");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer no esta configurado.");
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("Jwt:Audience no esta configurado.");
@@ -28,6 +57,48 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = signingKey,
             ClockSkew = TimeSpan.Zero
         };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = async context =>
+            {
+                context.HandleResponse();
+
+                if (context.Response.HasStarted)
+                {
+                    return;
+                }
+
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/problem+json";
+
+                await context.Response.WriteAsJsonAsync(new ProblemDetails
+                {
+                    Status = StatusCodes.Status401Unauthorized,
+                    Title = "No autorizado",
+                    Detail = "Necesitas iniciar sesion para acceder a este recurso.",
+                    Instance = context.Request.Path
+                });
+            },
+            OnForbidden = async context =>
+            {
+                if (context.Response.HasStarted)
+                {
+                    return;
+                }
+
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                context.Response.ContentType = "application/problem+json";
+
+                await context.Response.WriteAsJsonAsync(new ProblemDetails
+                {
+                    Status = StatusCodes.Status403Forbidden,
+                    Title = "Acceso denegado",
+                    Detail = "No tienes permisos suficientes para realizar esta accion.",
+                    Instance = context.Request.Path
+                });
+            }
+        };
     });
 
 builder.Services.AddAuthorization(options =>
@@ -43,6 +114,8 @@ builder.Services.AddScoped<IProfesoresService, ProfesoresService>();
 builder.Services.AddScoped<IEstudiantesService, EstudiantesService>();
 builder.Services.AddScoped<ICursosService, CursosService>();
 builder.Services.AddScoped<IAsignaturasService, AsignaturasService>();
+
+// Frontend access policy for the Angular app.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Front", policy =>
@@ -50,37 +123,65 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader()
             .AllowAnyMethod());
 });
+
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=school.db";
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(connectionString));
 
 var app = builder.Build();
 
+app.UseExceptionHandler(handler =>
+{
+    handler.Run(async context =>
+    {
+        var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("GlobalExceptionHandler");
+        var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+
+        if (exception is not null)
+        {
+            logger.LogError(exception, "Error no controlado procesando {Method} {Path}", context.Request.Method, context.Request.Path);
+        }
+
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/problem+json";
+
+        await context.Response.WriteAsJsonAsync(new ProblemDetails
+        {
+            Status = StatusCodes.Status500InternalServerError,
+            Title = "Se produjo un error interno en el servidor.",
+            Detail = app.Environment.IsDevelopment() ? exception?.Message : "Consulta los logs del backend para mas detalle.",
+            Instance = context.Request.Path
+        });
+    });
+});
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var passwordService = scope.ServiceProvider.GetRequiredService<IPasswordService>();
+    var seedAdminName = builder.Configuration["SeedAdmin:Nombre"] ?? "Administrador";
+    var seedAdminEmail = (builder.Configuration["SeedAdmin:Correo"] ?? "admin@prueba.com").Trim().ToLowerInvariant();
+    var seedAdminPassword = builder.Configuration["SeedAdmin:Contrasena"] ?? "Prueba1";
 
     db.Database.EnsureCreated();
 
-    var adminCorreo = "admin@prueba.com";
-    var adminExistente = db.Profesores.FirstOrDefault(p => p.Correo.ToLower() == adminCorreo);
+    var adminExistente = db.Profesores.FirstOrDefault(p => p.Correo.ToLower() == seedAdminEmail);
 
     if (adminExistente is null)
     {
         db.Profesores.Add(new()
         {
-            Nombre = "Administrador",
-            Correo = adminCorreo,
-            Contrasena = passwordService.Hash("Prueba1"),
+            Nombre = seedAdminName,
+            Correo = seedAdminEmail,
+            Contrasena = passwordService.Hash(seedAdminPassword),
             EsAdmin = true
         });
     }
     else
     {
-        adminExistente.Nombre = "Administrador";
-        adminExistente.Correo = adminCorreo;
-        adminExistente.Contrasena = passwordService.Hash("Prueba1");
+        adminExistente.Nombre = seedAdminName;
+        adminExistente.Correo = seedAdminEmail;
+        adminExistente.Contrasena = passwordService.Hash(seedAdminPassword);
         adminExistente.EsAdmin = true;
     }
 
@@ -89,7 +190,14 @@ using (var scope = app.Services.CreateScope())
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseStaticFiles();
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "School Manager API v1");
+        options.RoutePrefix = "swagger";
+        options.ConfigObject.PersistAuthorization = true;
+    });
 }
 
 app.UseCors("Front");

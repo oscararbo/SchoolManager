@@ -8,4 +8,6 @@ public interface ICursosService
     Task<IActionResult> GetAllAsync();
     Task<IActionResult> GetByIdAsync(int id);
     Task<IActionResult> CreateAsync(CreateCursoDto dto);
+    Task<IActionResult> UpdateAsync(int id, UpdateCursoDto dto);
+    Task<IActionResult> DeleteAsync(int id);
 }

@@ -49,38 +49,49 @@
             <div class="col-12 col-lg-9">
                 @if (detalleAsignatura()) {
                     <div class="vstack gap-3">
-                        <p class="mb-0 text-secondary small">
-                            <strong>{{ detalleAsignatura()!.asignatura.nombre }}</strong>
-                            &middot; {{ detalleAsignatura()!.asignatura.curso }}
-                        </p>
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <p class="mb-0 text-secondary small">
+                                <strong>{{ detalleAsignatura()!.asignatura.nombre }}</strong>
+                                &middot; {{ detalleAsignatura()!.asignatura.curso }}
+                            </p>
+                            <div class="btn-group btn-group-sm panel-switcher" role="group" aria-label="Cambiar vista de notas">
+                                <button class="btn"
+                                    type="button"
+                                    [class.btn-primary]="vistaDetalle() === 'resumen'"
+                                    [class.btn-outline-primary]="vistaDetalle() !== 'resumen'"
+                                    (click)="mostrarResumen()">
+                                    Resumen por alumno
+                                </button>
+                                <button class="btn"
+                                    type="button"
+                                    [class.btn-primary]="vistaDetalle() === 'calificar'"
+                                    [class.btn-outline-primary]="vistaDetalle() !== 'calificar'"
+                                    [disabled]="detalleAsignatura()!.tareas.length === 0"
+                                    (click)="mostrarCalificacion()">
+                                    Calificar tareas
+                                </button>
+                            </div>
+                        </div>
 
                         <div class="row g-3">
-                            <!-- Task list + create -->
                             <div class="col-12 col-md-4">
                                 <div class="card shadow-sm border-0 h-100">
                                     <div class="card-body">
                                         <h3 class="h6 text-uppercase text-secondary mb-3">Tareas</h3>
 
-                                        <ul class="list-group list-group-flush mb-3">
+                                        <div class="vstack gap-2 mb-3 task-list">
                                             @for (tarea of detalleAsignatura()!.tareas; track tarea.tareaId) {
-                                                <li class="list-group-item px-0 d-flex justify-content-between align-items-center"
-                                                    [class.bg-primary-subtle]="tareaActiva()?.tareaId === tarea.tareaId">
-                                                    <div>
-                                                        <span class="fw-medium">{{ tarea.nombre }}</span>
-                                                        <span class="badge text-bg-secondary ms-2">T{{ tarea.trimestre }}</span>
-                                                    </div>
-                                                    <button class="btn btn-sm"
-                                                        [class.btn-primary]="tareaActiva()?.tareaId === tarea.tareaId"
-                                                        [class.btn-outline-primary]="tareaActiva()?.tareaId !== tarea.tareaId"
-                                                        type="button"
-                                                        (click)="seleccionarTarea(tarea)">
-                                                        Calificar
-                                                    </button>
-                                                </li>
+                                                <button class="task-chip"
+                                                    type="button"
+                                                    [class.task-chip-active]="tareaActiva()?.tareaId === tarea.tareaId"
+                                                    (click)="seleccionarTarea(tarea)">
+                                                    <span class="fw-medium">{{ tarea.nombre }}</span>
+                                                    <span class="badge text-bg-secondary">T{{ tarea.trimestre }}</span>
+                                                </button>
                                             } @empty {
-                                                <li class="list-group-item px-0 text-secondary">Sin tareas aun.</li>
+                                                <div class="text-secondary small rounded-3 border bg-light p-3">Sin tareas aun.</div>
                                             }
-                                        </ul>
+                                        </div>
 
                                         <h4 class="h6 text-uppercase text-secondary mb-2">Nueva tarea</h4>
                                         <div class="vstack gap-2">
@@ -110,85 +121,121 @@
                                 </div>
                             </div>
 
-                            <!-- Students + grade editor / summary -->
                             <div class="col-12 col-md-8">
-                                <div class="card shadow-sm border-0">
+                                <div class="card shadow-sm border-0 h-100">
                                     <div class="card-body">
-                                        @if (tareaActiva()) {
-                                            <h3 class="h6 mb-3">
-                                                Calificando: <strong>{{ tareaActiva()!.nombre }}</strong>
-                                                <span class="badge text-bg-secondary ms-2">Trimestre {{ tareaActiva()!.trimestre }}</span>
-                                            </h3>
-                                            <div class="table-responsive">
-                                                <table class="table table-hover align-middle mb-0">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Alumno</th>
-                                                            <th style="width:140px">Nota (0-10)</th>
-                                                            <th style="width:110px"></th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @for (alumno of detalleAsignatura()!.alumnos; track alumno.estudianteId) {
-                                                            <tr>
-                                                                <td>{{ alumno.alumno }}</td>
-                                                                <td>
+                                        @if (vistaDetalle() === 'calificar') {
+                                            @if (tareaActiva()) {
+                                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                                    <h3 class="h6 mb-0">
+                                                        Calificando: <strong>{{ tareaActiva()!.nombre }}</strong>
+                                                    </h3>
+                                                    <span class="badge text-bg-secondary">Trimestre {{ tareaActiva()!.trimestre }}</span>
+                                                </div>
+
+                                                <div class="row g-3">
+                                                    @for (alumno of detalleAsignatura()!.alumnos; track alumno.estudianteId) {
+                                                        <div class="col-12 col-xl-6">
+                                                            <article class="student-grade-card border rounded-3 p-3 h-100">
+                                                                <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                                                                    <div>
+                                                                        <h4 class="h6 mb-1">{{ alumno.alumno }}</h4>
+                                                                        <p class="text-secondary small mb-0">Nota actual: {{ formatNota(getNotaInput(alumno.estudianteId)) }}</p>
+                                                                    </div>
+                                                                    <span class="badge"
+                                                                        [class.text-bg-success]="getNotaInput(alumno.estudianteId) !== null && getNotaInput(alumno.estudianteId)! >= 5"
+                                                                        [class.text-bg-danger]="getNotaInput(alumno.estudianteId) !== null && getNotaInput(alumno.estudianteId)! < 5"
+                                                                        [class.text-bg-secondary]="getNotaInput(alumno.estudianteId) === null">
+                                                                        {{ getNotaInput(alumno.estudianteId) === null ? 'Pendiente' : formatNota(getNotaInput(alumno.estudianteId)) }}
+                                                                    </span>
+                                                                </div>
+
+                                                                <div class="d-flex gap-2 align-items-end">
                                                                     <input
                                                                         class="form-control form-control-sm"
                                                                         type="number" min="0" max="10" step="0.01"
                                                                         [ngModel]="getNotaInput(alumno.estudianteId)"
                                                                         (ngModelChange)="setNotaInput(alumno.estudianteId, $event)">
-                                                                </td>
-                                                                <td>
                                                                     <button
-                                                                        class="btn btn-sm btn-success"
+                                                                        class="btn btn-sm btn-success flex-shrink-0"
                                                                         type="button"
                                                                         [disabled]="guardandoNota()"
                                                                         (click)="guardarNota(alumno.estudianteId)">
                                                                         Guardar
                                                                     </button>
-                                                                </td>
-                                                            </tr>
-                                                        }
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                                                </div>
+                                                            </article>
+                                                        </div>
+                                                    } @empty {
+                                                        <div class="col-12">
+                                                            <div class="text-secondary text-center py-4">Sin alumnos matriculados.</div>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            } @else {
+                                                <div class="empty-state text-center text-secondary py-5">
+                                                    Selecciona una tarea para empezar a calificar.
+                                                </div>
+                                            }
                                         } @else {
-                                            <h3 class="h6 mb-3">Resumen de notas</h3>
-                                            <div class="table-responsive">
-                                                <table class="table table-sm align-middle mb-0">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Alumno</th>
-                                                            @for (tarea of detalleAsignatura()!.tareas; track tarea.tareaId) {
-                                                                <th class="text-center">
-                                                                    {{ tarea.nombre }}<br>
-                                                                    <small class="text-secondary">T{{ tarea.trimestre }}</small>
-                                                                </th>
-                                                            }
-                                                            <th class="text-center">Media T1</th>
-                                                            <th class="text-center">Media T2</th>
-                                                            <th class="text-center">Media T3</th>
-                                                            <th class="text-center fw-bold">Final</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @for (alumno of detalleAsignatura()!.alumnos; track alumno.estudianteId) {
-                                                            <tr>
-                                                                <td>{{ alumno.alumno }}</td>
-                                                                @for (tarea of detalleAsignatura()!.tareas; track tarea.tareaId) {
-                                                                    <td class="text-center">{{ formatNota(notaDeAlumno(alumno, tarea.tareaId)) }}</td>
+                                            <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+                                                <h3 class="h6 mb-0">Resumen por alumno</h3>
+                                                <span class="badge text-bg-light border">{{ detalleAsignatura()!.alumnos.length }} alumnos</span>
+                                            </div>
+
+                                            <div class="vstack gap-3">
+                                                @for (alumno of detalleAsignatura()!.alumnos; track alumno.estudianteId) {
+                                                    <article class="student-summary-card border rounded-3 p-3">
+                                                        <button class="student-summary-toggle"
+                                                            type="button"
+                                                            (click)="toggleAlumno(alumno.estudianteId)">
+                                                            <div>
+                                                                <h4 class="h6 mb-1 text-start">{{ alumno.alumno }}</h4>
+                                                                <p class="text-secondary small mb-0 text-start">Pulsa para ver el detalle de tareas y medias.</p>
+                                                            </div>
+                                                            <div class="d-flex flex-wrap justify-content-end gap-2">
+                                                                <span class="badge text-bg-light border">T1 {{ formatNota(alumno.medias.t1) }}</span>
+                                                                <span class="badge text-bg-light border">T2 {{ formatNota(alumno.medias.t2) }}</span>
+                                                                <span class="badge text-bg-light border">T3 {{ formatNota(alumno.medias.t3) }}</span>
+                                                                <span class="badge text-bg-primary">Final {{ formatNota(alumno.notaFinal) }}</span>
+                                                            </div>
+                                                        </button>
+
+                                                        @if (alumnoExpandido(alumno.estudianteId)) {
+                                                            <div class="row g-3 mt-1">
+                                                                @for (trimestre of [1, 2, 3]; track trimestre) {
+                                                                    @if (tieneTareasEnTrimestre(trimestre)) {
+                                                                        <div class="col-12 col-lg-4">
+                                                                            <section class="trimester-card rounded-3 border h-100 p-3">
+                                                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                                                    <h5 class="h6 mb-0">Trimestre {{ trimestre }}</h5>
+                                                                                    <span class="badge text-bg-light border">Media {{ formatNota(trimestre === 1 ? alumno.medias.t1 : trimestre === 2 ? alumno.medias.t2 : alumno.medias.t3) }}</span>
+                                                                                </div>
+                                                                                <div class="vstack gap-2">
+                                                                                    @for (nota of tareasPorTrimestre(alumno, trimestre); track nota.tareaId) {
+                                                                                        <div class="task-result-row rounded-3 bg-light px-3 py-2">
+                                                                                            <span class="small fw-medium">{{ nota.nombre }}</span>
+                                                                                            <span class="badge"
+                                                                                                [class.text-bg-success]="nota.valor !== null && nota.valor >= 5"
+                                                                                                [class.text-bg-danger]="nota.valor !== null && nota.valor < 5"
+                                                                                                [class.text-bg-secondary]="nota.valor === null">
+                                                                                                {{ nota.valor === null ? 'Pendiente' : formatNota(nota.valor) }}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    } @empty {
+                                                                                        <div class="text-secondary small">Sin tareas en este trimestre.</div>
+                                                                                    }
+                                                                                </div>
+                                                                            </section>
+                                                                        </div>
+                                                                    }
                                                                 }
-                                                                <td class="text-center">{{ formatNota(alumno.medias.t1) }}</td>
-                                                                <td class="text-center">{{ formatNota(alumno.medias.t2) }}</td>
-                                                                <td class="text-center">{{ formatNota(alumno.medias.t3) }}</td>
-                                                                <td class="text-center fw-bold">{{ formatNota(alumno.notaFinal) }}</td>
-                                                            </tr>
-                                                        } @empty {
-                                                            <tr><td colspan="100" class="text-secondary text-center">Sin alumnos matriculados.</td></tr>
+                                                            </div>
                                                         }
-                                                    </tbody>
-                                                </table>
+                                                    </article>
+                                                } @empty {
+                                                    <div class="text-secondary text-center py-4">Sin alumnos matriculados.</div>
+                                                }
                                             </div>
                                         }
                                     </div>

@@ -1,0 +1,21 @@
+<div class="toast-container app-toast-container">
+    @for (toast of toastService.toasts(); track toast.id) {
+        <div
+            class="toast show mb-2 align-items-center border-0 app-toast"
+            role="alert"
+            [class.text-bg-success]="toast.type === 'success'"
+            [class.text-bg-danger]="toast.type === 'error'"
+            [class.text-bg-warning]="toast.type === 'warning'"
+            [class.text-bg-info]="toast.type === 'info'"
+        >
+            <div class="d-flex">
+                <div class="toast-body fw-medium">{{ toast.message }}</div>
+                <button
+                    type="button"
+                    class="btn-close btn-close-white me-2 m-auto"
+                    (click)="toastService.dismiss(toast.id)">
+                </button>
+            </div>
+        </div>
+    }
+</div>

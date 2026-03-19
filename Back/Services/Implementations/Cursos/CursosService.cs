@@ -117,6 +117,39 @@ public class CursosService(AppDbContext context) : ICursosService
         var curso = new Curso { Nombre = dto.Nombre.Trim() };
         context.Cursos.Add(curso);
         await context.SaveChangesAsync();
-        return new CreatedResult($"/api/cursos/{curso.Id}", curso);
+        return new CreatedResult($"/api/cursos/{curso.Id}", new CursoSimpleDto { Id = curso.Id, Nombre = curso.Nombre });
+    }
+
+    public async Task<IActionResult> UpdateAsync(int id, UpdateCursoDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Nombre))
+            return new BadRequestObjectResult("El nombre del curso es obligatorio.");
+
+        var curso = await context.Cursos.FindAsync(id);
+        if (curso is null)
+            return new NotFoundObjectResult("El curso no existe.");
+
+        curso.Nombre = dto.Nombre.Trim();
+        await context.SaveChangesAsync();
+        return new OkObjectResult(new CursoSimpleDto { Id = curso.Id, Nombre = curso.Nombre });
+    }
+
+    public async Task<IActionResult> DeleteAsync(int id)
+    {
+        var curso = await context.Cursos.FindAsync(id);
+        if (curso is null)
+            return new NotFoundObjectResult("El curso no existe.");
+
+        var tieneEstudiantes = await context.Estudiantes.AnyAsync(e => e.CursoId == id);
+        if (tieneEstudiantes)
+            return new BadRequestObjectResult("No se puede eliminar el curso porque tiene alumnos asignados.");
+
+        var tieneAsignaturas = await context.Asignaturas.AnyAsync(a => a.CursoId == id);
+        if (tieneAsignaturas)
+            return new BadRequestObjectResult("No se puede eliminar el curso porque tiene asignaturas. Elimínalas primero.");
+
+        context.Cursos.Remove(curso);
+        await context.SaveChangesAsync();
+        return new NoContentResult();
     }
 }

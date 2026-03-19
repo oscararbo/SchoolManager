@@ -12,6 +12,8 @@
 /Front/tmp
 /Front/out-tsc
 /Front/bazel-out
+/Front/docs
+/Front/documentation
 
 # Node
 /Front/node_modules

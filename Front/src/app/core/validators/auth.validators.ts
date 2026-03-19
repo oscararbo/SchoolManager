@@ -1,7 +1,10 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 
 /**
- * Valida que el email tenga el formato: texto@texto.texto
+ * Validador de formato de correo electronico.
+ * Acepta el patron: `texto@texto.texto`.
+ *
+ * @returns Funcion validadora que retorna `null` si es valido, o `{ invalidEmail: true }` si no.
  */
 export function emailValidator(): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
@@ -20,10 +23,10 @@ export function emailValidator(): ValidatorFn {
 }
 
 /**
- * Valida que la contraseña contenga:
- * - Al menos 1 mayúscula
- * - Al menos 1 minúscula
- * - Al menos 1 número
+ * Validador de seguridad de contrasena.
+ * Requiere al menos una mayuscula, una minuscula y un digito.
+ *
+ * @returns Funcion validadora que retorna `null` si es valida, o `{ invalidPassword: true }` si no.
  */
 export function passwordValidator(): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
