@@ -1,0 +1,20 @@
+@if (visible()) {
+<div class="confirm-overlay">
+    <div class="confirm-card">
+        <div class="confirm-header">
+            <h5 class="confirm-title">{{ titulo() }}</h5>
+        </div>
+        <div class="confirm-body">
+            <p class="confirm-message">{{ mensaje() }}</p>
+        </div>
+        <div class="confirm-footer">
+            <button type="button" class="btn btn-secondary" (click)="cancelar()">
+                Cancelar
+            </button>
+            <button type="button" class="btn btn-danger" (click)="aceptar()">
+                Eliminar
+            </button>
+        </div>
+    </div>
+</div>
+}

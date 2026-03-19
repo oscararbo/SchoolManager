@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -7,17 +7,20 @@ import {
     UpdateProfesorData, UpdateEstudianteData, CsvImportResult
 } from '../../../shared/services/school-api.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 
 type AdminTab = 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matriculas' | 'imparticiones' | 'importar';
 
 @Component({
     selector: 'app-admin-home',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, ConfirmDialogComponent],
     templateUrl: './admin-home.html',
     styleUrl: './admin-home.scss'
 })
 export class AdminHomeComponent implements OnInit {
+    @ViewChild(ConfirmDialogComponent) confirmDialog!: ConfirmDialogComponent;
+
     private api = inject(SchoolApiService);
     private toast = inject(ToastService);
 
@@ -173,7 +176,11 @@ export class AdminHomeComponent implements OnInit {
      * @param nombre - Nombre del curso (para el dialogo de confirmacion).
      */
     async eliminarCurso(id: number, nombre: string): Promise<void> {
-        if (!confirm(`¿Eliminar el curso "${nombre}"? Esta accion no se puede deshacer.`)) return;
+        const confirmado = await this.confirmDialog.show(
+            'Eliminar curso',
+            `¿Eliminar el curso "${nombre}"? Esta accion no se puede deshacer.`
+        );
+        if (!confirmado) return;
         try {
             await this.api.deleteCurso(id);
             this.cursos.update(list => list.filter(c => c.id !== id));
@@ -239,7 +246,11 @@ export class AdminHomeComponent implements OnInit {
      * @param nombre - Nombre de la asignatura (para el dialogo de confirmacion).
      */
     async eliminarAsignatura(id: number, nombre: string): Promise<void> {
-        if (!confirm(`¿Eliminar la asignatura "${nombre}"? Se eliminaran sus tareas y notas.`)) return;
+        const confirmado = await this.confirmDialog.show(
+            'Eliminar asignatura',
+            `¿Eliminar la asignatura "${nombre}"? Se eliminaran sus tareas y notas.`
+        );
+        if (!confirmado) return;
         try {
             await this.api.deleteAsignatura(id);
             this.asignaturas.update(list => list.filter(a => a.id !== id));
@@ -321,7 +332,11 @@ export class AdminHomeComponent implements OnInit {
      * @param nombre - Nombre del profesor (para el dialogo de confirmacion).
      */
     async eliminarProfesor(id: number, nombre: string): Promise<void> {
-        if (!confirm(`¿Eliminar al profesor "${nombre}"? Se eliminaran sus imparticiones y tareas.`)) return;
+        const confirmado = await this.confirmDialog.show(
+            'Eliminar profesor',
+            `¿Eliminar al profesor "${nombre}"? Se eliminaran sus imparticiones y tareas.`
+        );
+        if (!confirmado) return;
         try {
             await this.api.deleteProfesor(id);
             this.profesores.update(list => list.filter(p => p.id !== id));
@@ -403,7 +418,11 @@ export class AdminHomeComponent implements OnInit {
      * @param nombre - Nombre del estudiante (para el dialogo de confirmacion).
      */
     async eliminarEstudiante(id: number, nombre: string): Promise<void> {
-        if (!confirm(`¿Eliminar al estudiante "${nombre}"? Se eliminaran sus matriculas y notas.`)) return;
+        const confirmado = await this.confirmDialog.show(
+            'Eliminar estudiante',
+            `¿Eliminar al estudiante "${nombre}"? Se eliminaran sus matriculas y notas.`
+        );
+        if (!confirmado) return;
         try {
             await this.api.deleteEstudiante(id);
             this.estudiantes.update(list => list.filter(e => e.id !== id));
