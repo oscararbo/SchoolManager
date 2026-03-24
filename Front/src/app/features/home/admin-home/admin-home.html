@@ -461,10 +461,19 @@
                                                     <span class="badge text-bg-danger">{{ grupo.errors.length }}</span>
                                                 </div>
                                                 <ul class="mb-0 small">
-                                                    @for (err of grupo.errors; track err) {
+                                                    @for (err of erroresVisiblesGrupo(grupo); track err) {
                                                         <li>{{ err }}</li>
                                                     }
                                                 </ul>
+                                                @if (grupo.errors.length > 5) {
+                                                    <button class="btn btn-link btn-sm px-0 mt-1"
+                                                        type="button"
+                                                        (click)="toggleGrupoErrores(grupo.key)">
+                                                        {{ grupoErroresExpandido(grupo.key)
+                                                            ? 'Ver menos'
+                                                            : 'Ver mas (' + erroresOcultosGrupo(grupo) + ' ocultos)' }}
+                                                    </button>
+                                                }
                                             </div>
                                         }
                                     </div>

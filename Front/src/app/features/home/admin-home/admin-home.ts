@@ -27,6 +27,8 @@ type CsvErrorGroup = {
     errors: string[];
 };
 
+const CSV_ERROR_PREVIEW_COUNT = 5;
+
 @Component({
     selector: 'app-admin-home',
     standalone: true,
@@ -107,6 +109,7 @@ export class AdminHomeComponent implements OnInit {
     csvResultado = signal<CsvImportResult | null>(null);
     csvEntidadActual = signal<CsvImportEntity | null>(null);
     csvCargando = signal(false);
+    csvErroresExpandidos = signal<Record<string, boolean>>({});
     readonly csvImportItems: Array<{ entidad: CsvImportEntity; titulo: string; descripcion: string; orden: string }> = [
         { entidad: 'cursos', titulo: 'Cursos', descripcion: 'Alta masiva de cursos.', orden: '1' },
         { entidad: 'asignaturas', titulo: 'Asignaturas', descripcion: 'Alta masiva de asignaturas ligadas a curso.', orden: '2' },
@@ -149,6 +152,29 @@ export class AdminHomeComponent implements OnInit {
                 errors: grouped.get(key) ?? []
             }));
     });
+
+    grupoErroresExpandido(key: string): boolean {
+        return this.csvErroresExpandidos()[key] ?? false;
+    }
+
+    toggleGrupoErrores(key: string): void {
+        this.csvErroresExpandidos.update(current => ({
+            ...current,
+            [key]: !(current[key] ?? false)
+        }));
+    }
+
+    erroresVisiblesGrupo(grupo: CsvErrorGroup): string[] {
+        if (this.grupoErroresExpandido(grupo.key)) {
+            return grupo.errors;
+        }
+
+        return grupo.errors.slice(0, CSV_ERROR_PREVIEW_COUNT);
+    }
+
+    erroresOcultosGrupo(grupo: CsvErrorGroup): number {
+        return Math.max(grupo.errors.length - CSV_ERROR_PREVIEW_COUNT, 0);
+    }
 
     private clasificarCsvError(error: string): CsvErrorGroupKey {
         const text = error.toLowerCase();
@@ -717,6 +743,7 @@ export class AdminHomeComponent implements OnInit {
         this.csvCargando.set(true);
         this.csvResultado.set(null);
         this.csvEntidadActual.set(entidad);
+        this.csvErroresExpandidos.set({});
         try {
             const resultado = await this.api.importarCsv(entidad, file);
             this.csvResultado.set(resultado);

@@ -1,6 +1,9 @@
-using Back.Api.Data;
-using Back.Api.Infrastructure;
-using Back.Api.Services;
+using Back.Api.Application.Services;
+using Back.Api.Domain.Repositories;
+using Back.Api.Infrastructure.ErrorHandling;
+using Back.Api.Infrastructure.Security;
+using Back.Api.Persistence.Context;
+using Back.Api.Persistence.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -110,12 +113,20 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddScoped<IPasswordService, PasswordService>();
+builder.Services.AddScoped<IAdminDomainRepository, AdminDomainRepository>();
+builder.Services.AddScoped<IAuthDomainRepository, AuthDomainRepository>();
+builder.Services.AddScoped<IProfesoresDomainRepository, ProfesoresDomainRepository>();
+builder.Services.AddScoped<ICursosDomainRepository, CursosDomainRepository>();
+builder.Services.AddScoped<IAsignaturasDomainRepository, AsignaturasDomainRepository>();
+builder.Services.AddScoped<IEstudiantesDomainRepository, EstudiantesDomainRepository>();
+builder.Services.AddScoped<IImportRepository, ImportRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IProfesoresService, ProfesoresService>();
 builder.Services.AddScoped<IEstudiantesService, EstudiantesService>();
 builder.Services.AddScoped<ICursosService, CursosService>();
 builder.Services.AddScoped<IAsignaturasService, AsignaturasService>();
+builder.Services.AddScoped<IImportService, ImportService>();
 
 // Frontend access policy for the Angular app.
 builder.Services.AddCors(options =>

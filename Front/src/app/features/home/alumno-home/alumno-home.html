@@ -28,44 +28,51 @@
                                         <p class="text-secondary small mb-0 text-start">Profesor: {{ materia.profesor ?? 'Pendiente' }}</p>
                                     </div>
                                     <div class="d-flex flex-wrap justify-content-end gap-2">
-                                        <span class="badge text-bg-light border">T1 {{ formatNota(materia.medias.t1) }}</span>
-                                        <span class="badge text-bg-light border">T2 {{ formatNota(materia.medias.t2) }}</span>
-                                        <span class="badge text-bg-light border">T3 {{ formatNota(materia.medias.t3) }}</span>
-                                        <span class="badge text-bg-primary">Final {{ formatNota(materia.notaFinal) }}</span>
+                                        @if (materiaDetalle(materia.asignaturaId); as det) {
+                                            <span class="badge text-bg-light border">T1 {{ formatNota(det.medias.t1) }}</span>
+                                            <span class="badge text-bg-light border">T2 {{ formatNota(det.medias.t2) }}</span>
+                                            <span class="badge text-bg-light border">T3 {{ formatNota(det.medias.t3) }}</span>
+                                            <span class="badge text-bg-primary">Final {{ formatNota(det.notaFinal) }}</span>
+                                        } @else {
+                                            <span class="badge text-bg-secondary">Ver notas</span>
+                                        }
                                     </div>
                                 </button>
 
                                 @if (estaExpandida(materia.asignaturaId)) {
-                                    <div class="row g-3 mt-1">
-                                        @for (trimestre of [1, 2, 3]; track trimestre) {
-                                            @if (tieneTareasEnTrimestre(materia, trimestre)) {
-                                                <div class="col-12 col-lg-4">
-                                                    <section class="trimester-card rounded-3 border h-100 p-3">
-                                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                                            <h5 class="h6 mb-0">Trimestre {{ trimestre }}</h5>
-                                                            <span class="badge text-bg-light border">Media {{ formatNota(trimestre === 1 ? materia.medias.t1 : trimestre === 2 ? materia.medias.t2 : materia.medias.t3) }}</span>
-                                                        </div>
-
-                                                        <div class="vstack gap-2">
-                                                            @for (tarea of tareasPorTrimestre(materia, trimestre); track tarea.tareaId) {
-                                                                <div class="task-result-row rounded-3 bg-light px-3 py-2">
-                                                                    <span class="small fw-medium">{{ tarea.nombre }}</span>
-                                                                    <span class="badge"
-                                                                        [class.text-bg-success]="tarea.valor !== null && tarea.valor >= 5"
-                                                                        [class.text-bg-danger]="tarea.valor !== null && tarea.valor < 5"
-                                                                        [class.text-bg-secondary]="tarea.valor === null">
-                                                                        {{ tarea.valor === null ? 'Pendiente' : formatNota(tarea.valor) }}
-                                                                    </span>
-                                                                </div>
-                                                            } @empty {
-                                                                <div class="text-secondary small">Sin tareas registradas.</div>
-                                                            }
-                                                        </div>
-                                                    </section>
-                                                </div>
+                                    @if (materiaDetalleCargando(materia.asignaturaId)) {
+                                        <div class="alert alert-secondary mt-2 mb-0 py-2 small" role="status">Cargando notas...</div>
+                                    } @else if (materiaDetalle(materia.asignaturaId); as det) {
+                                        <div class="row g-3 mt-1">
+                                            @for (trimestre of [1, 2, 3]; track trimestre) {
+                                                @if (tieneTareasEnTrimestre(materia.asignaturaId, trimestre)) {
+                                                    <div class="col-12 col-lg-4">
+                                                        <section class="trimester-card rounded-3 border h-100 p-3">
+                                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                                <h5 class="h6 mb-0">Trimestre {{ trimestre }}</h5>
+                                                                <span class="badge text-bg-light border">Media {{ formatNota(trimestre === 1 ? det.medias.t1 : trimestre === 2 ? det.medias.t2 : det.medias.t3) }}</span>
+                                                            </div>
+                                                            <div class="vstack gap-2">
+                                                                @for (tarea of tareasPorTrimestre(materia.asignaturaId, trimestre); track tarea.tareaId) {
+                                                                    <div class="task-result-row rounded-3 bg-light px-3 py-2">
+                                                                        <span class="small fw-medium">{{ tarea.nombre }}</span>
+                                                                        <span class="badge"
+                                                                            [class.text-bg-success]="tarea.valor !== null && tarea.valor >= 5"
+                                                                            [class.text-bg-danger]="tarea.valor !== null && tarea.valor < 5"
+                                                                            [class.text-bg-secondary]="tarea.valor === null">
+                                                                            {{ tarea.valor === null ? 'Pendiente' : formatNota(tarea.valor) }}
+                                                                        </span>
+                                                                    </div>
+                                                                } @empty {
+                                                                    <div class="text-secondary small">Sin tareas registradas.</div>
+                                                                }
+                                                            </div>
+                                                        </section>
+                                                    </div>
+                                                }
                                             }
-                                        }
-                                    </div>
+                                        </div>
+                                    }
                                 }
                             </article>
                         } @empty {

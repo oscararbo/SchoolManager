@@ -1,0 +1,464 @@
+using Back.Api.Persistence.Context;
+using Back.Api.Application.Dtos;
+using Back.Api.Domain.Entities;
+using Back.Api.Domain.Repositories;
+using Microsoft.EntityFrameworkCore;
+
+namespace Back.Api.Persistence.Repositories;
+
+public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomainRepository
+{
+    // ── Checks ────────────────────────────────────────────────────────────────
+
+    public Task<bool> ProfesorExisteAsync(int profesorId)
+        => context.Profesores.AnyAsync(p => p.Id == profesorId);
+
+    public Task<bool> ProfesorImparteAsignaturaAsync(int profesorId, int asignaturaId)
+        => context.ProfesorAsignaturaCursos
+            .AnyAsync(pac => pac.ProfesorId == profesorId && pac.AsignaturaId == asignaturaId);
+
+    public Task<bool> ProfesorImparteTareaAsync(int profesorId, int tareaId)
+        => context.Tareas.AnyAsync(t => t.Id == tareaId && t.ProfesorId == profesorId);
+
+    public Task<bool> CorreoDuplicadoAsync(string correo)
+        => context.Profesores.AnyAsync(p => p.Correo == correo);
+
+    public Task<bool> CorreoDuplicadoExceptAsync(string correo, int exceptId)
+        => context.Profesores.AnyAsync(p => p.Correo == correo && p.Id != exceptId);
+
+    public Task<bool> CursoExisteAsync(int cursoId)
+        => context.Cursos.AnyAsync(c => c.Id == cursoId);
+
+    public Task<bool> AsignaturaYaTieneOtroProfesorAsync(int asignaturaId, int profesorId)
+        => context.ProfesorAsignaturaCursos
+            .AnyAsync(x => x.AsignaturaId == asignaturaId && x.ProfesorId != profesorId);
+
+    public Task<bool> ImparticionExisteAsync(int profesorId, int asignaturaId, int cursoId)
+        => context.ProfesorAsignaturaCursos
+            .AnyAsync(x => x.ProfesorId == profesorId && x.AsignaturaId == asignaturaId && x.CursoId == cursoId);
+
+    public Task<bool> EstudianteMatriculadoAsync(int estudianteId, int asignaturaId)
+        => context.EstudianteAsignaturas
+            .AnyAsync(x => x.EstudianteId == estudianteId && x.AsignaturaId == asignaturaId);
+
+    public Task<bool> ProfesorImparteAlCursoAsync(int profesorId, int asignaturaId, int cursoId)
+        => context.ProfesorAsignaturaCursos
+            .AnyAsync(x => x.ProfesorId == profesorId && x.AsignaturaId == asignaturaId && x.CursoId == cursoId);
+
+    public Task<bool> TareaDuplicadaAsync(int asignaturaId, int trimestre, string nombre)
+        => context.Tareas
+            .AnyAsync(t => t.AsignaturaId == asignaturaId && t.Trimestre == trimestre && t.Nombre == nombre);
+
+    // ── Simple lookups ────────────────────────────────────────────────────────
+
+    public async Task<AsignaturaInfoDto?> GetAsignaturaInfoAsync(int asignaturaId)
+        => await context.Asignaturas
+            .AsNoTracking()
+            .Where(a => a.Id == asignaturaId)
+            .Select(a => new AsignaturaInfoDto { Id = a.Id, Nombre = a.Nombre, CursoId = a.CursoId, Curso = a.Curso!.Nombre })
+            .FirstOrDefaultAsync();
+
+    public async Task<TareaResumenDto?> GetTareaResumenAsync(int tareaId)
+        => await context.Tareas
+            .AsNoTracking()
+            .Where(t => t.Id == tareaId)
+            .Select(t => new TareaResumenDto { TareaId = t.Id, Nombre = t.Nombre, Trimestre = t.Trimestre })
+            .FirstOrDefaultAsync();
+
+    public async Task<(int Id, int CursoId)?> GetAsignaturaBasicaAsync(int asignaturaId)
+    {
+        var asignatura = await context.Asignaturas
+            .AsNoTracking()
+            .Where(a => a.Id == asignaturaId)
+            .Select(a => new { a.Id, a.CursoId })
+            .FirstOrDefaultAsync();
+
+        return asignatura is null ? null : (asignatura.Id, asignatura.CursoId);
+    }
+
+    public async Task<(int Id, int AsignaturaId, int ProfesorId)?> GetTareaInfoAsync(int tareaId)
+    {
+        var tarea = await context.Tareas
+            .AsNoTracking()
+            .Where(t => t.Id == tareaId)
+            .Select(t => new { t.Id, t.AsignaturaId, t.ProfesorId })
+            .FirstOrDefaultAsync();
+
+        return tarea is null ? null : (tarea.Id, tarea.AsignaturaId, tarea.ProfesorId);
+    }
+
+    public async Task<int?> GetEstudianteCursoAsync(int estudianteId)
+    {
+        var result = await context.Estudiantes
+            .AsNoTracking()
+            .Where(e => e.Id == estudianteId)
+            .Select(e => (int?)e.CursoId)
+            .FirstOrDefaultAsync();
+
+        return result;
+    }
+
+    // ── Queries ───────────────────────────────────────────────────────────────
+
+    public async Task<IEnumerable<ProfesorListItemDto>> GetAllAsync()
+        => await context.Profesores
+            .AsNoTracking()
+            .Select(p => new ProfesorListItemDto
+            {
+                Id = p.Id,
+                Nombre = p.Nombre,
+                Correo = p.Correo,
+                Imparticiones = p.ProfesorAsignaturaCursos.Select(i => new ProfesorImparticionDto
+                {
+                    AsignaturaId = i.AsignaturaId,
+                    Asignatura = i.Asignatura!.Nombre,
+                    CursoId = i.CursoId,
+                    Curso = i.Curso!.Nombre
+                }).ToList()
+            })
+            .ToListAsync();
+
+    public async Task<ProfesorDetalleDto?> GetDetalleAsync(int id)
+    {
+        var profesor = await context.Profesores
+            .AsNoTracking()
+            .Where(p => p.Id == id)
+            .Select(p => new { p.Id, p.Nombre, p.Correo })
+            .FirstOrDefaultAsync();
+
+        if (profesor is null) return null;
+
+        var cursos = await context.ProfesorAsignaturaCursos
+            .AsNoTracking()
+            .Where(i => i.ProfesorId == id)
+            .OrderBy(i => i.Curso!.Nombre).ThenBy(i => i.Asignatura!.Nombre)
+            .Select(i => new { CursoId = i.CursoId, Curso = i.Curso!.Nombre, AsignaturaId = i.AsignaturaId, Asignatura = i.Asignatura!.Nombre })
+            .ToListAsync();
+
+        return new ProfesorDetalleDto
+        {
+            Id = profesor.Id,
+            Nombre = profesor.Nombre,
+            Correo = profesor.Correo,
+            Cursos = cursos
+                .GroupBy(i => new { i.CursoId, i.Curso })
+                .Select(g => new ProfesorCursoPanelDto
+                {
+                    CursoId = g.Key.CursoId,
+                    Curso = g.Key.Curso,
+                    Asignaturas = g.Select(x => new ProfesorCursoAsignaturaDto { AsignaturaId = x.AsignaturaId, Nombre = x.Asignatura }).ToList()
+                })
+                .OrderBy(x => x.Curso)
+                .ToList()
+        };
+    }
+
+    public async Task<ProfesorPanelDto?> GetPanelAsync(int id)
+    {
+        var profesor = await context.Profesores
+            .AsNoTracking()
+            .Where(p => p.Id == id)
+            .Select(p => new { p.Id, p.Nombre })
+            .FirstOrDefaultAsync();
+
+        if (profesor is null) return null;
+
+        var cursos = await context.ProfesorAsignaturaCursos
+            .AsNoTracking()
+            .Where(i => i.ProfesorId == id)
+            .OrderBy(i => i.Curso!.Nombre).ThenBy(i => i.Asignatura!.Nombre)
+            .Select(i => new { CursoId = i.CursoId, Curso = i.Curso!.Nombre, AsignaturaId = i.AsignaturaId, Asignatura = i.Asignatura!.Nombre })
+            .ToListAsync();
+
+        return new ProfesorPanelDto
+        {
+            Id = profesor.Id,
+            Nombre = profesor.Nombre,
+            Cursos = cursos
+                .GroupBy(i => new { i.CursoId, i.Curso })
+                .Select(g => new ProfesorCursoPanelDto
+                {
+                    CursoId = g.Key.CursoId,
+                    Curso = g.Key.Curso,
+                    Asignaturas = g.Select(x => new ProfesorCursoAsignaturaDto { AsignaturaId = x.AsignaturaId, Nombre = x.Asignatura }).ToList()
+                })
+                .OrderBy(x => x.Curso)
+                .ToList()
+        };
+    }
+
+    public async Task<AsignaturaAlumnosResponseDto?> GetAlumnosCompletoAsync(int asignaturaId)
+    {
+        var asignaturaInfo = await GetAsignaturaInfoAsync(asignaturaId);
+        if (asignaturaInfo is null) return null;
+
+        var tareas = await GetTareasDeAsignaturaAsync(asignaturaId);
+        var tareaIds = tareas.Select(t => t.TareaId).ToList();
+
+        var alumnosRaw = await context.EstudianteAsignaturas
+            .AsNoTracking()
+            .Where(ea => ea.AsignaturaId == asignaturaId)
+            .OrderBy(ea => ea.Estudiante!.Nombre)
+            .Select(ea => new { ea.EstudianteId, Alumno = ea.Estudiante!.Nombre })
+            .ToListAsync();
+
+        var alumnoIds = alumnosRaw.Select(a => a.EstudianteId).ToList();
+        var todasNotas = await context.Notas
+            .AsNoTracking()
+            .Where(n => alumnoIds.Contains(n.EstudianteId) && tareaIds.Contains(n.TareaId))
+            .ToListAsync();
+
+        var alumnos = alumnosRaw.Select(a =>
+        {
+            var notasAlumno = todasNotas.Where(n => n.EstudianteId == a.EstudianteId).ToList();
+            var notasList = tareas.Select(t => new AsignaturaNotaAlumnoDto
+            {
+                TareaId = t.TareaId,
+                Valor = notasAlumno.FirstOrDefault(n => n.TareaId == t.TareaId)?.Valor
+            }).ToList();
+
+            decimal? Media(int trim)
+            {
+                var vals = tareas.Where(t => t.Trimestre == trim)
+                    .Select(t => notasList.First(n => n.TareaId == t.TareaId).Valor)
+                    .Where(v => v.HasValue).Select(v => v!.Value).ToList();
+                return vals.Count > 0 ? vals.Average() : null;
+            }
+
+            var t1 = Media(1); var t2 = Media(2); var t3 = Media(3);
+            decimal? notaFinal = (t1.HasValue && t2.HasValue && t3.HasValue)
+                ? Math.Round((t1.Value + t2.Value + t3.Value) / 3, 2) : null;
+
+            return new AsignaturaAlumnoDto
+            {
+                EstudianteId = a.EstudianteId,
+                Alumno = a.Alumno,
+                Notas = notasList,
+                Medias = new MediasTrimestralesDto
+                {
+                    T1 = t1.HasValue ? Math.Round(t1.Value, 2) : null,
+                    T2 = t2.HasValue ? Math.Round(t2.Value, 2) : null,
+                    T3 = t3.HasValue ? Math.Round(t3.Value, 2) : null
+                },
+                NotaFinal = notaFinal
+            };
+        }).ToList();
+
+        return new AsignaturaAlumnosResponseDto { Asignatura = asignaturaInfo, Tareas = tareas, Alumnos = alumnos };
+    }
+
+    public async Task<List<TareaResumenDto>> GetTareasDeAsignaturaAsync(int asignaturaId)
+        => await context.Tareas
+            .AsNoTracking()
+            .Where(t => t.AsignaturaId == asignaturaId)
+            .OrderBy(t => t.Trimestre).ThenBy(t => t.Nombre)
+            .Select(t => new TareaResumenDto { TareaId = t.Id, Nombre = t.Nombre, Trimestre = t.Trimestre })
+            .ToListAsync();
+
+    public async Task<List<ProfesorAlumnoResumenRow>> GetAlumnosResumenAsync(int asignaturaId)
+        => await context.EstudianteAsignaturas
+            .AsNoTracking()
+            .Where(ea => ea.AsignaturaId == asignaturaId)
+            .OrderBy(ea => ea.Estudiante!.Nombre)
+            .Select(ea => new ProfesorAlumnoResumenRow(ea.EstudianteId, ea.Estudiante!.Nombre))
+            .ToListAsync();
+
+    public async Task<List<ProfesorTareaCalificacionRow>> GetCalificacionesTareaAsync(int asignaturaId, int tareaId)
+    {
+        var alumnos = await GetAlumnosResumenAsync(asignaturaId);
+        var notas = await context.Notas
+            .AsNoTracking()
+            .Where(n => n.TareaId == tareaId)
+            .ToDictionaryAsync(n => n.EstudianteId, n => (decimal?)n.Valor);
+        return alumnos.Select(a => new ProfesorTareaCalificacionRow(
+            a.EstudianteId, a.Alumno,
+            notas.TryGetValue(a.EstudianteId, out var v) ? v : null
+        )).ToList();
+    }
+
+    public async Task<ProfesorAlumnoDetalleDto?> GetAlumnoDetalleAsync(int asignaturaId, int estudianteId)
+    {
+        var alumno = await context.Estudiantes
+            .AsNoTracking()
+            .Where(e => e.Id == estudianteId)
+            .Select(e => new { e.Id, e.Nombre })
+            .FirstOrDefaultAsync();
+
+        if (alumno is null) return null;
+
+        var matriculado = await context.EstudianteAsignaturas
+            .AnyAsync(ea => ea.EstudianteId == estudianteId && ea.AsignaturaId == asignaturaId);
+        if (!matriculado) return null;
+
+        var tareas = await GetTareasDeAsignaturaAsync(asignaturaId);
+        var tareaIds = tareas.Select(t => t.TareaId).ToList();
+        var notas = await context.Notas
+            .AsNoTracking()
+            .Where(n => n.EstudianteId == estudianteId && tareaIds.Contains(n.TareaId))
+            .ToListAsync();
+
+        var notasList = tareas.Select(t => new AsignaturaNotaAlumnoDto
+        {
+            TareaId = t.TareaId,
+            Valor = notas.FirstOrDefault(n => n.TareaId == t.TareaId)?.Valor
+        }).ToList();
+
+        decimal? Media(int trim)
+        {
+            var vals = tareas.Where(t => t.Trimestre == trim)
+                .Select(t => notasList.First(n => n.TareaId == t.TareaId).Valor)
+                .Where(v => v.HasValue).Select(v => v!.Value).ToList();
+            return vals.Count > 0 ? Math.Round(vals.Average(), 2) : null;
+        }
+
+        var t1 = Media(1); var t2 = Media(2); var t3 = Media(3);
+        return new ProfesorAlumnoDetalleDto
+        {
+            EstudianteId = alumno.Id,
+            Alumno = alumno.Nombre,
+            Notas = notasList,
+            Medias = new MediasTrimestralesDto { T1 = t1, T2 = t2, T3 = t3 },
+            NotaFinal = (t1.HasValue && t2.HasValue && t3.HasValue)
+                ? Math.Round((t1.Value + t2.Value + t3.Value) / 3, 2) : null
+        };
+    }
+
+    public async Task<IEnumerable<TareaResumenDto>> GetTareasDeProfesorEnAsignaturaAsync(int profesorId, int asignaturaId)
+        => await context.Tareas
+            .AsNoTracking()
+            .Where(t => t.AsignaturaId == asignaturaId && t.ProfesorId == profesorId)
+            .OrderBy(t => t.Trimestre).ThenBy(t => t.Nombre)
+            .Select(t => new TareaResumenDto { TareaId = t.Id, Nombre = t.Nombre, Trimestre = t.Trimestre })
+            .ToListAsync();
+
+    public async Task<IEnumerable<TareaConNotasDto>> GetTareasConNotasAsync(int asignaturaId)
+    {
+        var asignaturaNombre = await context.Asignaturas
+            .AsNoTracking()
+            .Where(a => a.Id == asignaturaId)
+            .Select(a => a.Nombre)
+            .FirstOrDefaultAsync() ?? string.Empty;
+
+        var tareas = await context.Tareas
+            .AsNoTracking()
+            .Where(t => t.AsignaturaId == asignaturaId)
+            .OrderBy(t => t.Trimestre).ThenBy(t => t.Nombre)
+            .ToListAsync();
+
+        var tareaIds = tareas.Select(t => t.Id).ToList();
+        var notas = await context.Notas
+            .AsNoTracking()
+            .Where(n => tareaIds.Contains(n.TareaId))
+            .Select(n => new { n.TareaId, n.EstudianteId, Alumno = n.Estudiante!.Nombre, n.Valor })
+            .ToListAsync();
+
+        return tareas.Select(t => new TareaConNotasDto
+        {
+            TareaId = t.Id,
+            Nombre = t.Nombre,
+            Trimestre = t.Trimestre,
+            AsignaturaId = t.AsignaturaId,
+            Asignatura = asignaturaNombre,
+            Notas = notas
+                .Where(n => n.TareaId == t.Id)
+                .OrderBy(n => n.Alumno)
+                .Select(n => new TareaNotaAlumnoDto { EstudianteId = n.EstudianteId, Alumno = n.Alumno, Valor = n.Valor })
+                .ToList()
+        });
+    }
+
+    // ── Mutations ─────────────────────────────────────────────────────────────
+
+    public async Task<ProfesorListItemDto> CreateAsync(string nombre, string correo, string hash)
+    {
+        var profesor = new Profesor { Nombre = nombre, Correo = correo, Contrasena = hash };
+        context.Profesores.Add(profesor);
+        await context.SaveChangesAsync();
+        return new ProfesorListItemDto { Id = profesor.Id, Nombre = profesor.Nombre, Correo = profesor.Correo, Imparticiones = new() };
+    }
+
+    public async Task<ProfesorListItemDto?> UpdateAsync(int id, string nombre, string correo, string? hash)
+    {
+        var profesor = await context.Profesores.FindAsync(id);
+        if (profesor is null) return null;
+
+        profesor.Nombre = nombre;
+        profesor.Correo = correo;
+        if (hash is not null) profesor.Contrasena = hash;
+        await context.SaveChangesAsync();
+
+        var imparticiones = await context.ProfesorAsignaturaCursos
+            .AsNoTracking()
+            .Where(i => i.ProfesorId == id)
+            .Select(i => new ProfesorImparticionDto
+            {
+                AsignaturaId = i.AsignaturaId,
+                Asignatura = i.Asignatura!.Nombre,
+                CursoId = i.CursoId,
+                Curso = i.Curso!.Nombre
+            })
+            .ToListAsync();
+
+        return new ProfesorListItemDto { Id = profesor.Id, Nombre = profesor.Nombre, Correo = profesor.Correo, Imparticiones = imparticiones };
+    }
+
+    public async Task DeleteAsync(int id)
+    {
+        var imparticiones = await context.ProfesorAsignaturaCursos
+            .Where(i => i.ProfesorId == id).ToListAsync();
+        context.ProfesorAsignaturaCursos.RemoveRange(imparticiones);
+
+        var tareaIds = await context.Tareas
+            .Where(t => t.ProfesorId == id).Select(t => t.Id).ToListAsync();
+        if (tareaIds.Count > 0)
+        {
+            var notas = await context.Notas.Where(n => tareaIds.Contains(n.TareaId)).ToListAsync();
+            context.Notas.RemoveRange(notas);
+            var tareas = await context.Tareas.Where(t => t.ProfesorId == id).ToListAsync();
+            context.Tareas.RemoveRange(tareas);
+        }
+
+        var profesor = await context.Profesores.FindAsync(id);
+        if (profesor is not null) context.Profesores.Remove(profesor);
+        await context.SaveChangesAsync();
+    }
+
+    public async Task AsignarImparticionAsync(int profesorId, int asignaturaId, int cursoId)
+    {
+        context.ProfesorAsignaturaCursos.Add(new ProfesorAsignaturaCurso
+        {
+            ProfesorId = profesorId,
+            AsignaturaId = asignaturaId,
+            CursoId = cursoId
+        });
+        await context.SaveChangesAsync();
+    }
+
+    public async Task SetNotaAsync(int estudianteId, int tareaId, decimal valor)
+    {
+        var nota = await context.Notas
+            .FirstOrDefaultAsync(n => n.EstudianteId == estudianteId && n.TareaId == tareaId);
+
+        if (nota is null)
+            context.Notas.Add(new Nota { EstudianteId = estudianteId, TareaId = tareaId, Valor = valor });
+        else
+            nota.Valor = valor;
+
+        await context.SaveChangesAsync();
+    }
+
+    public async Task<TareaDetalleDto> CrearTareaAsync(string nombre, int trimestre, int asignaturaId, int profesorId)
+    {
+        var asignaturaNombre = await context.Asignaturas
+            .AsNoTracking()
+            .Where(a => a.Id == asignaturaId)
+            .Select(a => a.Nombre)
+            .FirstOrDefaultAsync() ?? string.Empty;
+
+        var tarea = new Tarea { Nombre = nombre, Trimestre = trimestre, AsignaturaId = asignaturaId, ProfesorId = profesorId };
+        context.Tareas.Add(tarea);
+        await context.SaveChangesAsync();
+
+        return new TareaDetalleDto { Id = tarea.Id, Nombre = tarea.Nombre, Trimestre = tarea.Trimestre, AsignaturaId = tarea.AsignaturaId, Asignatura = asignaturaNombre };
+    }
+}

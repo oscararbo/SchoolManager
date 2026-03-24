@@ -59,10 +59,36 @@ export interface AsignaturaAlumno {
     notaFinal: number | null;
 }
 
+export interface AsignaturaAlumnoResumen {
+    estudianteId: number;
+    alumno: string;
+    medias: MediasTrimestrales;
+    notaFinal: number | null;
+}
+
 export interface AsignaturaAlumnos {
     asignatura: { id: number; nombre: string; cursoId: number; curso: string };
     tareas: TareaResumen[];
     alumnos: AsignaturaAlumno[];
+}
+
+export interface AsignaturaAlumnosResumen {
+    asignatura: { id: number; nombre: string; cursoId: number; curso: string };
+    tareas: TareaResumen[];
+    alumnos: AsignaturaAlumnoResumen[];
+}
+
+export interface AsignaturaCalificacionTarea {
+    estudianteId: number;
+    alumno: string;
+    valor: number | null;
+}
+
+export interface AsignaturaCalificacionesTarea {
+    tareaId: number;
+    tarea: string;
+    trimestre: number;
+    calificaciones: AsignaturaCalificacionTarea[];
 }
 
 export interface NotaAlumnoTarea {
@@ -101,6 +127,28 @@ export interface AlumnoPanel {
     nombre: string;
     curso: { cursoId: number; curso: string };
     materias: AlumnoMateria[];
+}
+
+export interface AlumnoMateriaResumen {
+    asignaturaId: number;
+    asignatura: string;
+    profesor: string | null;
+}
+
+export interface AlumnoPanelResumen {
+    id: number;
+    nombre: string;
+    curso: { cursoId: number; curso: string };
+    materias: AlumnoMateriaResumen[];
+}
+
+export interface AlumnoMateriaDetalle {
+    asignaturaId: number;
+    asignatura: string;
+    profesor: string | null;
+    notas: AlumnoTarea[];
+    medias: MediasTrimestrales;
+    notaFinal: number | null;
 }
 
 export interface CursoItem {
@@ -297,6 +345,45 @@ export class SchoolApiService {
     }
 
     /**
+     * Devuelve el resumen de alumnos (medias y nota final) de una asignatura.
+     */
+    async getAlumnosResumenDeAsignatura(profesorId: number, asignaturaId: number): Promise<AsignaturaAlumnosResumen> {
+        try {
+            return await firstValueFrom(
+                this.http.get<AsignaturaAlumnosResumen>(
+                    `${this.apiUrl}/profesores/${profesorId}/asignaturas/${asignaturaId}/alumnos-resumen`
+                )
+            );
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    /**
+     * Devuelve el detalle de notas de un alumno concreto en una asignatura.
+     */
+    async getAlumnoDetalleDeAsignatura(profesorId: number, asignaturaId: number, estudianteId: number): Promise<AsignaturaAlumno> {
+        try {
+            return await firstValueFrom(
+                this.http.get<AsignaturaAlumno>(
+                    `${this.apiUrl}/profesores/${profesorId}/asignaturas/${asignaturaId}/alumnos/${estudianteId}/detalle`
+                )
+            );
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    /**
+     * Devuelve las calificaciones de una tarea para todos los alumnos de la asignatura.
+     */
+    async getCalificacionesDeTarea(profesorId: number, asignaturaId: number, tareaId: number): Promise<AsignaturaCalificacionesTarea> {
+        try {
+            return await firstValueFrom(
+                this.http.get<AsignaturaCalificacionesTarea>(
+                    `${this.apiUrl}/profesores/${profesorId}/asignaturas/${asignaturaId}/tareas/${tareaId}/calificaciones`
+                )
+            );
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    /**
      * Registra o actualiza la nota de un estudiante para una tarea concreta.
      *
      * @param profesorId - Identificador del profesor.
@@ -344,6 +431,22 @@ export class SchoolApiService {
         try {
             return await firstValueFrom(
                 this.http.get<AlumnoPanel>(`${this.apiUrl}/estudiantes/${estudianteId}/panel`)
+            );
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    async getPanelAlumnoResumen(estudianteId: number): Promise<AlumnoPanelResumen> {
+        try {
+            return await firstValueFrom(
+                this.http.get<AlumnoPanelResumen>(`${this.apiUrl}/estudiantes/${estudianteId}/panel-resumen`)
+            );
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    async getMateriaDetalle(estudianteId: number, asignaturaId: number): Promise<AlumnoMateriaDetalle> {
+        try {
+            return await firstValueFrom(
+                this.http.get<AlumnoMateriaDetalle>(`${this.apiUrl}/estudiantes/${estudianteId}/materias/${asignaturaId}/detalle`)
             );
         } catch (e) { throw this.extractError(e); }
     }
