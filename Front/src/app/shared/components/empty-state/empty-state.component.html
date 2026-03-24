@@ -1,0 +1,7 @@
+<section class="empty-state" role="status" aria-live="polite">
+  <h3>{{ title }}</h3>
+  <p>{{ description }}</p>
+  <button *ngIf="actionLabel" type="button" class="action" (click)="action.emit()">
+    {{ actionLabel }}
+  </button>
+</section>

@@ -1,5 +1,7 @@
 using Back.Api.Application.Services;
-using Back.Api.Domain.Repositories;
+using Back.Api.Application.Abstractions.Repositories;
+using Back.Api.Application.Abstractions.Security;
+using Back.Api.Application.Configuration;
 using Back.Api.Infrastructure.ErrorHandling;
 using Back.Api.Infrastructure.Security;
 using Back.Api.Persistence.Context;
@@ -9,8 +11,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Npgsql;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -42,10 +46,16 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 // JWT authentication setup.
-var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key no esta configurado.");
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer no esta configurado.");
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("Jwt:Audience no esta configurado.");
-var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+builder.Services.AddOptions<JwtOptions>()
+    .Bind(builder.Configuration.GetSection("Jwt"))
+    .ValidateDataAnnotations()
+    .Validate(options => !string.IsNullOrWhiteSpace(options.Key) && options.Key.Length >= 32,
+        "Jwt:Key debe tener al menos 32 caracteres para HMAC-SHA256.")
+    .ValidateOnStart();
+
+var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()
+    ?? throw new InvalidOperationException("La seccion Jwt no esta configurada.");
+var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -56,8 +66,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateIssuerSigningKey = true,
             ValidateLifetime = true,
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidAudience = jwtOptions.Audience,
             IssuerSigningKey = signingKey,
             ClockSkew = TimeSpan.Zero
         };
@@ -137,9 +147,10 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod());
 });
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=school.db";
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? "Host=localhost;Port=5432;Database=schooldb;Username=postgres;Password=postgres";
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(connectionString));
+    options.UseNpgsql(connectionString));
 
 var app = builder.Build();
 
@@ -147,40 +158,52 @@ app.UseExceptionHandler();
 
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var passwordService = scope.ServiceProvider.GetRequiredService<IPasswordService>();
-    var seedAdminName = builder.Configuration["SeedAdmin:Nombre"] ?? "Administrador";
-    var seedAdminEmail = (builder.Configuration["SeedAdmin:Correo"] ?? "admin@prueba.com").Trim().ToLowerInvariant();
-    var seedAdminPassword = builder.Configuration["SeedAdmin:Contrasena"] ?? "Prueba1";
-
-    if (db.Database.GetMigrations().Any())
+    try
     {
-        db.Database.Migrate();
-    }
-    else
-    {
-        db.Database.EnsureCreated();
-    }
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var passwordService = scope.ServiceProvider.GetRequiredService<IPasswordService>();
+        var seedAdminName = builder.Configuration["SeedAdmin:Nombre"] ?? "Administrador";
+        var seedAdminEmail = (builder.Configuration["SeedAdmin:Correo"] ?? "admin@prueba.com").Trim().ToLowerInvariant();
+        var seedAdminPassword = builder.Configuration["SeedAdmin:Contrasena"] ?? "Prueba1";
 
-    var adminExistente = db.Admins.FirstOrDefault(a => a.Correo == seedAdminEmail);
-
-    if (adminExistente is null)
-    {
-        db.Admins.Add(new()
+        if (db.Database.GetMigrations().Any())
         {
-            Nombre = seedAdminName,
-            Correo = seedAdminEmail,
-            Contrasena = passwordService.Hash(seedAdminPassword)
-        });
-    }
-    else
-    {
-        adminExistente.Nombre = seedAdminName;
-        adminExistente.Correo = seedAdminEmail;
-        adminExistente.Contrasena = passwordService.Hash(seedAdminPassword);
-    }
+            db.Database.Migrate();
+        }
+        else
+        {
+            db.Database.EnsureCreated();
+        }
 
-    db.SaveChanges();
+        var adminExistente = db.Admins.FirstOrDefault(a => a.Correo == seedAdminEmail);
+
+        if (adminExistente is null)
+        {
+            db.Admins.Add(new()
+            {
+                Nombre = seedAdminName,
+                Correo = seedAdminEmail,
+                Contrasena = passwordService.Hash(seedAdminPassword)
+            });
+        }
+        else
+        {
+            adminExistente.Nombre = seedAdminName;
+            adminExistente.Correo = seedAdminEmail;
+            adminExistente.Contrasena = passwordService.Hash(seedAdminPassword);
+        }
+
+        db.SaveChanges();
+    }
+    catch (NpgsqlException)
+    {
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine("No se pudo conectar con PostgreSQL.");
+        Console.WriteLine("Levanta la BD antes de ejecutar el backend.");
+        Console.WriteLine("Sugerencia: docker compose up -d postgres");
+        Console.ResetColor();
+        return;
+    }
 }
 
 if (app.Environment.IsDevelopment())

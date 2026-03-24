@@ -5,7 +5,7 @@ API REST del sistema de gestion escolar. Expone autenticacion, administracion ac
 ## Stack
 
 - ASP.NET Core 10
-- Entity Framework Core + SQLite
+- Entity Framework Core + PostgreSQL
 - JWT Bearer
 - Swagger UI
 
@@ -21,6 +21,21 @@ URL de desarrollo:
 
 - API: `http://localhost:5014`
 - Swagger UI: `http://localhost:5014/swagger`
+
+## Docker
+
+El backend se ejecuta en `docker-compose.yml` junto con PostgreSQL y el frontend.
+
+```bash
+docker compose up --build
+```
+
+Variables relevantes del servicio `back`:
+
+- `ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=schooldb;Username=postgres;Password=postgres`
+- `SeedAdmin__Nombre`
+- `SeedAdmin__Correo`
+- `SeedAdmin__Contrasena`
 
 ## Configuracion
 
@@ -51,71 +66,35 @@ Back/
 ├── Program.cs
 ├── appsettings.json
 ├── README.md
+├── Dockerfile
+├── ARCHITECTURE.md
 ├── Properties/
 │   └── launchSettings.json
-├── Controllers/
-│   ├── Admin/
-│   │   └── ImportController.cs
-│   ├── Auth/
-│   │   └── AuthController.cs
-│   ├── Asignaturas/
-│   │   └── AsignaturasController.cs
-│   ├── Cursos/
-│   │   └── CursosController.cs
-│   ├── Estudiantes/
-│   │   └── EstudiantesController.cs
-│   └── Profesores/
-│       └── ProfesoresController.cs
-├── Data/
-│   └── AppDbContext.cs
-├── Dtos/
-│   ├── Input/
-│   │   ├── Asignaturas/
-│   │   ├── Auth/
-│   │   ├── Cursos/
-│   │   ├── Estudiantes/
-│   │   └── Profesores/
-│   └── Output/
-│       ├── Asignaturas/
-│       ├── Auth/
-│       ├── Cursos/
-│       ├── Estudiantes/
-│       └── Profesores/
-├── Models/
-│   ├── Asignatura.cs
-│   ├── Curso.cs
-│   ├── Estudiante.cs
-│   ├── EstudianteAsignatura.cs
-│   ├── Nota.cs
-│   ├── Profesor.cs
-│   ├── ProfesorAsignaturaCurso.cs
-│   ├── RefreshToken.cs
-│   └── Tarea.cs
-└── Services/
-	├── Interfaces/
-	│   ├── Asignaturas/
-	│   ├── Auth/
-	│   ├── Cursos/
-	│   ├── Estudiantes/
-	│   ├── Profesores/
-	│   └── Security/
-	└── Implementations/
-		├── Asignaturas/
-		├── Auth/
-		├── Cursos/
-		├── Estudiantes/
-		├── Profesores/
-		└── Security/
+├── Application/
+│   ├── Abstractions/
+│   ├── Configuration/
+│   ├── Dtos/
+│   └── Services/
+├── Domain/
+│   └── Entities/
+├── Infrastructure/
+│   ├── ErrorHandling/
+│   └── Security/
+├── Persistence/
+│   ├── Context/
+│   └── Repositories/
+└── Presentation/
+    └── Controllers/
 ```
 
-## Responsabilidad por capas
+## Responsabilidad por capas (actual)
 
-- `Controllers`: entrada HTTP y delegacion en servicios.
-- `Services/Implementations`: reglas de negocio y validaciones.
-- `Dtos`: contratos de entrada/salida entre API y cliente.
-- `Models`: entidades persistidas.
-- `Data/AppDbContext`: mapeo EF, relaciones e indices.
-- `Program.cs`: DI, auth, CORS, swagger, excepciones globales.
+- `Presentation`: entrada HTTP y traduccion request/response.
+- `Application`: casos de uso, DTOs, contratos de repositorio/seguridad.
+- `Domain`: entidades de negocio.
+- `Infrastructure`: cross-cutting tecnico (seguridad, manejo de errores).
+- `Persistence`: EF Core (DbContext y repositorios).
+- `Program.cs`: composition root (DI, auth, CORS, swagger, migraciones).
 
 ## Endpoints clave
 
@@ -134,6 +113,11 @@ Back/
 - `POST /api/admin/csv/estudiantes`
 - `POST /api/admin/csv/imparticiones`
 - `POST /api/admin/csv/matriculas`
+
+Nota de integracion con Front:
+
+- El panel admin del cliente Angular esta modularizado en vistas de estadisticas y gestion.
+- La importacion CSV del cliente usa una card reutilizable por entidad, pero consume los mismos endpoints listados arriba.
 
 ### Profesor
 

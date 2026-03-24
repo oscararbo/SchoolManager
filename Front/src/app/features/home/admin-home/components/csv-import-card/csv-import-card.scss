@@ -1,0 +1,15 @@
+.csv-import-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.csv-import-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    background: rgba(148, 163, 184, 0.32);
+    backdrop-filter: blur(1px);
+}
+

@@ -4,15 +4,18 @@ Aplicacion de gestion escolar con backend en ASP.NET Core y frontend en Angular.
 
 ## Stack
 
-- Backend: ASP.NET Core 10, Entity Framework Core, SQLite, JWT Bearer, Swagger UI.
+- Backend: ASP.NET Core 10, Entity Framework Core, PostgreSQL, JWT Bearer, Swagger UI.
 - Frontend: Angular 21 standalone, signals, Bootstrap 5, Bootstrap Icons.
+- Contenedores: Docker + Docker Compose (PostgreSQL, API y Front).
 
 ## Estructura general
 
 ```text
 proyectoInicial/
-├── Back/                      # API REST + logica de negocio + SQLite
-└── Front/                     # Aplicacion Angular (admin, profesor, alumno)
+├── Back/                      # API REST por capas (Application/Domain/Infrastructure/Persistence/Presentation)
+├── Front/                     # Aplicacion Angular (admin, profesor, alumno)
+├── Back.Tests/                # Pruebas de backend
+└── docker-compose.yml         # Orquestacion local (postgres + back + front)
 ```
 
 ## Arranque rapido
@@ -28,6 +31,8 @@ dotnet run --project Back.Api.csproj
 - API: `http://localhost:5014`
 - Swagger UI: `http://localhost:5014/swagger`
 
+Base de datos local por defecto: PostgreSQL (`Host=localhost;Port=5432;Database=schooldb;Username=postgres;Password=postgres`).
+
 ### Frontend
 
 ```bash
@@ -37,6 +42,18 @@ npm start
 ```
 
 - App: `http://localhost:4200`
+
+## Arranque con Docker Compose
+
+```bash
+docker compose up --build
+```
+
+Servicios:
+
+- Front: `http://localhost:4200`
+- Back (Swagger): `http://localhost:5014/swagger`
+- PostgreSQL: `localhost:5432`
 
 ## Credenciales semilla
 

@@ -3,6 +3,20 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { SessionService } from '../../core/services/session.service';
 import { environment } from '../../../environments/environment';
+import type {
+    ApiAsignaturaItem,
+    ApiCursoItem,
+    ApiEstudianteItem,
+    ApiLoginResponse,
+    ApiProfesorListItem
+} from './school-api.contracts';
+import {
+    mapAsignaturaItem,
+    mapCursoItem,
+    mapEstudianteItem,
+    mapLoginResponse,
+    mapProfesorListItem
+} from './school-api.mappers';
 
 //#region Interfaces
 export interface LoginResponse {
@@ -219,6 +233,82 @@ export interface CsvImportResult {
     detalles?: string[];
 }
 
+export interface AdminCursoStats {
+    curso: string;
+    estudiantes: number;
+    asignaturas: number;
+}
+
+export interface AdminStats {
+    totalCursos: number;
+    totalAsignaturas: number;
+    totalProfesores: number;
+    totalEstudiantes: number;
+    totalMatriculas: number;
+    totalTareas: number;
+    porCurso: AdminCursoStats[];
+}
+
+export interface AdminAlumnoNotaResumen {
+    estudianteId: number;
+    estudiante: string;
+    notaFinal: number | null;
+    aprobado: boolean;
+}
+
+export interface AdminAsignaturaNotasStats {
+    asignaturaId: number;
+    asignatura: string;
+    totalAlumnos: number;
+    aprobados: number;
+    suspensos: number;
+    sinNota: number;
+    media: number | null;
+    alumnos: AdminAlumnoNotaResumen[];
+}
+
+export interface AdminCursoNotasStats {
+    cursoId: number;
+    curso: string;
+    media: number | null;
+    asignaturas: AdminAsignaturaNotasStats[];
+}
+
+export interface AdminNotasStats {
+    mediaGlobal: number | null;
+    porCurso: AdminCursoNotasStats[];
+}
+
+export interface ProfesorTareaStats {
+    tareaId: number;
+    nombre: string;
+    trimestre: number;
+    media: number | null;
+    totalNotas: number;
+    sinNota: number;
+    notaMax: number | null;
+    notaMin: number | null;
+}
+
+export interface ProfesorAsignaturaStats {
+    asignaturaId: number;
+    asignatura: string;
+    curso: string;
+    totalAlumnos: number;
+    aprobados: number;
+    suspensos: number;
+    sinNota: number;
+    media: number | null;
+    porTarea: ProfesorTareaStats[];
+}
+
+export interface ProfesorStats {
+    profesorId: number;
+    nombre: string;
+    mediaGlobal: number | null;
+    asignaturas: ProfesorAsignaturaStats[];
+}
+
 export class CsvImportError extends Error {
     constructor(message: string, public readonly result?: CsvImportResult) {
         super(message);
@@ -288,9 +378,10 @@ export class SchoolApiService {
      */
     async login(correo: string, contrasena: string): Promise<LoginResponse> {
         try {
-            return await firstValueFrom(
-                this.http.post<LoginResponse>(`${this.apiUrl}/auth/login`, { correo, contrasena })
+            const response = await firstValueFrom(
+                this.http.post<ApiLoginResponse>(`${this.apiUrl}/auth/login`, { correo, contrasena })
             );
+            return mapLoginResponse(response);
         } catch (e) { throw this.extractError(e); }
     }
 
@@ -323,6 +414,14 @@ export class SchoolApiService {
         try {
             return await firstValueFrom(
                 this.http.get<ProfesorPanel>(`${this.apiUrl}/profesores/${profesorId}/panel`)
+            );
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    async getProfesorStats(profesorId: number): Promise<ProfesorStats> {
+        try {
+            return await firstValueFrom(
+                this.http.get<ProfesorStats>(`${this.apiUrl}/profesores/${profesorId}/stats`)
             );
         } catch (e) { throw this.extractError(e); }
     }
@@ -454,10 +553,23 @@ export class SchoolApiService {
 
     //#region AdminCursos
 
+    async getAdminStats(): Promise<AdminStats> {
+        try {
+            return await firstValueFrom(this.http.get<AdminStats>(`${this.apiUrl}/admin/stats`));
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    async getAdminNotasStats(): Promise<AdminNotasStats> {
+        try {
+            return await firstValueFrom(this.http.get<AdminNotasStats>(`${this.apiUrl}/admin/stats/notas`));
+        } catch (e) { throw this.extractError(e); }
+    }
+
     /** Devuelve todos los cursos registrados en el sistema. */
     async getCursos(): Promise<CursoItem[]> {
         try {
-            return await firstValueFrom(this.http.get<CursoItem[]>(`${this.apiUrl}/cursos`));
+            const response = await firstValueFrom(this.http.get<ApiCursoItem[]>(`${this.apiUrl}/cursos/simple`));
+            return response.map(mapCursoItem);
         } catch (e) { throw this.extractError(e); }
     }
 
@@ -501,7 +613,8 @@ export class SchoolApiService {
     /** Devuelve todas las asignaturas con su curso y relaciones (profesores y alumnos). */
     async getAsignaturas(): Promise<AsignaturaItem[]> {
         try {
-            return await firstValueFrom(this.http.get<AsignaturaItem[]>(`${this.apiUrl}/asignaturas`));
+            const response = await firstValueFrom(this.http.get<ApiAsignaturaItem[]>(`${this.apiUrl}/asignaturas`));
+            return response.map(mapAsignaturaItem);
         } catch (e) { throw this.extractError(e); }
     }
 
@@ -551,7 +664,8 @@ export class SchoolApiService {
     /** Devuelve todos los profesores con sus imparticiones. */
     async getProfesores(): Promise<ProfesorListItem[]> {
         try {
-            return await firstValueFrom(this.http.get<ProfesorListItem[]>(`${this.apiUrl}/profesores`));
+            const response = await firstValueFrom(this.http.get<ApiProfesorListItem[]>(`${this.apiUrl}/profesores`));
+            return response.map(mapProfesorListItem);
         } catch (e) { throw this.extractError(e); }
     }
 
@@ -595,7 +709,8 @@ export class SchoolApiService {
     /** Devuelve todos los estudiantes con su curso de pertenencia. */
     async getEstudiantes(): Promise<EstudianteItem[]> {
         try {
-            return await firstValueFrom(this.http.get<EstudianteItem[]>(`${this.apiUrl}/estudiantes`));
+            const response = await firstValueFrom(this.http.get<ApiEstudianteItem[]>(`${this.apiUrl}/estudiantes`));
+            return response.map(mapEstudianteItem);
         } catch (e) { throw this.extractError(e); }
     }
 
@@ -665,6 +780,22 @@ export class SchoolApiService {
                 this.http.post<void>(
                     `${this.apiUrl}/profesores/${profesorId}/imparticiones`, { asignaturaId, cursoId }
                 )
+            );
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    async desmatricularEstudiante(estudianteId: number, asignaturaId: number): Promise<void> {
+        try {
+            await firstValueFrom(
+                this.http.delete<void>(`${this.apiUrl}/estudiantes/${estudianteId}/asignaturas/${asignaturaId}`)
+            );
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    async eliminarImparticion(profesorId: number, asignaturaId: number, cursoId: number): Promise<void> {
+        try {
+            await firstValueFrom(
+                this.http.delete<void>(`${this.apiUrl}/profesores/${profesorId}/imparticiones/${asignaturaId}/${cursoId}`)
             );
         } catch (e) { throw this.extractError(e); }
     }

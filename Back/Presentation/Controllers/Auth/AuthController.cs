@@ -14,20 +14,20 @@ public class AuthController(IAuthService authService) : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest request)
     {
-        return this.ToActionResult(await authService.LoginAsync(request));
+        return this.ToActionResult(await authService.LoginAsync(request, HttpContext.RequestAborted));
     }
 
     [AllowAnonymous]
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh(RefreshRequest request)
     {
-        return this.ToActionResult(await authService.RefreshAsync(request));
+        return this.ToActionResult(await authService.RefreshAsync(request, HttpContext.RequestAborted));
     }
 
     [Authorize]
     [HttpPost("logout")]
     public async Task<IActionResult> Logout(LogoutRequest request)
     {
-        return this.ToActionResult(await authService.LogoutAsync(request, User));
+        return this.ToActionResult(await authService.LogoutAsync(request, User, HttpContext.RequestAborted));
     }
 }

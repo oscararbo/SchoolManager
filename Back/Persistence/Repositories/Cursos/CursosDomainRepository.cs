@@ -1,35 +1,35 @@
+using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Persistence.Context;
 using Back.Api.Application.Dtos;
 using Back.Api.Domain.Entities;
-using Back.Api.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace Back.Api.Persistence.Repositories;
 
 public class CursosDomainRepository(AppDbContext context) : ICursosDomainRepository
 {
-    public Task<bool> ExisteAsync(int id) =>
+    public Task<bool> ExisteAsync(int id, CancellationToken cancellationToken = default) =>
         context.Cursos.AnyAsync(c => c.Id == id);
 
-    public Task<bool> TieneEstudiantesAsync(int id) =>
+    public Task<bool> TieneEstudiantesAsync(int id, CancellationToken cancellationToken = default) =>
         context.Estudiantes.AnyAsync(e => e.CursoId == id);
 
-    public Task<bool> TieneAsignaturasAsync(int id) =>
+    public Task<bool> TieneAsignaturasAsync(int id, CancellationToken cancellationToken = default) =>
         context.Asignaturas.AnyAsync(a => a.CursoId == id);
 
-    public Task<CursoSimpleDto?> GetSimpleAsync(int id) =>
+    public Task<CursoSimpleDto?> GetSimpleAsync(int id, CancellationToken cancellationToken = default) =>
         context.Cursos.AsNoTracking()
             .Where(c => c.Id == id)
             .Select(c => new CursoSimpleDto { Id = c.Id, Nombre = c.Nombre })
             .FirstOrDefaultAsync();
 
-    public async Task<IEnumerable<CursoResumenDto>> GetAllResumenAsync()
+    public async Task<IEnumerable<CursoResumenDto>> GetAllResumenAsync(CancellationToken cancellationToken = default)
     {
         var cursosBase = await context.Cursos
             .AsNoTracking()
             .Select(c => new CursoSimpleDto { Id = c.Id, Nombre = c.Nombre })
             .OrderBy(c => c.Nombre)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         var asignaturasConProfesor = await context.Asignaturas
             .AsNoTracking()
@@ -46,7 +46,7 @@ public class CursosDomainRepository(AppDbContext context) : ICursosDomainReposit
                     .FirstOrDefault()
             })
             .OrderBy(a => a.Nombre)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return cursosBase.Select(c => new CursoResumenDto
         {
@@ -65,7 +65,7 @@ public class CursosDomainRepository(AppDbContext context) : ICursosDomainReposit
         });
     }
 
-    public async Task<CursoDetalleDto?> GetDetalleAsync(int id)
+    public async Task<CursoDetalleDto?> GetDetalleAsync(int id, CancellationToken cancellationToken = default)
     {
         var curso = await context.Cursos
             .AsNoTracking()
@@ -114,7 +114,7 @@ public class CursosDomainRepository(AppDbContext context) : ICursosDomainReposit
 
     // ── Mutations ─────────────────────────────────────────────────────────────
 
-    public async Task<CursoSimpleDto> CreateAsync(string nombre)
+    public async Task<CursoSimpleDto> CreateAsync(string nombre, CancellationToken cancellationToken = default)
     {
         var curso = new Curso { Nombre = nombre };
         context.Cursos.Add(curso);
@@ -122,7 +122,7 @@ public class CursosDomainRepository(AppDbContext context) : ICursosDomainReposit
         return new CursoSimpleDto { Id = curso.Id, Nombre = curso.Nombre };
     }
 
-    public async Task<CursoSimpleDto?> UpdateAsync(int id, string nombre)
+    public async Task<CursoSimpleDto?> UpdateAsync(int id, string nombre, CancellationToken cancellationToken = default)
     {
         var curso = await context.Cursos.FindAsync(id);
         if (curso is null) return null;
@@ -131,7 +131,7 @@ public class CursosDomainRepository(AppDbContext context) : ICursosDomainReposit
         return new CursoSimpleDto { Id = curso.Id, Nombre = curso.Nombre };
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
         var curso = await context.Cursos.FindAsync(id);
         if (curso is not null)

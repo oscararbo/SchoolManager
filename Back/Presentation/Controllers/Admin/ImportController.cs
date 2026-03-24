@@ -32,7 +32,7 @@ public class ImportController(IImportService importService) : ControllerBase
         if (!EsCsvValido(file))
             return BadRequest("Sube un archivo CSV valido.");
 
-        return this.ToActionResult(await importService.ImportarCursosAsync(await ReadTextAsync(file)));
+        return this.ToActionResult(await importService.ImportarCursosAsync(await ReadTextAsync(file), HttpContext.RequestAborted));
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ public class ImportController(IImportService importService) : ControllerBase
         if (!EsCsvValido(file))
             return BadRequest("Sube un archivo CSV valido.");
 
-        return this.ToActionResult(await importService.ImportarAsignaturasAsync(await ReadTextAsync(file)));
+        return this.ToActionResult(await importService.ImportarAsignaturasAsync(await ReadTextAsync(file), HttpContext.RequestAborted));
     }
 
     /// <summary>
@@ -56,7 +56,7 @@ public class ImportController(IImportService importService) : ControllerBase
         if (!EsCsvValido(file))
             return BadRequest("Sube un archivo CSV valido.");
 
-        return this.ToActionResult(await importService.ImportarProfesoresAsync(await ReadTextAsync(file)));
+        return this.ToActionResult(await importService.ImportarProfesoresAsync(await ReadTextAsync(file), HttpContext.RequestAborted));
     }
 
     /// <summary>
@@ -68,7 +68,7 @@ public class ImportController(IImportService importService) : ControllerBase
         if (!EsCsvValido(file))
             return BadRequest("Sube un archivo CSV valido.");
 
-        return this.ToActionResult(await importService.ImportarEstudiantesAsync(await ReadTextAsync(file)));
+        return this.ToActionResult(await importService.ImportarEstudiantesAsync(await ReadTextAsync(file), HttpContext.RequestAborted));
     }
 
     /// <summary>
@@ -80,7 +80,7 @@ public class ImportController(IImportService importService) : ControllerBase
         if (!EsCsvValido(file))
             return BadRequest("Sube un archivo CSV valido.");
 
-        return this.ToActionResult(await importService.ImportarMatriculasAsync(await ReadTextAsync(file)));
+        return this.ToActionResult(await importService.ImportarMatriculasAsync(await ReadTextAsync(file), HttpContext.RequestAborted));
     }
 
     /// <summary>
@@ -92,6 +92,6 @@ public class ImportController(IImportService importService) : ControllerBase
         if (!EsCsvValido(file))
             return BadRequest("Sube un archivo CSV valido.");
 
-        return this.ToActionResult(await importService.ImportarImparticionesAsync(await ReadTextAsync(file)));
+        return this.ToActionResult(await importService.ImportarImparticionesAsync(await ReadTextAsync(file), HttpContext.RequestAborted));
     }
 }

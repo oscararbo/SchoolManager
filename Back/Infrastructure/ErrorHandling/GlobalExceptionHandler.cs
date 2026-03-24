@@ -17,6 +17,12 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
             Instance = httpContext.Request.Path
         };
 
+        problem.Extensions["traceId"] = httpContext.TraceIdentifier;
+        if (environment.IsDevelopment())
+        {
+            problem.Extensions["exceptionType"] = exception.GetType().Name;
+        }
+
         httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
         httpContext.Response.ContentType = "application/problem+json";
         await httpContext.Response.WriteAsJsonAsync(problem, cancellationToken);

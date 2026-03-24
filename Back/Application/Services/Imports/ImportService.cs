@@ -1,7 +1,7 @@
 using Back.Api.Application.Common;
+using Back.Api.Application.Abstractions.Repositories;
+using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Dtos;
-using Back.Api.Domain.Repositories;
-using Back.Api.Infrastructure.Security;
 
 namespace Back.Api.Application.Services;
 
@@ -9,12 +9,12 @@ public class ImportService(IImportRepository importRepository, IPasswordService 
 {
     private sealed record CsvRow(int LineNumber, string[] Columns);
 
-    public async Task<ApplicationResult> ImportarCursosAsync(string csvText)
+    public async Task<ApplicationResult> ImportarCursosAsync(string csvText, CancellationToken cancellationToken = default)
     {
         var creados = new List<string>();
         var omitidos = new List<string>();
         var errores = new List<string>();
-        var existentes = (await importRepository.GetCursosAsync())
+        var existentes = (await importRepository.GetCursosAsync(cancellationToken))
             .Select(c => c.Nombre)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -38,7 +38,7 @@ public class ImportService(IImportRepository importRepository, IPasswordService 
 
         if (creados.Count > 0)
         {
-            await importRepository.AddCursosAsync(creados);
+            await importRepository.AddCursosAsync(creados, cancellationToken);
         }
 
         return ApplicationResult.Ok(new CsvImportResultDto
@@ -50,13 +50,13 @@ public class ImportService(IImportRepository importRepository, IPasswordService 
         });
     }
 
-    public async Task<ApplicationResult> ImportarAsignaturasAsync(string csvText)
+    public async Task<ApplicationResult> ImportarAsignaturasAsync(string csvText, CancellationToken cancellationToken = default)
     {
         var creados = new List<(string Nombre, int CursoId)>();
         var errores = new List<string>();
-        var cursos = (await importRepository.GetCursosAsync())
+        var cursos = (await importRepository.GetCursosAsync(cancellationToken))
             .ToDictionary(c => c.Nombre, c => c, StringComparer.OrdinalIgnoreCase);
-        var clavesExistentes = (await importRepository.GetAsignaturasAsync())
+        var clavesExistentes = (await importRepository.GetAsignaturasAsync(cancellationToken))
             .Select(a => ToAsignaturaKey(a.CursoId, a.Nombre))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -99,7 +99,7 @@ public class ImportService(IImportRepository importRepository, IPasswordService 
 
         if (creados.Count > 0)
         {
-            await importRepository.AddAsignaturasAsync(creados);
+            await importRepository.AddAsignaturasAsync(creados, cancellationToken);
         }
 
         return ApplicationResult.Ok(new CsvImportResultDto
@@ -109,11 +109,11 @@ public class ImportService(IImportRepository importRepository, IPasswordService 
         });
     }
 
-    public async Task<ApplicationResult> ImportarProfesoresAsync(string csvText)
+    public async Task<ApplicationResult> ImportarProfesoresAsync(string csvText, CancellationToken cancellationToken = default)
     {
         var creados = new List<(string Nombre, string Correo, string ContrasenaHash)>();
         var errores = new List<string>();
-        var correos = (await importRepository.GetProfesoresAsync())
+        var correos = (await importRepository.GetProfesoresAsync(cancellationToken))
             .Select(p => p.Correo)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -146,7 +146,7 @@ public class ImportService(IImportRepository importRepository, IPasswordService 
 
         if (creados.Count > 0)
         {
-            await importRepository.AddProfesoresAsync(creados);
+            await importRepository.AddProfesoresAsync(creados, cancellationToken);
         }
 
         return ApplicationResult.Ok(new CsvImportResultDto
@@ -156,13 +156,13 @@ public class ImportService(IImportRepository importRepository, IPasswordService 
         });
     }
 
-    public async Task<ApplicationResult> ImportarEstudiantesAsync(string csvText)
+    public async Task<ApplicationResult> ImportarEstudiantesAsync(string csvText, CancellationToken cancellationToken = default)
     {
         var creados = new List<(string Nombre, string Correo, string ContrasenaHash, int CursoId)>();
         var errores = new List<string>();
-        var cursos = (await importRepository.GetCursosAsync())
+        var cursos = (await importRepository.GetCursosAsync(cancellationToken))
             .ToDictionary(c => c.Nombre, c => c, StringComparer.OrdinalIgnoreCase);
-        var correos = (await importRepository.GetEstudiantesAsync())
+        var correos = (await importRepository.GetEstudiantesAsync(cancellationToken))
             .Select(e => e.Correo)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -213,7 +213,7 @@ public class ImportService(IImportRepository importRepository, IPasswordService 
 
         if (creados.Count > 0)
         {
-            await importRepository.AddEstudiantesAsync(creados);
+            await importRepository.AddEstudiantesAsync(creados, cancellationToken);
         }
 
         return ApplicationResult.Ok(new CsvImportResultDto
@@ -223,18 +223,18 @@ public class ImportService(IImportRepository importRepository, IPasswordService 
         });
     }
 
-    public async Task<ApplicationResult> ImportarMatriculasAsync(string csvText)
+    public async Task<ApplicationResult> ImportarMatriculasAsync(string csvText, CancellationToken cancellationToken = default)
     {
         var errores = new List<string>();
         var omitidos = new List<string>();
         var creados = new List<(int EstudianteId, int AsignaturaId)>();
 
-        var estudiantes = (await importRepository.GetEstudiantesAsync())
+        var estudiantes = (await importRepository.GetEstudiantesAsync(cancellationToken))
             .ToDictionary(e => e.Correo, e => e, StringComparer.OrdinalIgnoreCase);
-        var cursos = (await importRepository.GetCursosAsync())
+        var cursos = (await importRepository.GetCursosAsync(cancellationToken))
             .ToDictionary(c => c.Nombre, c => c, StringComparer.OrdinalIgnoreCase);
-        var asignaturas = await importRepository.GetAsignaturasAsync();
-        var matriculas = (await importRepository.GetMatriculasAsync()).ToHashSet();
+        var asignaturas = await importRepository.GetAsignaturasAsync(cancellationToken);
+        var matriculas = (await importRepository.GetMatriculasAsync(cancellationToken)).ToHashSet();
 
         foreach (var row in ParseCsv(csvText))
         {
@@ -307,7 +307,7 @@ public class ImportService(IImportRepository importRepository, IPasswordService 
 
         if (creados.Count > 0)
         {
-            await importRepository.AddMatriculasAsync(creados);
+            await importRepository.AddMatriculasAsync(creados, cancellationToken);
         }
 
         return ApplicationResult.Ok(new CsvImportResultDto
@@ -319,18 +319,18 @@ public class ImportService(IImportRepository importRepository, IPasswordService 
         });
     }
 
-    public async Task<ApplicationResult> ImportarImparticionesAsync(string csvText)
+    public async Task<ApplicationResult> ImportarImparticionesAsync(string csvText, CancellationToken cancellationToken = default)
     {
         var errores = new List<string>();
         var omitidos = new List<string>();
         var creados = new List<(int ProfesorId, int AsignaturaId, int CursoId)>();
 
-        var profesores = (await importRepository.GetProfesoresAsync())
+        var profesores = (await importRepository.GetProfesoresAsync(cancellationToken))
             .ToDictionary(p => p.Correo, p => p, StringComparer.OrdinalIgnoreCase);
-        var cursos = (await importRepository.GetCursosAsync())
+        var cursos = (await importRepository.GetCursosAsync(cancellationToken))
             .ToDictionary(c => c.Nombre, c => c, StringComparer.OrdinalIgnoreCase);
-        var asignaturas = await importRepository.GetAsignaturasAsync();
-        var imparticiones = await importRepository.GetImparticionesAsync();
+        var asignaturas = await importRepository.GetAsignaturasAsync(cancellationToken);
+        var imparticiones = await importRepository.GetImparticionesAsync(cancellationToken);
         var asignaturaProfesor = imparticiones
             .GroupBy(x => x.AsignaturaId)
             .ToDictionary(g => g.Key, g => g.First().ProfesorId);
@@ -410,7 +410,7 @@ public class ImportService(IImportRepository importRepository, IPasswordService 
 
         if (creados.Count > 0)
         {
-            await importRepository.AddImparticionesAsync(creados);
+            await importRepository.AddImparticionesAsync(creados, cancellationToken);
         }
 
         return ApplicationResult.Ok(new CsvImportResultDto

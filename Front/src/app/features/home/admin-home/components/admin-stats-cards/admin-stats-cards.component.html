@@ -1,0 +1,12 @@
+<div class="row g-3">
+    @for (card of cards; track card.label) {
+        <div class="col-6 col-lg-2">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-3">
+                    <small class="text-secondary">{{ card.label }}</small>
+                    <div class="h4 mb-0">{{ card.value }}</div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

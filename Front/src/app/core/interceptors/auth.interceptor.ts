@@ -3,6 +3,7 @@ import { inject } from '@angular/core';
 import { catchError, from, switchMap, throwError } from 'rxjs';
 import { SessionService } from '../services/session.service';
 import { AuthStateService } from '../services/auth-state.service';
+import { environment } from '../../../environments/environment';
 
 /**
  * Extrae el mensaje legible de un error `401 Unauthorized`.
@@ -30,6 +31,16 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     const sessionService = inject(SessionService);
     const authState = inject(AuthStateService);
 
+    const skipAuth = req.headers.has('X-Skip-Auth');
+    const request = skipAuth
+        ? req.clone({ headers: req.headers.delete('X-Skip-Auth') })
+        : req;
+
+    const isApiRequest = request.url.startsWith(environment.apiBaseUrl);
+    if (!isApiRequest || skipAuth) {
+        return next(request);
+    }
+
     /**
      * Clona la peticion aniadiendo la cabecera de autorizacion.
      * Si no hay token activo, devuelve la peticion original sin modificar.
@@ -40,9 +51,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         return r.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
     };
 
-    const isAuthUrl = req.url.includes('/auth/login') || req.url.includes('/auth/refresh');
+    const isAuthUrl = request.url.includes('/auth/login') || request.url.includes('/auth/refresh');
 
-    return next(addAuth(req)).pipe(
+    return next(addAuth(request)).pipe(
         catchError((error: HttpErrorResponse) => {
             if (error.status !== 401 || isAuthUrl) {
                 return throwError(() => error);
@@ -54,7 +65,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
                         authState.markExpired(getUnauthorizedMessage(error));
                         return throwError(() => error);
                     }
-                    return next(addAuth(req));
+                    return next(addAuth(request));
                 })
             );
         })

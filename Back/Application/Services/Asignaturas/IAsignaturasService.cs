@@ -5,9 +5,9 @@ namespace Back.Api.Application.Services;
 
 public interface IAsignaturasService
 {
-    Task<ApplicationResult> GetAllAsync();
-    Task<ApplicationResult> GetByIdAsync(int id);
-    Task<ApplicationResult> CreateAsync(CreateAsignaturaDto dto);
-    Task<ApplicationResult> UpdateAsync(int id, UpdateAsignaturaDto dto);
-    Task<ApplicationResult> DeleteAsync(int id);
+    Task<ApplicationResult> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<ApplicationResult> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> CreateAsync(CreateAsignaturaDto dto, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> UpdateAsync(int id, UpdateAsignaturaDto dto, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> DeleteAsync(int id, CancellationToken cancellationToken = default);
 }

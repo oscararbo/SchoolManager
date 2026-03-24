@@ -52,12 +52,19 @@ function getHttpErrorMessage(error: HttpErrorResponse): string {
  */
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
     const toastService = inject(ToastService);
-    const esImportCsv = req.url.includes('/admin/csv/');
+    const skipToast = req.headers.has('X-Skip-Error-Toast');
+    const request = skipToast
+        ? req.clone({ headers: req.headers.delete('X-Skip-Error-Toast') })
+        : req;
 
-    return next(req).pipe(
+    const esImportCsv = request.url.includes('/admin/csv/');
+
+    return next(request).pipe(
         catchError((error: HttpErrorResponse) => {
             // 401 is handled by the auth refresh flow and the session-expired dialog.
-            if (error.status !== 401 && !esImportCsv) {
+            if (error.status === 403 && !skipToast) {
+                toastService.show('No tienes permisos para realizar esta accion.', 'warning');
+            } else if (error.status !== 401 && !esImportCsv && !skipToast) {
                 toastService.show(getHttpErrorMessage(error), 'error');
             }
             return throwError(() => error);

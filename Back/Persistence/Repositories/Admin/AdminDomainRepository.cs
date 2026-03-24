@@ -1,23 +1,23 @@
+using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Persistence.Context;
 using Back.Api.Application.Dtos;
 using Back.Api.Domain.Entities;
-using Back.Api.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace Back.Api.Persistence.Repositories;
 
 public class AdminDomainRepository(AppDbContext context) : IAdminDomainRepository
 {
-    public async Task<IEnumerable<AdminListItemDto>> GetAllAsync()
+    public async Task<IEnumerable<AdminListItemDto>> GetAllAsync(CancellationToken cancellationToken = default)
         => await context.Admins
             .AsNoTracking()
             .Select(a => new AdminListItemDto { Id = a.Id, Nombre = a.Nombre, Correo = a.Correo })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
-    public Task<bool> CorreoDuplicadoAsync(string correo)
+    public Task<bool> CorreoDuplicadoAsync(string correo, CancellationToken cancellationToken = default)
         => context.Admins.AnyAsync(a => a.Correo == correo);
 
-    public async Task<AdminListItemDto> CreateAsync(string nombre, string correo, string hash)
+    public async Task<AdminListItemDto> CreateAsync(string nombre, string correo, string hash, CancellationToken cancellationToken = default)
     {
         var admin = new Admin { Nombre = nombre, Correo = correo, Contrasena = hash };
         context.Admins.Add(admin);

@@ -1,10 +1,10 @@
 import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { ToastsComponent } from './shared/components/toasts/toasts.component';
+import { SessionExpiredDialogComponent, ToastsComponent } from './shared/components';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ToastsComponent],
+  imports: [RouterOutlet, ToastsComponent, SessionExpiredDialogComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })

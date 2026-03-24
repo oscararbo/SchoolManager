@@ -1,4 +1,4 @@
-namespace Back.Api.Infrastructure.Security;
+namespace Back.Api.Application.Abstractions.Security;
 
 public interface IPasswordService
 {

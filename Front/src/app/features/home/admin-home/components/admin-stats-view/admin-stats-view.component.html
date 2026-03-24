@@ -1,0 +1,128 @@
+@if (statsEstado() === 'loading') {
+    <div class="alert alert-secondary mb-0">Cargando estadisticas...</div>
+} @else if (statsEstado() === 'error') {
+    <div class="alert alert-warning mb-0">No se pudieron cargar las estadisticas. Intenta de nuevo.</div>
+} @else if (statsDisponibles() && stats() && notasStats()) {
+    <div class="vstack gap-4 mt-4">
+        <app-admin-stats-cards class="d-block" [stats]="stats()!"></app-admin-stats-cards>
+
+        <div class="row g-3">
+            @for (card of notasResumenCards(); track card.label) {
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <small class="text-secondary text-uppercase d-block mb-2">{{ card.label }}</small>
+                            <div class="h4 mb-2">{{ card.value }}</div>
+                            <p class="text-secondary small mb-0">{{ card.helper }}</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (statsTieneDatosGraficables()) {
+            <div class="row g-3">
+                <div class="col-12 col-xl-8">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">Estudiantes y asignaturas por curso</h6>
+                            <div class="chart-shell">
+                                <canvas #cursosChart></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-xl-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">Distribucion global</h6>
+                            <div class="chart-shell">
+                                <canvas #totalesChart></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body vstack gap-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h6 class="card-title mb-1">Rendimiento por curso</h6>
+                        <p class="text-secondary small mb-0">Selecciona un curso para ver medias finales, aprobados y detalle por asignatura.</p>
+                    </div>
+                    <select class="form-select form-select-sm w-auto" [value]="cursoNotasSeleccionado()?.cursoId ?? ''" (change)="seleccionarCursoNotas($any($event.target).value)">
+                        @for (curso of notasStats()!.porCurso; track trackByCurso($index, curso)) {
+                            <option [value]="curso.cursoId">{{ curso.curso }}</option>
+                        }
+                    </select>
+                </div>
+
+                @if (cursoNotasSeleccionado()) {
+                    <div class="row g-3">
+                        <div class="col-12 col-xl-7">
+                            <div class="chart-shell chart-shell-wide">
+                                <canvas #rendimientoChart></canvas>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-xl-5">
+                            <div class="vstack gap-2">
+                                @for (asignatura of cursoNotasSeleccionado()!.asignaturas; track asignatura.asignaturaId) {
+                                    <article class="border rounded-3 p-3 bg-light-subtle">
+                                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                            <div>
+                                                <div class="fw-semibold">{{ asignatura.asignatura }}</div>
+                                                <div class="text-secondary small">{{ asignatura.totalAlumnos }} alumnos</div>
+                                            </div>
+                                            <span class="badge text-bg-primary">Media {{ formatNota(asignatura.media) }}</span>
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-2 mb-2">
+                                            <span class="badge text-bg-success">{{ asignatura.aprobados }} aprobados</span>
+                                            <span class="badge text-bg-danger">{{ asignatura.suspensos }} suspensos</span>
+                                            <span class="badge text-bg-secondary">{{ asignatura.sinNota }} sin nota</span>
+                                        </div>
+                                        <div class="progress" role="progressbar" [attr.aria-valuenow]="porcentajeAprobado(asignatura.aprobados, asignatura.totalAlumnos)" aria-valuemin="0" aria-valuemax="100">
+                                            <div class="progress-bar bg-success" [style.width.%]="porcentajeAprobado(asignatura.aprobados, asignatura.totalAlumnos)"></div>
+                                        </div>
+                                    </article>
+                                } @empty {
+                                    <div class="alert alert-secondary mb-0">Este curso aun no tiene asignaturas con evaluacion cerrada.</div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Asignatura</th>
+                                    <th>Media</th>
+                                    <th>Aprobados</th>
+                                    <th>Suspensos</th>
+                                    <th>Sin nota</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (asignatura of cursoNotasSeleccionado()!.asignaturas; track asignatura.asignaturaId) {
+                                    <tr>
+                                        <td>{{ asignatura.asignatura }}</td>
+                                        <td>{{ formatNota(asignatura.media) }}</td>
+                                        <td>{{ asignatura.aprobados }}</td>
+                                        <td>{{ asignatura.suspensos }}</td>
+                                        <td>{{ asignatura.sinNota }}</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+} @else {
+    <div class="alert alert-secondary mb-0">No hay estadisticas disponibles todavia.</div>
+}

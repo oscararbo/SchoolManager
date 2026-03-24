@@ -1,0 +1,32 @@
+.empty-state {
+  border: 1px dashed rgba(30, 50, 70, 0.28);
+  border-radius: 14px;
+  padding: 1.2rem;
+  background: linear-gradient(180deg, #f6faf8 0%, #eef5f1 100%);
+  color: #1f3444;
+}
+
+h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+p {
+  margin: 0.45rem 0 0;
+  color: #3f5b70;
+}
+
+.action {
+  margin-top: 0.9rem;
+  border: 0;
+  border-radius: 10px;
+  padding: 0.45rem 0.75rem;
+  font-weight: 600;
+  background: #1f6d5f;
+  color: #fff;
+  cursor: pointer;
+}
+
+.action:hover {
+  filter: brightness(1.06);
+}

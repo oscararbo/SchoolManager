@@ -1,3 +1,4 @@
+using Back.Api.Application.Abstractions.Security;
 using Microsoft.AspNetCore.Identity;
 
 namespace Back.Api.Infrastructure.Security;

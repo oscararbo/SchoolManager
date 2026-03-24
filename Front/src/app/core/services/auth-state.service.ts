@@ -70,7 +70,13 @@ export class AuthStateService {
         try {
             const data = await firstValueFrom(this.http.post<{ token: string; refreshToken: string }>(
                 `${environment.apiBaseUrl}/auth/refresh`,
-                { refreshToken: session.refreshToken }
+                { refreshToken: session.refreshToken },
+                {
+                    headers: {
+                        'X-Skip-Auth': 'true',
+                        'X-Skip-Error-Toast': 'true'
+                    }
+                }
             ));
             this.sessionService.setSession({ ...session, token: data.token, refreshToken: data.refreshToken });
             return true;

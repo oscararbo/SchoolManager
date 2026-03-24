@@ -1,0 +1,12 @@
+<ul class="nav nav-tabs flex-wrap">
+    @for (tab of tabs; track tab.key) {
+        <li class="nav-item">
+            <button class="nav-link" [class.active]="tabActiva === tab.key" (click)="seleccionar(tab.key)">
+                @if (tab.iconClass) {
+                    <i [class]="tab.iconClass"></i>
+                }
+                {{ tab.label }}
+            </button>
+        </li>
+    }
+</ul>

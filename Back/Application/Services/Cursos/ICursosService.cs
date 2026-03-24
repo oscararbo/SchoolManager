@@ -5,9 +5,9 @@ namespace Back.Api.Application.Services;
 
 public interface ICursosService
 {
-    Task<ApplicationResult> GetAllAsync();
-    Task<ApplicationResult> GetByIdAsync(int id);
-    Task<ApplicationResult> CreateAsync(CreateCursoDto dto);
-    Task<ApplicationResult> UpdateAsync(int id, UpdateCursoDto dto);
-    Task<ApplicationResult> DeleteAsync(int id);
+    Task<ApplicationResult> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<ApplicationResult> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> CreateAsync(CreateCursoDto dto, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> UpdateAsync(int id, UpdateCursoDto dto, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> DeleteAsync(int id, CancellationToken cancellationToken = default);
 }

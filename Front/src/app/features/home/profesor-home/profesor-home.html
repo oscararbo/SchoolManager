@@ -11,6 +11,92 @@
             <div class="alert alert-danger mb-0" role="alert">{{ error() }}</div>
         }
 
+        @if (stats()) {
+            <div class="vstack gap-3">
+                <div class="row g-3">
+                    @for (card of statsCards; track card.label) {
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-body">
+                                    <small class="text-secondary text-uppercase d-block mb-2">{{ card.label }}</small>
+                                    <div class="h4 mb-2">{{ card.value }}</div>
+                                    <p class="text-secondary small mb-0">{{ card.helper }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-12 col-xl-7">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+                                    <div>
+                                        <h3 class="h6 text-uppercase text-secondary mb-1">Riesgo por asignatura</h3>
+                                        <p class="text-secondary small mb-0">Detecta grupos con mas suspensos o sin nota final cerrada.</p>
+                                    </div>
+                                </div>
+
+                                <div class="vstack gap-3">
+                                    @for (asignatura of asignaturasStatsOrdenadas; track asignatura.asignaturaId) {
+                                        <article class="border rounded-3 p-3 bg-light-subtle">
+                                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                                                <div>
+                                                    <div class="fw-semibold">{{ asignatura.asignatura }}</div>
+                                                    <div class="text-secondary small">{{ asignatura.curso }}</div>
+                                                </div>
+                                                <span class="badge text-bg-primary">Media {{ formatNota(asignatura.media) }}</span>
+                                            </div>
+                                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                                <span class="badge text-bg-success">{{ asignatura.aprobados }} aprobados</span>
+                                                <span class="badge text-bg-danger">{{ asignatura.suspensos }} suspensos</span>
+                                                <span class="badge text-bg-secondary">{{ asignatura.sinNota }} sin nota</span>
+                                            </div>
+                                            <div class="progress" role="progressbar" [attr.aria-valuenow]="porcentaje(asignatura.aprobados, asignatura.totalAlumnos)" aria-valuemin="0" aria-valuemax="100">
+                                                <div class="progress-bar bg-success" [style.width.%]="porcentaje(asignatura.aprobados, asignatura.totalAlumnos)"></div>
+                                            </div>
+                                        </article>
+                                    } @empty {
+                                        <div class="alert alert-secondary mb-0">Aun no hay datos de rendimiento para tus asignaturas.</div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-xl-5">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body">
+                                <h3 class="h6 text-uppercase text-secondary mb-3">Tareas clave</h3>
+                                <div class="vstack gap-2">
+                                    @for (tarea of tareasClave; track tarea.tareaId) {
+                                        <article class="task-insight-card rounded-3 border p-3">
+                                            <div class="d-flex justify-content-between gap-2 align-items-start mb-2">
+                                                <div>
+                                                    <div class="fw-semibold">{{ tarea.nombre }}</div>
+                                                    <div class="text-secondary small">{{ tarea.asignatura }} · {{ tarea.curso }}</div>
+                                                </div>
+                                                <span class="badge text-bg-light border">T{{ tarea.trimestre }}</span>
+                                            </div>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <span class="badge text-bg-primary">Media {{ formatNota(tarea.media) }}</span>
+                                                <span class="badge text-bg-warning">{{ tarea.sinNota }} pendientes</span>
+                                                <span class="badge text-bg-light border">Min {{ formatNota(tarea.notaMin) }}</span>
+                                                <span class="badge text-bg-light border">Max {{ formatNota(tarea.notaMax) }}</span>
+                                            </div>
+                                        </article>
+                                    } @empty {
+                                        <div class="text-secondary small">Todavia no hay tareas con datos suficientes.</div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
         <div class="row g-3">
             <!-- Left: course/subject selector -->
             <aside class="col-12 col-lg-3">

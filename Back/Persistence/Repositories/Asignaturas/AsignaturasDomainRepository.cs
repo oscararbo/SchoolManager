@@ -1,46 +1,46 @@
+using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Persistence.Context;
 using Back.Api.Application.Dtos;
 using Back.Api.Domain.Entities;
-using Back.Api.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace Back.Api.Persistence.Repositories;
 
 public class AsignaturasDomainRepository(AppDbContext context) : IAsignaturasDomainRepository
 {
-    public Task<bool> ExisteAsync(int id) =>
+    public Task<bool> ExisteAsync(int id, CancellationToken cancellationToken = default) =>
         context.Asignaturas.AnyAsync(a => a.Id == id);
 
-    public Task<bool> CursoExisteAsync(int cursoId) =>
+    public Task<bool> CursoExisteAsync(int cursoId, CancellationToken cancellationToken = default) =>
         context.Cursos.AnyAsync(c => c.Id == cursoId);
 
-    public Task<bool> ExisteEnCursoAsync(int cursoId, string nombre) =>
+    public Task<bool> ExisteEnCursoAsync(int cursoId, string nombre, CancellationToken cancellationToken = default) =>
         context.Asignaturas.AnyAsync(a => a.CursoId == cursoId && a.Nombre == nombre);
 
-    public Task<string?> GetCursoNombreAsync(int cursoId) =>
+    public Task<string?> GetCursoNombreAsync(int cursoId, CancellationToken cancellationToken = default) =>
         context.Cursos.AsNoTracking()
             .Where(c => c.Id == cursoId)
             .Select(c => (string?)c.Nombre)
             .FirstOrDefaultAsync();
 
-    public async Task<IEnumerable<AsignaturaResumenDto>> GetAllResumenAsync()
+    public async Task<IEnumerable<AsignaturaResumenDto>> GetAllResumenAsync(CancellationToken cancellationToken = default)
     {
         var asignaturasBase = await context.Asignaturas
             .AsNoTracking()
             .Select(a => new { a.Id, a.Nombre, CursoId = a.CursoId, CursoNombre = a.Curso!.Nombre })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         var profesoresPorAsignatura = await context.ProfesorAsignaturaCursos
             .AsNoTracking()
             .Select(i => new { i.AsignaturaId, i.ProfesorId, ProfesorNombre = i.Profesor!.Nombre })
             .Distinct()
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         var alumnosPorAsignatura = await context.EstudianteAsignaturas
             .AsNoTracking()
             .Select(ea => new { ea.AsignaturaId, EstudianteId = ea.EstudianteId, EstudianteNombre = ea.Estudiante!.Nombre })
             .Distinct()
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return asignaturasBase.Select(a => new AsignaturaResumenDto
         {
@@ -60,7 +60,7 @@ public class AsignaturasDomainRepository(AppDbContext context) : IAsignaturasDom
         });
     }
 
-    public async Task<AsignaturaDetalleDto?> GetDetalleAsync(int id)
+    public async Task<AsignaturaDetalleDto?> GetDetalleAsync(int id, CancellationToken cancellationToken = default)
     {
         var asignatura = await context.Asignaturas
             .AsNoTracking()
@@ -116,7 +116,7 @@ public class AsignaturasDomainRepository(AppDbContext context) : IAsignaturasDom
 
     // ── Mutations ─────────────────────────────────────────────────────────
 
-    public async Task<AsignaturaResumenDto> CreateAsync(string nombre, int cursoId)
+    public async Task<AsignaturaResumenDto> CreateAsync(string nombre, int cursoId, CancellationToken cancellationToken = default)
     {
         var cursoNombre = await GetCursoNombreAsync(cursoId) ?? string.Empty;
         var asignatura = new Asignatura { Nombre = nombre, CursoId = cursoId };
@@ -132,7 +132,7 @@ public class AsignaturasDomainRepository(AppDbContext context) : IAsignaturasDom
         };
     }
 
-    public async Task<AsignaturaResumenDto?> UpdateAsync(int id, string nombre, int cursoId)
+    public async Task<AsignaturaResumenDto?> UpdateAsync(int id, string nombre, int cursoId, CancellationToken cancellationToken = default)
     {
         var asignatura = await context.Asignaturas.FindAsync(id);
         if (asignatura is null) return null;
@@ -150,7 +150,7 @@ public class AsignaturasDomainRepository(AppDbContext context) : IAsignaturasDom
         };
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
         var imparticiones = await context.ProfesorAsignaturaCursos
             .Where(i => i.AsignaturaId == id).ToListAsync();

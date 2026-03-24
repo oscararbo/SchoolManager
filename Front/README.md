@@ -9,6 +9,19 @@ Cliente Angular del sistema de gestion escolar. Consume la API de `Back/` y ofre
 - Bootstrap 5 + Bootstrap Icons
 - HttpClient + interceptors
 
+## Docker
+
+El frontend esta preparado para build de contenedor (`Front/Dockerfile`) y se ejecuta en `docker-compose.yml`.
+
+```bash
+docker compose up --build
+```
+
+Notas:
+
+- El contenedor de front compila con configuracion docker (`npm run build -- --configuration docker`).
+- `environment.docker.ts` usa `apiBaseUrl: '/api'` para enrutar al backend detras de nginx.
+
 ## Arranque local
 
 ```bash
@@ -88,6 +101,13 @@ Front/
 - Importacion CSV de cursos, asignaturas, profesores, estudiantes, imparticiones y matriculas.
 - Indicador de carga "Por favor espere" durante importaciones CSV largas.
 
+Arquitectura actual del panel admin:
+
+- `AdminHomeComponent`: orquestador de seccion activa (`estadisticas` o `gestion`).
+- `AdminStatsViewComponent`: vista y graficas de estadisticas.
+- `AdminManagementViewComponent`: operaciones CRUD y tab de importacion.
+- Card CSV reutilizable dentro de la vista de gestion para cada tipo de importacion (cambia titulo, descripcion y entidad).
+
 Orden recomendado de carga CSV:
 
 1. cursos
@@ -140,4 +160,11 @@ El frontend combina:
 ```bash
 cd Front
 npx ng build
+```
+
+Tambien puedes validar localmente con:
+
+```bash
+cd Front
+npm run build
 ```

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import {
     SchoolApiService,
     ProfesorPanel,
+    ProfesorStats,
     AsignaturaAlumnosResumen,
     AsignaturaAlumnoResumen,
     AsignaturaAlumno,
@@ -28,6 +29,7 @@ export class ProfesorHomeComponent implements OnInit {
     error = signal<string | null>(null);
 
     panel = signal<ProfesorPanel | null>(null);
+    stats = signal<ProfesorStats | null>(null);
     detalleAsignatura = signal<AsignaturaAlumnosResumen | null>(null);
     asignaturaActivaId = signal<number | null>(null);
     vistaDetalle = signal<ProfesorDetalleView>('resumen');
@@ -56,8 +58,12 @@ export class ProfesorHomeComponent implements OnInit {
         this.cargando.set(true);
         this.error.set(null);
         try {
-            const data = await this.api.getPanelProfesor(this.profesorId);
-            this.panel.set(data);
+            const [panel, stats] = await Promise.all([
+                this.api.getPanelProfesor(this.profesorId),
+                this.api.getProfesorStats(this.profesorId)
+            ]);
+            this.panel.set(panel);
+            this.stats.set(stats);
         } catch (e) {
             this.error.set((e as Error).message);
         } finally {
@@ -163,6 +169,7 @@ export class ProfesorHomeComponent implements OnInit {
                 this.alumnoDetalles.update(m => ({ ...m, [estudianteId]: detalle }));
                 this.actualizarResumenDesdeDetalle(detalle);
             }
+            await this.recargarStatsSilencioso();
         } catch (e) {
             this.error.set((e as Error).message);
         } finally {
@@ -210,6 +217,7 @@ export class ProfesorHomeComponent implements OnInit {
 
             this.nuevaTareaNombre.set('');
             this.nuevaTareaTrimestre.set(1);
+            await this.recargarStatsSilencioso();
             this.toast.show(`Tarea "${nombre}" creada.`, 'success');
         } catch (e) {
             this.error.set((e as Error).message);
@@ -220,6 +228,62 @@ export class ProfesorHomeComponent implements OnInit {
 
     formatNota(n: number | null): string {
         return n !== null ? n.toFixed(2) : '-';
+    }
+
+    get statsCards(): Array<{ label: string; value: string; helper: string }> {
+        const stats = this.stats();
+        if (!stats) {
+            return [];
+        }
+
+        const totalAlumnos = stats.asignaturas.reduce((acc, item) => acc + item.totalAlumnos, 0);
+        const tareas = stats.asignaturas.flatMap(item => item.porTarea);
+        const tareasConMedia = tareas.filter(tarea => tarea.media !== null);
+        const tareaExigente = [...tareasConMedia].sort((a, b) => (a.media ?? 99) - (b.media ?? 99))[0];
+        const pendientes = tareas.reduce((acc, item) => acc + item.sinNota, 0);
+
+        return [
+            {
+                label: 'Media global',
+                value: this.formatNota(stats.mediaGlobal),
+                helper: 'Promedio de las medias finales en tus asignaturas.'
+            },
+            {
+                label: 'Carga de alumnos',
+                value: String(totalAlumnos),
+                helper: `${stats.asignaturas.length} asignaturas activas en tu panel.`
+            },
+            {
+                label: 'Notas pendientes',
+                value: String(pendientes),
+                helper: 'Suma de entregas sin calificar en tus tareas actuales.'
+            },
+            {
+                label: 'Tarea mas exigente',
+                value: tareaExigente?.nombre ?? '-',
+                helper: tareaExigente ? `Media ${this.formatNota(tareaExigente.media)}` : 'Todavia no hay tareas con notas.'
+            }
+        ];
+    }
+
+    get asignaturasStatsOrdenadas() {
+        return [...(this.stats()?.asignaturas ?? [])]
+            .sort((a, b) => b.suspensos - a.suspensos || (a.media ?? 99) - (b.media ?? 99));
+    }
+
+    get tareasClave() {
+        return [...(this.stats()?.asignaturas ?? [])]
+            .flatMap(asignatura => asignatura.porTarea.map(tarea => ({
+                ...tarea,
+                asignatura: asignatura.asignatura,
+                curso: asignatura.curso
+            })))
+            .sort((a, b) => b.sinNota - a.sinNota || (a.media ?? 99) - (b.media ?? 99))
+            .slice(0, 6);
+    }
+
+    porcentaje(valor: number, total: number): number {
+        return total > 0 ? Math.round((valor / total) * 100) : 0;
     }
 
     async toggleAlumno(alumnoId: number): Promise<void> {
@@ -301,5 +365,13 @@ export class ProfesorHomeComponent implements OnInit {
                 )
             };
         });
+    }
+
+    private async recargarStatsSilencioso(): Promise<void> {
+        try {
+            this.stats.set(await this.api.getProfesorStats(this.profesorId));
+        } catch {
+            // Si falla esta recarga no debe bloquear la operacion principal.
+        }
     }
 }
