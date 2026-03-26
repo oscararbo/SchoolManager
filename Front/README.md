@@ -98,14 +98,16 @@ Front/
 - CRUD de cursos, asignaturas, profesores y estudiantes.
 - Matriculas e imparticiones.
 - Busqueda por texto.
-- Importacion CSV de cursos, asignaturas, profesores, estudiantes, imparticiones y matriculas.
-- Indicador de carga "Por favor espere" durante importaciones CSV largas.
+- Estadisticas por curso con selector, comparacion multi-curso y visualizacion de metricas academicas.
+- Importacion CSV de cursos, asignaturas, profesores, estudiantes, imparticiones, tareas, matriculas y notas.
+- Indicador de carga "Por favor espere" durante importaciones CSV largas y limpieza del formulario al terminar cada importacion.
 
 Arquitectura actual del panel admin:
 
 - `AdminHomeComponent`: orquestador de seccion activa (`estadisticas` o `gestion`).
-- `AdminStatsViewComponent`: vista y graficas de estadisticas.
-- `AdminManagementViewComponent`: operaciones CRUD y tab de importacion.
+- `AdminStatsViewComponent`: vista y graficas de estadisticas por curso y comparacion.
+- `AdminManagementViewComponent`: operaciones CRUD, matriculas, imparticiones e importaciones.
+- Las tablas de matriculas e imparticiones consumen endpoints de lectura especificos del backend, en vez de recomponer la vista cruzando varias colecciones en cliente.
 - Card CSV reutilizable dentro de la vista de gestion para cada tipo de importacion (cambia titulo, descripcion y entidad).
 
 Orden recomendado de carga CSV:
@@ -115,7 +117,9 @@ Orden recomendado de carga CSV:
 3. profesores
 4. estudiantes
 5. imparticiones
-6. matriculas
+6. tareas
+7. matriculas
+8. notas
 
 ### Profesor
 

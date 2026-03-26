@@ -366,16 +366,22 @@
                                         <tr>
                                             <td>{{ m.estudiante }}</td>
                                             <td>{{ m.curso ?? '—' }}</td>
-                                            <td>@if (m.asignaturas.length) { {{ m.asignaturas.join(', ') }} } @else { <span class="text-secondary">Sin matriculas</span> }</td>
-                                            <td class="text-end pe-2">
-                                                @for (asig of asignaturas(); track asig.id) {
-                                                    @if (asig.alumnos.some(al => al.id === m.estudianteId)) {
-                                                        <button class="btn btn-xs btn-outline-danger me-1 mb-1"
-                                                            (click)="eliminarMatricula(m.estudianteId, asig.id, asig.nombre)"
-                                                            [disabled]="estaCargando('eliminarMatricula')">
-                                                            {{ asig.nombre }}
-                                                        </button>
+                                            <td>
+                                                @if (m.asignaturas.length) {
+                                                    @for (asig of m.asignaturas; track asig.asignaturaId) {
+                                                        <span class="badge text-bg-light border me-1 mb-1">{{ asig.asignatura }}</span>
                                                     }
+                                                } @else {
+                                                    <span class="text-secondary">Sin matriculas</span>
+                                                }
+                                            </td>
+                                            <td class="text-end pe-2">
+                                                @for (asig of m.asignaturas; track asig.asignaturaId) {
+                                                    <button class="btn btn-xs btn-outline-danger me-1 mb-1"
+                                                        (click)="eliminarMatricula(m.estudianteId, asig.asignaturaId, asig.asignatura)"
+                                                        [disabled]="estaCargando('eliminarMatricula')">
+                                                        {{ asig.asignatura }}
+                                                    </button>
                                                 }
                                             </td>
                                         </tr>
@@ -485,8 +491,10 @@
                         : item.entidad === 'asignaturas' ? csvAsignaturasFile
                         : item.entidad === 'profesores' ? csvProfesoresFile
                         : item.entidad === 'estudiantes' ? csvEstudiantesFile
+                        : item.entidad === 'tareas' ? csvTareasFile
                         : item.entidad === 'matriculas' ? csvMatriculasFile
-                        : csvImparticionesFile"
+                        : item.entidad === 'imparticiones' ? csvImparticionesFile
+                        : csvNotasFile"
                     (fileSelected)="onCsvFileChange($event.event, $event.entidad)"
                     (importar)="importarCsv($event)"
                     (descargarPlantilla)="descargarPlantilla($event)">

@@ -2,10 +2,11 @@ using Back.Api.Application.Common;
 using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Dtos;
+using System.Globalization;
 
 namespace Back.Api.Application.Services;
 
-public class ImportService(IImportRepository importRepository, IPasswordService passwordService) : IImportService
+public class ImportService(IImportDomainRepository importRepository, IPasswordService passwordService) : IImportService
 {
     private sealed record CsvRow(int LineNumber, string[] Columns);
 
@@ -223,6 +224,117 @@ public class ImportService(IImportRepository importRepository, IPasswordService 
         });
     }
 
+    public async Task<ApplicationResult> ImportarTareasAsync(string csvText, CancellationToken cancellationToken = default)
+    {
+        var errores = new List<string>();
+        var omitidos = new List<string>();
+        var creados = new List<(string Nombre, int Trimestre, int AsignaturaId, int ProfesorId)>();
+
+        var profesores = (await importRepository.GetProfesoresAsync(cancellationToken))
+            .ToDictionary(p => p.Correo, p => p, StringComparer.OrdinalIgnoreCase);
+        var cursos = (await importRepository.GetCursosAsync(cancellationToken))
+            .ToDictionary(c => c.Nombre, c => c, StringComparer.OrdinalIgnoreCase);
+        var asignaturas = await importRepository.GetAsignaturasAsync(cancellationToken);
+        var imparticiones = (await importRepository.GetImparticionesAsync(cancellationToken)).ToHashSet();
+        var tareasExistentes = (await importRepository.GetTareasAsync(cancellationToken))
+            .Select(t => ToTareaKey(t.AsignaturaId, t.Trimestre, t.Nombre))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var row in ParseCsv(csvText))
+        {
+            if (row.Columns.Length < 5)
+            {
+                errores.Add($"Linea {row.LineNumber}: se esperaban las columnas profesorCorreo,asignaturaNombre,cursoNombre,trimestre,tareaNombre.");
+                continue;
+            }
+
+            var profesorCorreo = row.Columns[0].Trim().ToLowerInvariant();
+            var asignaturaNombre = row.Columns[1].Trim();
+            var cursoNombre = row.Columns[2].Trim();
+            var trimestreRaw = row.Columns[3].Trim();
+            var tareaNombre = row.Columns[4].Trim();
+
+            if (string.IsNullOrWhiteSpace(profesorCorreo)
+                || string.IsNullOrWhiteSpace(asignaturaNombre)
+                || string.IsNullOrWhiteSpace(cursoNombre)
+                || string.IsNullOrWhiteSpace(trimestreRaw)
+                || string.IsNullOrWhiteSpace(tareaNombre))
+            {
+                errores.Add($"Linea {row.LineNumber}: todos los campos son obligatorios.");
+                continue;
+            }
+
+            if (!profesores.TryGetValue(profesorCorreo, out var profesor))
+            {
+                errores.Add($"Linea {row.LineNumber}: profesor no encontrado '{profesorCorreo}'.");
+                continue;
+            }
+
+            if (!cursos.TryGetValue(cursoNombre, out var curso))
+            {
+                errores.Add($"Linea {row.LineNumber}: curso no encontrado '{cursoNombre}'.");
+                continue;
+            }
+
+            if (!int.TryParse(trimestreRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var trimestre) || trimestre < 1 || trimestre > 3)
+            {
+                errores.Add($"Linea {row.LineNumber}: trimestre no valido '{trimestreRaw}'. Debe ser 1, 2 o 3.");
+                continue;
+            }
+
+            var asignatura = asignaturas.FirstOrDefault(a =>
+                a.CursoId == curso.Id &&
+                a.Nombre.Equals(asignaturaNombre, StringComparison.OrdinalIgnoreCase));
+
+            if (asignatura is null)
+            {
+                errores.Add($"Linea {row.LineNumber}: asignatura no encontrada '{asignaturaNombre}' en '{cursoNombre}'.");
+                continue;
+            }
+
+            if (!imparticiones.Contains(new ImportImparticionLookup(profesor.Id, asignatura.Id, curso.Id)))
+            {
+                errores.Add($"Linea {row.LineNumber}: el profesor '{profesorCorreo}' no imparte '{asignaturaNombre}' en '{cursoNombre}'.");
+                continue;
+            }
+
+            var tareaKey = ToTareaKey(asignatura.Id, trimestre, tareaNombre);
+            if (!tareasExistentes.Add(tareaKey))
+            {
+                omitidos.Add($"{tareaNombre} ({asignaturaNombre} - {cursoNombre} T{trimestre})");
+                continue;
+            }
+
+            creados.Add((tareaNombre, trimestre, asignatura.Id, profesor.Id));
+        }
+
+        if (errores.Count > 0)
+        {
+            return ApplicationResult.BadRequest(new CsvImportResultDto
+            {
+                Detail = "La importacion de tareas ha fallado y se ha cancelado.",
+                Mensaje = "La importacion de tareas ha fallado y se ha cancelado.",
+                Creados = 0,
+                Omitidos = omitidos.Count,
+                Errores = errores,
+                Detalles = omitidos
+            });
+        }
+
+        if (creados.Count > 0)
+        {
+            await importRepository.AddTareasAsync(creados, cancellationToken);
+        }
+
+        return ApplicationResult.Ok(new CsvImportResultDto
+        {
+            Creados = creados.Count,
+            Omitidos = omitidos.Count,
+            Errores = errores,
+            Detalles = omitidos
+        });
+    }
+
     public async Task<ApplicationResult> ImportarMatriculasAsync(string csvText, CancellationToken cancellationToken = default)
     {
         var errores = new List<string>();
@@ -422,6 +534,177 @@ public class ImportService(IImportRepository importRepository, IPasswordService 
         });
     }
 
+    public async Task<ApplicationResult> ImportarNotasAsync(string csvText, CancellationToken cancellationToken = default)
+    {
+        var errores = new List<string>();
+        var detalles = new List<string>();
+        var upserts = new List<(int EstudianteId, int TareaId, decimal Valor)>();
+        var clavesNotasCsv = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var profesores = (await importRepository.GetProfesoresAsync(cancellationToken))
+            .ToDictionary(p => p.Correo, p => p, StringComparer.OrdinalIgnoreCase);
+        var estudiantes = (await importRepository.GetEstudiantesAsync(cancellationToken))
+            .ToDictionary(e => e.Correo, e => e, StringComparer.OrdinalIgnoreCase);
+        var cursos = (await importRepository.GetCursosAsync(cancellationToken))
+            .ToDictionary(c => c.Nombre, c => c, StringComparer.OrdinalIgnoreCase);
+        var asignaturas = await importRepository.GetAsignaturasAsync(cancellationToken);
+        var matriculas = (await importRepository.GetMatriculasAsync(cancellationToken)).ToHashSet();
+        var imparticiones = (await importRepository.GetImparticionesAsync(cancellationToken)).ToHashSet();
+        var tareasExistentes = (await importRepository.GetTareasAsync(cancellationToken))
+            .ToDictionary(t => ToTareaKey(t.AsignaturaId, t.Trimestre, t.Nombre), t => t, StringComparer.OrdinalIgnoreCase);
+        var notasExistentes = (await importRepository.GetNotasAsync(cancellationToken)).ToHashSet();
+
+        foreach (var row in ParseCsv(csvText))
+        {
+            if (row.Columns.Length < 7)
+            {
+                errores.Add($"Linea {row.LineNumber}: se esperaban las columnas profesorCorreo,estudianteCorreo,asignaturaNombre,cursoNombre,trimestre,tareaNombre,valor.");
+                continue;
+            }
+
+            var profesorCorreo = row.Columns[0].Trim().ToLowerInvariant();
+            var estudianteCorreo = row.Columns[1].Trim().ToLowerInvariant();
+            var asignaturaNombre = row.Columns[2].Trim();
+            var cursoNombre = row.Columns[3].Trim();
+            var trimestreRaw = row.Columns[4].Trim();
+            var tareaNombre = row.Columns[5].Trim();
+            var valorRaw = row.Columns[6].Trim();
+
+            if (string.IsNullOrWhiteSpace(profesorCorreo)
+                || string.IsNullOrWhiteSpace(estudianteCorreo)
+                || string.IsNullOrWhiteSpace(asignaturaNombre)
+                || string.IsNullOrWhiteSpace(cursoNombre)
+                || string.IsNullOrWhiteSpace(trimestreRaw)
+                || string.IsNullOrWhiteSpace(tareaNombre)
+                || string.IsNullOrWhiteSpace(valorRaw))
+            {
+                errores.Add($"Linea {row.LineNumber}: todos los campos son obligatorios.");
+                continue;
+            }
+
+            if (!profesores.TryGetValue(profesorCorreo, out var profesor))
+            {
+                errores.Add($"Linea {row.LineNumber}: profesor no encontrado '{profesorCorreo}'.");
+                continue;
+            }
+
+            if (!estudiantes.TryGetValue(estudianteCorreo, out var estudiante))
+            {
+                errores.Add($"Linea {row.LineNumber}: estudiante no encontrado '{estudianteCorreo}'.");
+                continue;
+            }
+
+            if (!cursos.TryGetValue(cursoNombre, out var curso))
+            {
+                errores.Add($"Linea {row.LineNumber}: curso no encontrado '{cursoNombre}'.");
+                continue;
+            }
+
+            if (!int.TryParse(trimestreRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var trimestre) || trimestre < 1 || trimestre > 3)
+            {
+                errores.Add($"Linea {row.LineNumber}: trimestre no valido '{trimestreRaw}'. Debe ser 1, 2 o 3.");
+                continue;
+            }
+
+            if (!decimal.TryParse(valorRaw, NumberStyles.Number, CultureInfo.InvariantCulture, out var valor) || valor < 0 || valor > 10)
+            {
+                errores.Add($"Linea {row.LineNumber}: valor no valido '{valorRaw}'. Debe estar entre 0 y 10 usando punto decimal si hace falta.");
+                continue;
+            }
+
+            var asignatura = asignaturas.FirstOrDefault(a =>
+                a.CursoId == curso.Id &&
+                a.Nombre.Equals(asignaturaNombre, StringComparison.OrdinalIgnoreCase));
+
+            if (asignatura is null)
+            {
+                errores.Add($"Linea {row.LineNumber}: asignatura no encontrada '{asignaturaNombre}' en '{cursoNombre}'.");
+                continue;
+            }
+
+            if (estudiante.CursoId != curso.Id)
+            {
+                errores.Add($"Linea {row.LineNumber}: el estudiante '{estudianteCorreo}' no pertenece al curso '{cursoNombre}'.");
+                continue;
+            }
+
+            if (!matriculas.Contains((estudiante.Id, asignatura.Id)))
+            {
+                errores.Add($"Linea {row.LineNumber}: el estudiante '{estudianteCorreo}' no esta matriculado en '{asignaturaNombre}' ({cursoNombre}).");
+                continue;
+            }
+
+            if (!imparticiones.Contains(new ImportImparticionLookup(profesor.Id, asignatura.Id, curso.Id)))
+            {
+                errores.Add($"Linea {row.LineNumber}: el profesor '{profesorCorreo}' no imparte '{asignaturaNombre}' en '{cursoNombre}'.");
+                continue;
+            }
+
+            var tareaKey = ToTareaKey(asignatura.Id, trimestre, tareaNombre);
+            if (!tareasExistentes.TryGetValue(tareaKey, out var tarea))
+            {
+                errores.Add($"Linea {row.LineNumber}: la tarea '{tareaNombre}' no existe en '{asignaturaNombre}' ({cursoNombre}) para el trimestre {trimestre}.");
+                continue;
+            }
+
+            var notaCsvKey = $"{estudiante.Id}:{tareaKey}";
+            if (!clavesNotasCsv.Add(notaCsvKey))
+            {
+                errores.Add($"Linea {row.LineNumber}: nota duplicada para '{estudianteCorreo}' en la tarea '{tareaNombre}'.");
+                continue;
+            }
+
+            upserts.Add((estudiante.Id, tarea.Id, decimal.Round(valor, 2)));
+        }
+
+        if (errores.Count > 0)
+        {
+            return ApplicationResult.BadRequest(new CsvImportResultDto
+            {
+                Detail = "La importacion de notas ha fallado y se ha cancelado.",
+                Mensaje = "La importacion de notas ha fallado y se ha cancelado.",
+                Creados = 0,
+                Errores = errores,
+                Detalles = detalles
+            });
+        }
+
+        var nuevas = 0;
+        var actualizadas = 0;
+
+        foreach (var nota in upserts)
+        {
+            var key = (nota.EstudianteId, nota.TareaId);
+            if (notasExistentes.Contains(key))
+            {
+                actualizadas++;
+            }
+            else
+            {
+                nuevas++;
+                notasExistentes.Add(key);
+            }
+        }
+
+        if (upserts.Count > 0)
+        {
+            await importRepository.UpsertNotasAsync(upserts, cancellationToken);
+        }
+
+        if (actualizadas > 0)
+        {
+            detalles.Add($"Notas actualizadas: {actualizadas}.");
+        }
+
+        return ApplicationResult.Ok(new CsvImportResultDto
+        {
+            Creados = nuevas,
+            Omitidos = 0,
+            Errores = errores,
+            Detalles = detalles
+        });
+    }
+
     private static IEnumerable<CsvRow> ParseCsv(string text)
     {
         var lines = text.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n');
@@ -449,4 +732,7 @@ public class ImportService(IImportRepository importRepository, IPasswordService 
 
     private static string ToAsignaturaKey(int cursoId, string nombre)
         => $"{cursoId}:{nombre.Trim().ToLowerInvariant()}";
+
+    private static string ToTareaKey(int asignaturaId, int trimestre, string nombre)
+        => $"{asignaturaId}:{trimestre}:{nombre.Trim().ToLowerInvariant()}";
 }

@@ -72,6 +72,18 @@ public class ImportController(IImportService importService) : ControllerBase
     }
 
     /// <summary>
+    /// Importa tareas a partir de un CSV con cabecera: profesorCorreo,asignaturaNombre,cursoNombre,trimestre,tareaNombre.
+    /// </summary>
+    [HttpPost("tareas")]
+    public async Task<IActionResult> ImportarTareas(IFormFile file)
+    {
+        if (!EsCsvValido(file))
+            return BadRequest("Sube un archivo CSV valido.");
+
+        return this.ToActionResult(await importService.ImportarTareasAsync(await ReadTextAsync(file), HttpContext.RequestAborted));
+    }
+
+    /// <summary>
     /// Importa matriculas a partir de un CSV con cabecera: estudianteCorreo,asignaturaNombre,cursoNombre.
     /// </summary>
     [HttpPost("matriculas")]
@@ -93,5 +105,17 @@ public class ImportController(IImportService importService) : ControllerBase
             return BadRequest("Sube un archivo CSV valido.");
 
         return this.ToActionResult(await importService.ImportarImparticionesAsync(await ReadTextAsync(file), HttpContext.RequestAborted));
+    }
+
+    /// <summary>
+    /// Importa notas a partir de un CSV con cabecera: profesorCorreo,estudianteCorreo,asignaturaNombre,cursoNombre,trimestre,tareaNombre,valor.
+    /// </summary>
+    [HttpPost("notas")]
+    public async Task<IActionResult> ImportarNotas(IFormFile file)
+    {
+        if (!EsCsvValido(file))
+            return BadRequest("Sube un archivo CSV valido.");
+
+        return this.ToActionResult(await importService.ImportarNotasAsync(await ReadTextAsync(file), HttpContext.RequestAborted));
     }
 }

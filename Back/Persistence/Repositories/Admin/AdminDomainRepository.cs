@@ -24,4 +24,45 @@ public class AdminDomainRepository(AppDbContext context) : IAdminDomainRepositor
         await context.SaveChangesAsync();
         return new AdminListItemDto { Id = admin.Id, Nombre = admin.Nombre, Correo = admin.Correo };
     }
+
+    public async Task<IEnumerable<AdminMatriculaListItemDto>> GetMatriculasAsync(CancellationToken cancellationToken = default)
+        => await context.Estudiantes
+            .AsNoTracking()
+            .OrderBy(e => e.Nombre)
+            .Select(e => new AdminMatriculaListItemDto
+            {
+                EstudianteId = e.Id,
+                Estudiante = e.Nombre,
+                CursoId = e.CursoId,
+                Curso = e.Curso != null ? e.Curso.Nombre : null,
+                Asignaturas = context.EstudianteAsignaturas
+                    .Where(ea => ea.EstudianteId == e.Id)
+                    .Join(context.Asignaturas,
+                        ea => ea.AsignaturaId,
+                        a => a.Id,
+                        (_, a) => new AdminMatriculaAsignaturaItemDto
+                        {
+                            AsignaturaId = a.Id,
+                            Asignatura = a.Nombre
+                        })
+                    .OrderBy(a => a.Asignatura)
+                    .ToList()
+            })
+            .ToListAsync(cancellationToken);
+
+    public async Task<IEnumerable<AdminImparticionListItemDto>> GetImparticionesAsync(CancellationToken cancellationToken = default)
+        => await context.ProfesorAsignaturaCursos
+            .AsNoTracking()
+            .OrderBy(x => x.Curso!.Nombre)
+            .ThenBy(x => x.Asignatura!.Nombre)
+            .Select(x => new AdminImparticionListItemDto
+            {
+                ProfesorId = x.ProfesorId,
+                Profesor = x.Profesor != null ? x.Profesor.Nombre : string.Empty,
+                AsignaturaId = x.AsignaturaId,
+                Asignatura = x.Asignatura != null ? x.Asignatura.Nombre : string.Empty,
+                CursoId = x.CursoId,
+                Curso = x.Curso != null ? x.Curso.Nombre : string.Empty
+            })
+            .ToListAsync(cancellationToken);
 }

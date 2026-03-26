@@ -6,3 +6,84 @@
 .chart-shell-wide {
     min-height: 320px;
 }
+
+.chart-shell-large {
+    min-height: 360px;
+}
+
+.cursos-lista-scroll {
+    max-height: 360px;
+    overflow: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+    padding: 8px;
+    display: grid;
+    gap: 8px;
+}
+
+.curso-row {
+    border: 1px solid #dbe3ef;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #f8fafc;
+}
+
+.curso-row-active {
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+
+.curso-row-main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.curso-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.selector-compare-check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.selector-compare-check .form-check-input {
+    margin: 0;
+}
+
+.compare-actions-block {
+    width: 100%;
+}
+
+.compare-submit-btn {
+    width: 100%;
+    min-height: 44px;
+}
+
+@media (max-width: 768px) {
+    .curso-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .curso-row-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+.curso-heading-sticky {
+    position: sticky;
+    top: 12px;
+    z-index: 2;
+}

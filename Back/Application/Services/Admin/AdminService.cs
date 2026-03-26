@@ -52,85 +52,79 @@ public class AdminService(
         });
     }
 
-    public async Task<ApplicationResult> GetNotasStatsAsync(CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> GetCursosStatsSelectorAsync(CancellationToken cancellationToken = default)
     {
-        var cursos = (await cursosDomain.GetAllResumenAsync(cancellationToken))
+        var cursos = (await cursosDomain.GetAllResumenAsync(cancellationToken)).ToList();
+        var estudiantes = (await estudiantesDomain.GetAllAsync(cancellationToken)).ToList();
+
+        var result = cursos
             .OrderBy(c => c.Nombre)
+            .Select(c => new CursoStatsSelectorDto
+            {
+                CursoId = c.Id,
+                Curso = c.Nombre,
+                TotalEstudiantes = estudiantes.Count(e => e.CursoId == c.Id),
+                TotalAsignaturas = c.Asignaturas.Count
+            })
             .ToList();
 
-        var asignaturas = (await asignaturasDomain.GetAllResumenAsync(cancellationToken)).ToList();
-        var cursosStats = new List<CursoNotasStatsDto>();
-        var mediasGlobales = new List<double>();
+        return ApplicationResult.Ok(result);
+    }
 
-        foreach (var curso in cursos)
+    public async Task<ApplicationResult> GetStatsByCursoAsync(int cursoId, CancellationToken cancellationToken = default)
+    {
+        var curso = await cursosDomain.GetSimpleAsync(cursoId, cancellationToken);
+        if (curso is null)
+            return ApplicationResult.NotFound("El curso no existe.");
+
+        var result = await ConstruirStatsCursoAsync(curso.Id, curso.Nombre, cancellationToken);
+        return ApplicationResult.Ok(result);
+    }
+
+    public async Task<ApplicationResult> CompareCursosAsync(IEnumerable<int> cursoIds, CancellationToken cancellationToken = default)
+    {
+        var ids = cursoIds
+            .Where(id => id > 0)
+            .Distinct()
+            .Take(6)
+            .ToList();
+
+        if (ids.Count < 2)
+            return ApplicationResult.BadRequest("Selecciona al menos 2 cursos para comparar.");
+
+        var result = new List<CursoComparacionItemDto>();
+        foreach (var id in ids)
         {
-            var asignaturasCurso = asignaturas
-                .Where(a => a.Curso.Id == curso.Id)
-                .OrderBy(a => a.Nombre)
-                .ToList();
-
-            var asignaturasStats = new List<AsignaturaNotasStatsDto>();
-
-            foreach (var asignatura in asignaturasCurso)
+            var curso = await cursosDomain.GetSimpleAsync(id, cancellationToken);
+            if (curso is null)
             {
-                var detalle = await asignaturasDomain.GetDetalleAsync(asignatura.Id, cancellationToken);
-                if (detalle is null)
-                {
-                    continue;
-                }
-
-                var alumnos = detalle.Alumnos
-                    .Select(alumno =>
-                    {
-                        var notaFinal = CalcularNotaFinal(alumno.Notas);
-                        return new AlumnoNotaResumenDto
-                        {
-                            EstudianteId = alumno.EstudianteId,
-                            Estudiante = alumno.Alumno,
-                            NotaFinal = notaFinal,
-                            Aprobado = notaFinal.HasValue && notaFinal.Value >= 5
-                        };
-                    })
-                    .OrderBy(a => a.Estudiante)
-                    .ToList();
-
-                var mediasAsignatura = alumnos.Where(a => a.NotaFinal.HasValue).Select(a => a.NotaFinal!.Value).ToList();
-                mediasGlobales.AddRange(mediasAsignatura);
-
-                asignaturasStats.Add(new AsignaturaNotasStatsDto
-                {
-                    AsignaturaId = detalle.Id,
-                    Asignatura = detalle.Nombre,
-                    TotalAlumnos = alumnos.Count,
-                    Aprobados = alumnos.Count(a => a.Aprobado),
-                    Suspensos = alumnos.Count(a => a.NotaFinal.HasValue && !a.Aprobado),
-                    SinNota = alumnos.Count(a => !a.NotaFinal.HasValue),
-                    Media = mediasAsignatura.Count > 0 ? Math.Round(mediasAsignatura.Average(), 2) : null,
-                    Alumnos = alumnos
-                });
+                continue;
             }
 
-            var mediasCurso = asignaturasStats
-                .SelectMany(a => a.Alumnos)
-                .Where(a => a.NotaFinal.HasValue)
-                .Select(a => a.NotaFinal!.Value)
-                .ToList();
-
-            cursosStats.Add(new CursoNotasStatsDto
+            var stats = await ConstruirStatsCursoAsync(curso.Id, curso.Nombre, cancellationToken);
+            result.Add(new CursoComparacionItemDto
             {
-                CursoId = curso.Id,
-                Curso = curso.Nombre,
-                Media = mediasCurso.Count > 0 ? Math.Round(mediasCurso.Average(), 2) : null,
-                Asignaturas = asignaturasStats
+                CursoId = stats.CursoId,
+                Curso = stats.Curso,
+                MediaGlobalCurso = stats.MediaGlobalCurso,
+                TotalAlumnos = stats.TotalAlumnos,
+                Aprobados = stats.Aprobados,
+                Suspensos = stats.Suspensos,
+                SinNota = stats.SinNota
             });
         }
 
-        return ApplicationResult.Ok(new AdminNotasStatsDto
+        return ApplicationResult.Ok(new ComparacionCursosResponseDto
         {
-            MediaGlobal = mediasGlobales.Count > 0 ? Math.Round(mediasGlobales.Average(), 2) : null,
-            PorCurso = cursosStats
+            Cursos = result.OrderBy(r => r.Curso).ToList()
         });
     }
+
+    public async Task<ApplicationResult> GetMatriculasAsync(CancellationToken cancellationToken = default)
+        => ApplicationResult.Ok(await adminDomain.GetMatriculasAsync(cancellationToken));
+
+    public async Task<ApplicationResult> GetImparticionesAsync(CancellationToken cancellationToken = default)
+        => ApplicationResult.Ok(await adminDomain.GetImparticionesAsync(cancellationToken));
 
     public async Task<ApplicationResult> CreateAsync(CreateAdminDto dto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
@@ -170,5 +164,67 @@ public class AdminService(
         return (t1.HasValue && t2.HasValue && t3.HasValue)
             ? Math.Round((t1.Value + t2.Value + t3.Value) / 3, 2)
             : null;
+    }
+
+    private async Task<CursoNotasStatsResponseDto> ConstruirStatsCursoAsync(int cursoId, string cursoNombre, CancellationToken cancellationToken)
+    {
+        var asignaturasCurso = (await asignaturasDomain.GetAllResumenAsync(cancellationToken))
+            .Where(a => a.Curso.Id == cursoId)
+            .OrderBy(a => a.Nombre)
+            .ToList();
+
+        var asignaturasStats = new List<AsignaturaNotasStatsDto>();
+        var acumuladoFinales = new List<double>();
+        var totalAlumnos = 0;
+        var aprobados = 0;
+        var suspensos = 0;
+        var sinNota = 0;
+
+        foreach (var asignatura in asignaturasCurso)
+        {
+            var detalle = await asignaturasDomain.GetDetalleAsync(asignatura.Id, cancellationToken);
+            if (detalle is null)
+            {
+                continue;
+            }
+
+            var finales = detalle.Alumnos
+                .Select(alumno => CalcularNotaFinal(alumno.Notas))
+                .ToList();
+
+            var finalesValidas = finales.Where(f => f.HasValue).Select(f => f!.Value).ToList();
+            var aprobadosAsignatura = finalesValidas.Count(f => f >= 5);
+            var suspensosAsignatura = finalesValidas.Count(f => f < 5);
+            var sinNotaAsignatura = finales.Count - finalesValidas.Count;
+
+            totalAlumnos += finales.Count;
+            aprobados += aprobadosAsignatura;
+            suspensos += suspensosAsignatura;
+            sinNota += sinNotaAsignatura;
+            acumuladoFinales.AddRange(finalesValidas);
+
+            asignaturasStats.Add(new AsignaturaNotasStatsDto
+            {
+                AsignaturaId = detalle.Id,
+                Asignatura = detalle.Nombre,
+                TotalAlumnos = finales.Count,
+                Aprobados = aprobadosAsignatura,
+                Suspensos = suspensosAsignatura,
+                SinNota = sinNotaAsignatura,
+                Media = finalesValidas.Count > 0 ? Math.Round(finalesValidas.Average(), 2) : null
+            });
+        }
+
+        return new CursoNotasStatsResponseDto
+        {
+            CursoId = cursoId,
+            Curso = cursoNombre,
+            MediaGlobalCurso = acumuladoFinales.Count > 0 ? Math.Round(acumuladoFinales.Average(), 2) : null,
+            TotalAlumnos = totalAlumnos,
+            Aprobados = aprobados,
+            Suspensos = suspensos,
+            SinNota = sinNota,
+            Asignaturas = asignaturasStats
+        };
     }
 }

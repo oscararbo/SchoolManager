@@ -107,16 +107,24 @@ Back/
 ### Admin
 
 - CRUD de cursos, asignaturas, profesores y estudiantes.
+- `GET /api/admin/matriculas`
+- `GET /api/admin/imparticiones`
+- `GET /api/admin/stats/cursos`
+- `GET /api/admin/stats/cursos/{cursoId}`
+- `POST /api/admin/stats/cursos/comparar`
 - `POST /api/admin/csv/cursos`
 - `POST /api/admin/csv/asignaturas`
 - `POST /api/admin/csv/profesores`
 - `POST /api/admin/csv/estudiantes`
 - `POST /api/admin/csv/imparticiones`
+- `POST /api/admin/csv/tareas`
 - `POST /api/admin/csv/matriculas`
+- `POST /api/admin/csv/notas`
 
 Nota de integracion con Front:
 
 - El panel admin del cliente Angular esta modularizado en vistas de estadisticas y gestion.
+- La vista de gestion consume endpoints dedicados para matriculas e imparticiones, evitando recomponer esas vistas en el cliente a partir de multiples llamadas.
 - La importacion CSV del cliente usa una card reutilizable por entidad, pero consume los mismos endpoints listados arriba.
 
 ### Profesor
@@ -148,8 +156,10 @@ Formatos:
 - asignaturas: `nombre,cursoNombre`
 - profesores: `nombre,correo,contrasena`
 - estudiantes: `nombre,correo,contrasena,cursoNombre`
+- tareas: `profesorCorreo,asignaturaNombre,cursoNombre,trimestre,tareaNombre`
 - imparticiones: `profesorCorreo,asignaturaNombre,cursoNombre`
 - matriculas: `estudianteCorreo,asignaturaNombre,cursoNombre`
+- notas: `profesorCorreo,estudianteCorreo,asignaturaNombre,cursoNombre,trimestre,tareaNombre,valor`
 
 Comportamiento:
 
@@ -157,8 +167,9 @@ Comportamiento:
 - ignora cabecera
 - informa errores por linea
 - evita duplicados
-- en `asignaturas`, `estudiantes`, `imparticiones` y `matriculas`, si hay errores de validacion o referencias la importacion completa se cancela
+- en `asignaturas`, `estudiantes`, `tareas`, `imparticiones`, `matriculas` y `notas`, si hay errores de validacion o referencias la importacion completa se cancela
 - en `profesores` y `estudiantes`, las contrasenas del CSV siempre se almacenan hasheadas
+- en `notas`, todas las tareas deben existir previamente
 
 Orden recomendado:
 
@@ -167,7 +178,9 @@ Orden recomendado:
 3. profesores
 4. estudiantes
 5. imparticiones
-6. matriculas
+6. tareas
+7. matriculas
+8. notas
 
 ## Manejo de errores
 
@@ -188,5 +201,9 @@ Mensajes claros en `400`, `404` y `403` segun regla violada.
 
 ```bash
 cd Back
-dotnet build Back.Api.csproj
+dotnet build Back.slnx
+```
+
+```bash
+dotnet test ../Back.Tests/Back.Tests.csproj
 ```

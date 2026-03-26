@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Back.Api.Persistence.Repositories;
 
-public class ImportRepository(AppDbContext context) : IImportRepository
+public class ImportDomainRepository(AppDbContext context) : IImportDomainRepository
 {
     public Task<List<ImportCursoLookup>> GetCursosAsync(CancellationToken cancellationToken = default) => context.Cursos
         .AsNoTracking()
@@ -35,6 +35,16 @@ public class ImportRepository(AppDbContext context) : IImportRepository
     public Task<List<ImportImparticionLookup>> GetImparticionesAsync(CancellationToken cancellationToken = default) => context.ProfesorAsignaturaCursos
         .AsNoTracking()
         .Select(x => new ImportImparticionLookup(x.ProfesorId, x.AsignaturaId, x.CursoId))
+        .ToListAsync(cancellationToken);
+
+    public Task<List<ImportTareaLookup>> GetTareasAsync(CancellationToken cancellationToken = default) => context.Tareas
+        .AsNoTracking()
+        .Select(t => new ImportTareaLookup(t.Id, t.Nombre, t.Trimestre, t.AsignaturaId, t.ProfesorId))
+        .ToListAsync(cancellationToken);
+
+    public Task<List<(int EstudianteId, int TareaId)>> GetNotasAsync(CancellationToken cancellationToken = default) => context.Notas
+        .AsNoTracking()
+        .Select(n => new ValueTuple<int, int>(n.EstudianteId, n.TareaId))
         .ToListAsync(cancellationToken);
 
     public async Task AddCursosAsync(IEnumerable<string> nombres, CancellationToken cancellationToken = default)
@@ -90,6 +100,49 @@ public class ImportRepository(AppDbContext context) : IImportRepository
             AsignaturaId = x.AsignaturaId,
             CursoId = x.CursoId
         }));
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task AddTareasAsync(IEnumerable<(string Nombre, int Trimestre, int AsignaturaId, int ProfesorId)> tareas, CancellationToken cancellationToken = default)
+    {
+        context.Tareas.AddRange(tareas.Select(x => new Tarea
+        {
+            Nombre = x.Nombre,
+            Trimestre = x.Trimestre,
+            AsignaturaId = x.AsignaturaId,
+            ProfesorId = x.ProfesorId
+        }));
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpsertNotasAsync(IEnumerable<(int EstudianteId, int TareaId, decimal Valor)> notas, CancellationToken cancellationToken = default)
+    {
+        var notasList = notas.ToList();
+        if (notasList.Count == 0)
+        {
+            return;
+        }
+
+        var estudianteIds = notasList.Select(n => n.EstudianteId).Distinct().ToList();
+        var tareaIds = notasList.Select(n => n.TareaId).Distinct().ToList();
+        var existentes = await context.Notas
+            .Where(n => estudianteIds.Contains(n.EstudianteId) && tareaIds.Contains(n.TareaId))
+            .ToListAsync(cancellationToken);
+        var existentesMap = existentes.ToDictionary(n => (n.EstudianteId, n.TareaId));
+
+        foreach (var nota in notasList)
+        {
+            if (existentesMap.TryGetValue((nota.EstudianteId, nota.TareaId), out var actual))
+            {
+                actual.Valor = nota.Valor;
+                continue;
+            }
+
+            var nueva = new Nota { EstudianteId = nota.EstudianteId, TareaId = nota.TareaId, Valor = nota.Valor };
+            context.Notas.Add(nueva);
+            existentesMap[(nota.EstudianteId, nota.TareaId)] = nueva;
+        }
+
         await context.SaveChangesAsync(cancellationToken);
     }
 }

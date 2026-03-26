@@ -249,13 +249,6 @@ export interface AdminStats {
     porCurso: AdminCursoStats[];
 }
 
-export interface AdminAlumnoNotaResumen {
-    estudianteId: number;
-    estudiante: string;
-    notaFinal: number | null;
-    aprobado: boolean;
-}
-
 export interface AdminAsignaturaNotasStats {
     asignaturaId: number;
     asignatura: string;
@@ -264,19 +257,60 @@ export interface AdminAsignaturaNotasStats {
     suspensos: number;
     sinNota: number;
     media: number | null;
-    alumnos: AdminAlumnoNotaResumen[];
+}
+
+export interface AdminCursoStatsSelector {
+    cursoId: number;
+    curso: string;
+    totalEstudiantes: number;
+    totalAsignaturas: number;
 }
 
 export interface AdminCursoNotasStats {
     cursoId: number;
     curso: string;
-    media: number | null;
+    mediaGlobalCurso: number | null;
+    totalAlumnos: number;
+    aprobados: number;
+    suspensos: number;
+    sinNota: number;
     asignaturas: AdminAsignaturaNotasStats[];
 }
 
-export interface AdminNotasStats {
-    mediaGlobal: number | null;
-    porCurso: AdminCursoNotasStats[];
+export interface AdminCursoComparacionItem {
+    cursoId: number;
+    curso: string;
+    mediaGlobalCurso: number | null;
+    totalAlumnos: number;
+    aprobados: number;
+    suspensos: number;
+    sinNota: number;
+}
+
+export interface AdminComparacionCursos {
+    cursos: AdminCursoComparacionItem[];
+}
+
+export interface AdminMatriculaAsignaturaItem {
+    asignaturaId: number;
+    asignatura: string;
+}
+
+export interface AdminMatriculaListItem {
+    estudianteId: number;
+    estudiante: string;
+    cursoId: number;
+    curso: string | null;
+    asignaturas: AdminMatriculaAsignaturaItem[];
+}
+
+export interface AdminImparticionListItem {
+    profesorId: number;
+    profesor: string;
+    asignaturaId: number;
+    asignatura: string;
+    cursoId: number;
+    curso: string;
 }
 
 export interface ProfesorTareaStats {
@@ -316,7 +350,7 @@ export class CsvImportError extends Error {
     }
 }
 
-export type CsvImportEntity = 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matriculas' | 'imparticiones';
+export type CsvImportEntity = 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'tareas' | 'matriculas' | 'imparticiones' | 'notas';
 //#endregion
 
 @Injectable({ providedIn: 'root' })
@@ -559,9 +593,33 @@ export class SchoolApiService {
         } catch (e) { throw this.extractError(e); }
     }
 
-    async getAdminNotasStats(): Promise<AdminNotasStats> {
+    async getAdminCursosStatsSelector(): Promise<AdminCursoStatsSelector[]> {
         try {
-            return await firstValueFrom(this.http.get<AdminNotasStats>(`${this.apiUrl}/admin/stats/notas`));
+            return await firstValueFrom(this.http.get<AdminCursoStatsSelector[]>(`${this.apiUrl}/admin/stats/cursos`));
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    async getAdminStatsByCurso(cursoId: number): Promise<AdminCursoNotasStats> {
+        try {
+            return await firstValueFrom(this.http.get<AdminCursoNotasStats>(`${this.apiUrl}/admin/stats/cursos/${cursoId}`));
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    async compararCursos(cursoIds: number[]): Promise<AdminComparacionCursos> {
+        try {
+            return await firstValueFrom(this.http.post<AdminComparacionCursos>(`${this.apiUrl}/admin/stats/cursos/comparar`, { cursoIds }));
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    async getAdminMatriculas(): Promise<AdminMatriculaListItem[]> {
+        try {
+            return await firstValueFrom(this.http.get<AdminMatriculaListItem[]>(`${this.apiUrl}/admin/matriculas`));
+        } catch (e) { throw this.extractError(e); }
+    }
+
+    async getAdminImparticiones(): Promise<AdminImparticionListItem[]> {
+        try {
+            return await firstValueFrom(this.http.get<AdminImparticionListItem[]>(`${this.apiUrl}/admin/imparticiones`));
         } catch (e) { throw this.extractError(e); }
     }
 
@@ -806,7 +864,7 @@ export class SchoolApiService {
     /**
      * Importa entidades desde un archivo CSV multiparte.
      *
-     * @param entidad - Tipo de entidad: `'cursos'`, `'asignaturas'`, `'profesores'`, `'estudiantes'`, `'matriculas'` o `'imparticiones'`.
+    * @param entidad - Tipo de entidad: `'cursos'`, `'asignaturas'`, `'profesores'`, `'estudiantes'`, `'tareas'`, `'matriculas'`, `'imparticiones'` o `'notas'`.
      * @param file - Archivo CSV a importar.
      * @returns Resumen de la importacion: entidades creadas, omitidas y errores por linea.
      */

@@ -129,7 +129,7 @@ builder.Services.AddScoped<IProfesoresDomainRepository, ProfesoresDomainReposito
 builder.Services.AddScoped<ICursosDomainRepository, CursosDomainRepository>();
 builder.Services.AddScoped<IAsignaturasDomainRepository, AsignaturasDomainRepository>();
 builder.Services.AddScoped<IEstudiantesDomainRepository, EstudiantesDomainRepository>();
-builder.Services.AddScoped<IImportRepository, ImportRepository>();
+builder.Services.AddScoped<IImportDomainRepository, ImportDomainRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IProfesoresService, ProfesoresService>();
@@ -166,9 +166,12 @@ using (var scope = app.Services.CreateScope())
         var seedAdminEmail = (builder.Configuration["SeedAdmin:Correo"] ?? "admin@prueba.com").Trim().ToLowerInvariant();
         var seedAdminPassword = builder.Configuration["SeedAdmin:Contrasena"] ?? "Prueba1";
 
-        if (db.Database.GetMigrations().Any())
+        if (db.Database.IsRelational())
         {
-            db.Database.Migrate();
+            if (db.Database.GetMigrations().Any())
+                db.Database.Migrate();
+            else
+                db.Database.EnsureCreated();
         }
         else
         {
@@ -224,3 +227,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Required to expose the entry-point type for WebApplicationFactory<Program> in integration tests.
+public partial class Program { }

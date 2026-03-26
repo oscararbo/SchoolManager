@@ -4,7 +4,8 @@ import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angu
 import {
     SchoolApiService,
     CursoItem, AsignaturaItem, ProfesorListItem, EstudianteItem,
-    UpdateProfesorData, UpdateEstudianteData, CsvImportResult, CsvImportEntity, CsvImportError
+    UpdateProfesorData, UpdateEstudianteData, CsvImportResult, CsvImportEntity, CsvImportError,
+    AdminMatriculaListItem, AdminImparticionListItem
 } from '../../../../../shared/services/school-api.service';
 import { ToastService } from '../../../../../core/services/toast.service';
 import { ConfirmDialogComponent } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
@@ -61,17 +62,23 @@ export class AdminManagementViewComponent implements OnInit {
         asignaturas: boolean;
         profesores: boolean;
         estudiantes: boolean;
+        matriculas: boolean;
+        imparticiones: boolean;
     }>({
         cursos: false,
         asignaturas: false,
         profesores: false,
-        estudiantes: false
+        estudiantes: false,
+        matriculas: false,
+        imparticiones: false
     });
 
     cursos = signal<CursoItem[]>([]);
     asignaturas = signal<AsignaturaItem[]>([]);
     profesores = signal<ProfesorListItem[]>([]);
     estudiantes = signal<EstudianteItem[]>([]);
+    matriculas = signal<AdminMatriculaListItem[]>([]);
+    imparticiones = signal<AdminImparticionListItem[]>([]);
 
     private readonly busquedaCursosInput$ = new Subject<string>();
     private readonly busquedaAsignaturasInput$ = new Subject<string>();
@@ -141,8 +148,10 @@ export class AdminManagementViewComponent implements OnInit {
     csvAsignaturasFile: File | null = null;
     csvProfesoresFile: File | null = null;
     csvEstudiantesFile: File | null = null;
+    csvTareasFile: File | null = null;
     csvMatriculasFile: File | null = null;
     csvImparticionesFile: File | null = null;
+    csvNotasFile: File | null = null;
     csvResultado = signal<CsvImportResult | null>(null);
     csvEntidadActual = signal<CsvImportEntity | null>(null);
     csvCargando = signal(false);
@@ -153,7 +162,9 @@ export class AdminManagementViewComponent implements OnInit {
         { entidad: 'profesores', titulo: 'Profesores', descripcion: 'Alta masiva de profesores.', orden: '3' },
         { entidad: 'estudiantes', titulo: 'Estudiantes', descripcion: 'Alta masiva de estudiantes con su curso.', orden: '4' },
         { entidad: 'imparticiones', titulo: 'Imparticiones', descripcion: 'Relaciona profesor, asignatura y curso.', orden: '5' },
-        { entidad: 'matriculas', titulo: 'Matriculas', descripcion: 'Relaciona estudiante con asignaturas de su curso.', orden: '6' }
+        { entidad: 'tareas', titulo: 'Tareas', descripcion: 'Crea tareas por profesor, asignatura, curso y trimestre.', orden: '6' },
+        { entidad: 'matriculas', titulo: 'Matriculas', descripcion: 'Relaciona estudiante con asignaturas de su curso.', orden: '7' },
+        { entidad: 'notas', titulo: 'Notas', descripcion: 'Carga masiva de calificaciones sobre tareas ya existentes.', orden: '8' }
     ];
 
     csvErroresAgrupados = computed<CsvErrorGroup[]>(() => {
@@ -340,35 +351,18 @@ export class AdminManagementViewComponent implements OnInit {
         return this.asignaturas().filter(a => a.curso.id === Number(cursoId));
     });
 
-    matriculasVista = computed<Array<{ estudianteId: number; estudiante: string; curso: string | null; asignaturas: string[] }>>(() => {
+    matriculasVista = computed<AdminMatriculaListItem[]>(() => {
         const cursoFiltroRaw = this.filtroMatriculasCursoId();
         const cursoFiltro = cursoFiltroRaw ? Number(cursoFiltroRaw) : null;
-        const estudiantes = this.estudiantes().filter(e => !cursoFiltro || e.cursoId === cursoFiltro);
-        return estudiantes
-            .map(e => ({
-                estudianteId: e.id,
-                estudiante: e.nombre,
-                curso: e.curso,
-                asignaturas: this.asignaturas()
-                    .filter(a => a.alumnos.some(al => al.id === e.id))
-                    .map(a => a.nombre)
-                    .sort((a, b) => a.localeCompare(b))
-            }))
+        return this.matriculas()
+            .filter(m => !cursoFiltro || m.cursoId === cursoFiltro)
             .sort((a, b) => a.estudiante.localeCompare(b.estudiante));
     });
 
-    imparticionesVista = computed<Array<{ profesorId: number; asignaturaId: number; profesor: string; asignatura: string; cursoId: number; curso: string }>>(() => {
+    imparticionesVista = computed<AdminImparticionListItem[]>(() => {
         const cursoFiltroRaw = this.filtroImparticionesCursoId();
         const cursoFiltro = cursoFiltroRaw ? Number(cursoFiltroRaw) : null;
-        return this.profesores()
-            .flatMap(p => p.imparticiones.map(i => ({
-                profesorId: p.id,
-                asignaturaId: i.asignaturaId,
-                profesor: p.nombre,
-                asignatura: i.asignatura,
-                cursoId: i.cursoId,
-                curso: i.curso
-            })))
+        return this.imparticiones()
             .filter(x => !cursoFiltro || x.cursoId === cursoFiltro)
             .sort((a, b) => a.curso.localeCompare(b.curso) || a.asignatura.localeCompare(b.asignatura));
     });
@@ -457,14 +451,16 @@ export class AdminManagementViewComponent implements OnInit {
                 await Promise.all([
                     this.cargarCursos(force),
                     this.cargarAsignaturas(force),
-                    this.cargarEstudiantes(force)
+                    this.cargarEstudiantes(force),
+                    this.cargarMatriculas(force)
                 ]);
                 break;
             case 'imparticiones':
                 await Promise.all([
                     this.cargarCursos(force),
                     this.cargarAsignaturas(force),
-                    this.cargarProfesores(force)
+                    this.cargarProfesores(force),
+                    this.cargarImparticiones(force)
                 ]);
                 break;
             case 'importar':
@@ -473,8 +469,38 @@ export class AdminManagementViewComponent implements OnInit {
         }
     }
 
-    private setResourceLoaded(resource: 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes', loaded: boolean): void {
+    private setResourceLoaded(resource: 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matriculas' | 'imparticiones', loaded: boolean): void {
         this.resourcesLoaded.update(current => ({ ...current, [resource]: loaded }));
+    }
+
+    private async cargarMatriculas(force = false): Promise<void> {
+        if (!force && this.resourcesLoaded().matriculas) {
+            return;
+        }
+
+        await this.runWithLoading('cargarMatriculas', async () => {
+            try {
+                this.matriculas.set(await this.api.getAdminMatriculas());
+                this.setResourceLoaded('matriculas', true);
+            } catch (e) {
+                this.mostrarError(e, 'No se pudieron cargar las matriculas.');
+            }
+        });
+    }
+
+    private async cargarImparticiones(force = false): Promise<void> {
+        if (!force && this.resourcesLoaded().imparticiones) {
+            return;
+        }
+
+        await this.runWithLoading('cargarImparticiones', async () => {
+            try {
+                this.imparticiones.set(await this.api.getAdminImparticiones());
+                this.setResourceLoaded('imparticiones', true);
+            } catch (e) {
+                this.mostrarError(e, 'No se pudieron cargar las imparticiones.');
+            }
+        });
     }
 
     private async cargarCursos(force = false): Promise<void> {
@@ -543,31 +569,49 @@ export class AdminManagementViewComponent implements OnInit {
             this.setResourceLoaded('asignaturas', false);
             this.setResourceLoaded('estudiantes', false);
             this.setResourceLoaded('profesores', false);
+            this.setResourceLoaded('matriculas', false);
+            this.setResourceLoaded('imparticiones', false);
             return;
         }
 
         if (entidad === 'asignaturas') {
             this.setResourceLoaded('asignaturas', false);
+            this.setResourceLoaded('matriculas', false);
+            this.setResourceLoaded('imparticiones', false);
             return;
         }
 
         if (entidad === 'profesores') {
             this.setResourceLoaded('profesores', false);
+            this.setResourceLoaded('imparticiones', false);
             return;
         }
 
         if (entidad === 'estudiantes') {
             this.setResourceLoaded('estudiantes', false);
+            this.setResourceLoaded('matriculas', false);
+            return;
+        }
+
+        if (entidad === 'tareas') {
+            this.setResourceLoaded('asignaturas', false);
             return;
         }
 
         if (entidad === 'matriculas') {
             this.setResourceLoaded('asignaturas', false);
+            this.setResourceLoaded('matriculas', false);
             return;
         }
 
         if (entidad === 'imparticiones') {
             this.setResourceLoaded('profesores', false);
+            this.setResourceLoaded('imparticiones', false);
+            return;
+        }
+
+        if (entidad === 'notas') {
+            this.setResourceLoaded('asignaturas', false);
         }
     }
 
@@ -649,6 +693,8 @@ export class AdminManagementViewComponent implements OnInit {
                 this.setResourceLoaded('cursos', false);
                 this.setResourceLoaded('asignaturas', false);
                 this.setResourceLoaded('estudiantes', false);
+                this.setResourceLoaded('matriculas', false);
+                this.setResourceLoaded('imparticiones', false);
                 await this.cargarTab(this.tabActiva(), true);
                 this.dataChanged.emit();
             } catch (e) {
@@ -716,6 +762,8 @@ export class AdminManagementViewComponent implements OnInit {
                 this.asignaturas.update(list => list.filter(a => a.id !== id));
                 this.toast.show(`Asignatura "${nombre}" eliminada.`, 'success');
                 this.setResourceLoaded('asignaturas', false);
+                this.setResourceLoaded('matriculas', false);
+                this.setResourceLoaded('imparticiones', false);
                 await this.cargarTab(this.tabActiva(), true);
                 this.dataChanged.emit();
             } catch (e) {
@@ -792,6 +840,7 @@ export class AdminManagementViewComponent implements OnInit {
                 this.profesores.update(list => list.filter(p => p.id !== id));
                 this.toast.show(`Profesor "${nombre}" eliminado.`, 'success');
                 this.setResourceLoaded('profesores', false);
+                this.setResourceLoaded('imparticiones', false);
                 await this.cargarTab(this.tabActiva(), true);
                 this.dataChanged.emit();
             } catch (e) {
@@ -873,6 +922,7 @@ export class AdminManagementViewComponent implements OnInit {
                 this.toast.show(`Estudiante "${nombre}" eliminado.`, 'success');
                 this.setResourceLoaded('estudiantes', false);
                 this.setResourceLoaded('asignaturas', false);
+                this.setResourceLoaded('matriculas', false);
                 await this.cargarTab(this.tabActiva(), true);
                 this.dataChanged.emit();
             } catch (e) {
@@ -913,6 +963,7 @@ export class AdminManagementViewComponent implements OnInit {
                 }
 
                 this.matriculaAsignaturaId.set(null);
+                await this.cargarMatriculas(true);
                 this.toast.show('Matricula realizada correctamente.', 'success');
                 this.dataChanged.emit();
             } catch (e) {
@@ -965,6 +1016,7 @@ export class AdminManagementViewComponent implements OnInit {
                 }
 
                 this.imparticionAsignaturaId.set(null);
+                await this.cargarImparticiones(true);
                 this.toast.show('Imparticion asignada correctamente.', 'success');
             } catch (e) {
                 this.mostrarError(e);
@@ -985,6 +1037,7 @@ export class AdminManagementViewComponent implements OnInit {
                     if (a.id !== asignaturaId) return a;
                     return { ...a, alumnos: a.alumnos.filter(al => al.id !== estudianteId) };
                 }));
+                await this.cargarMatriculas(true);
                 this.toast.show('Matricula eliminada.', 'success');
                 this.dataChanged.emit();
             } catch (e) {
@@ -1011,6 +1064,7 @@ export class AdminManagementViewComponent implements OnInit {
                         )
                     };
                 }));
+                await this.cargarImparticiones(true);
                 this.toast.show('Imparticion eliminada.', 'success');
                 this.dataChanged.emit();
             } catch (e) {
@@ -1082,8 +1136,10 @@ export class AdminManagementViewComponent implements OnInit {
             : entidad === 'asignaturas' ? this.csvAsignaturasFile
             : entidad === 'profesores' ? this.csvProfesoresFile
             : entidad === 'estudiantes' ? this.csvEstudiantesFile
+            : entidad === 'tareas' ? this.csvTareasFile
             : entidad === 'matriculas' ? this.csvMatriculasFile
-            : this.csvImparticionesFile;
+            : entidad === 'imparticiones' ? this.csvImparticionesFile
+            : this.csvNotasFile;
     }
 
     private setCsvFile(entidad: CsvImportEntity, file: File | null): void {
@@ -1091,8 +1147,10 @@ export class AdminManagementViewComponent implements OnInit {
         else if (entidad === 'asignaturas') this.csvAsignaturasFile = file;
         else if (entidad === 'profesores') this.csvProfesoresFile = file;
         else if (entidad === 'estudiantes') this.csvEstudiantesFile = file;
+        else if (entidad === 'tareas') this.csvTareasFile = file;
         else if (entidad === 'matriculas') this.csvMatriculasFile = file;
-        else this.csvImparticionesFile = file;
+        else if (entidad === 'imparticiones') this.csvImparticionesFile = file;
+        else this.csvNotasFile = file;
     }
 
     private clearCsvSelection(entidad: CsvImportEntity): void {
@@ -1105,8 +1163,10 @@ export class AdminManagementViewComponent implements OnInit {
             asignaturas: 'nombre,cursoNombre\nMatematicas,1°A\nLengua,1°A\nCiencias,1°B',
             profesores: 'nombre,correo,contrasena\nJuan Garcia,juan@colegio.es,Pass123',
             estudiantes: 'nombre,correo,contrasena,cursoNombre\nLucia Perez,lucia@colegio.es,Pass123,1°A',
+            tareas: 'profesorCorreo,asignaturaNombre,cursoNombre,trimestre,tareaNombre\njuan@colegio.es,Matematicas,1°A,1,Examen T1',
             matriculas: 'estudianteCorreo,asignaturaNombre,cursoNombre\nlucia@colegio.es,Matematicas,1°A',
-            imparticiones: 'profesorCorreo,asignaturaNombre,cursoNombre\njuan@colegio.es,Matematicas,1°A'
+            imparticiones: 'profesorCorreo,asignaturaNombre,cursoNombre\njuan@colegio.es,Matematicas,1°A',
+            notas: 'profesorCorreo,estudianteCorreo,asignaturaNombre,cursoNombre,trimestre,tareaNombre,valor\njuan@colegio.es,lucia@colegio.es,Matematicas,1°A,1,Examen T1,7.50'
         };
         const csv = plantillas[entidad];
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

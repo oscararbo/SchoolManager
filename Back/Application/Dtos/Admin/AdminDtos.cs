@@ -41,17 +41,23 @@ public record CursoStatsItemDto
 
 // ── Grade Statistics ──────────────────────────────────────────────────────────
 
-public record AdminNotasStatsDto
-{
-    public double? MediaGlobal { get; init; }
-    public IEnumerable<CursoNotasStatsDto> PorCurso { get; init; } = [];
-}
-
-public record CursoNotasStatsDto
+public record CursoStatsSelectorDto
 {
     public int CursoId { get; init; }
     public string Curso { get; init; } = "";
-    public double? Media { get; init; }
+    public int TotalEstudiantes { get; init; }
+    public int TotalAsignaturas { get; init; }
+}
+
+public record CursoNotasStatsResponseDto
+{
+    public int CursoId { get; init; }
+    public string Curso { get; init; } = "";
+    public double? MediaGlobalCurso { get; init; }
+    public int TotalAlumnos { get; init; }
+    public int Aprobados { get; init; }
+    public int Suspensos { get; init; }
+    public int SinNota { get; init; }
     public IEnumerable<AsignaturaNotasStatsDto> Asignaturas { get; init; } = [];
 }
 
@@ -64,13 +70,52 @@ public record AsignaturaNotasStatsDto
     public int Suspensos { get; init; }
     public int SinNota { get; init; }
     public double? Media { get; init; }
-    public IEnumerable<AlumnoNotaResumenDto> Alumnos { get; init; } = [];
 }
 
-public record AlumnoNotaResumenDto
+public record CompararCursosRequestDto
+{
+    public IEnumerable<int> CursoIds { get; init; } = [];
+}
+
+public record ComparacionCursosResponseDto
+{
+    public IEnumerable<CursoComparacionItemDto> Cursos { get; init; } = [];
+}
+
+public record CursoComparacionItemDto
+{
+    public int CursoId { get; init; }
+    public string Curso { get; init; } = "";
+    public double? MediaGlobalCurso { get; init; }
+    public int TotalAlumnos { get; init; }
+    public int Aprobados { get; init; }
+    public int Suspensos { get; init; }
+    public int SinNota { get; init; }
+}
+
+// ── Admin Read Models ─────────────────────────────────────────────────────────
+
+public record AdminMatriculaAsignaturaItemDto
+{
+    public int AsignaturaId { get; init; }
+    public string Asignatura { get; init; } = "";
+}
+
+public record AdminMatriculaListItemDto
 {
     public int EstudianteId { get; init; }
     public string Estudiante { get; init; } = "";
-    public double? NotaFinal { get; init; }
-    public bool Aprobado { get; init; }
+    public int CursoId { get; init; }
+    public string? Curso { get; init; }
+    public IEnumerable<AdminMatriculaAsignaturaItemDto> Asignaturas { get; init; } = [];
+}
+
+public record AdminImparticionListItemDto
+{
+    public int ProfesorId { get; init; }
+    public string Profesor { get; init; } = "";
+    public int AsignaturaId { get; init; }
+    public string Asignatura { get; init; } = "";
+    public int CursoId { get; init; }
+    public string Curso { get; init; } = "";
 }
