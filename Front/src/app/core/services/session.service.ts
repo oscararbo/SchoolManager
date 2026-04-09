@@ -50,17 +50,14 @@ export class SessionService {
         this._accessToken = null;
     }
 
-    /** Returns the in-memory access token (lost on page reload, restored via silent refresh). */
     getToken(): string | null {
         return this._accessToken;
     }
 
-    /** Stores the access token in memory only — never persisted to localStorage. */
     setToken(token: string): void {
         this._accessToken = token;
     }
 
-    /** Clears the in-memory access token without affecting the session data. */
     clearToken(): void {
         this._accessToken = null;
     }

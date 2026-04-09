@@ -78,7 +78,7 @@ public class AuthController(IAuthService authService, IOptions<JwtOptions> jwtOp
         Response.Cookies.Append(RefreshTokenCookie, token, new CookieOptions
         {
             HttpOnly = true,
-            Secure = false, // Set to true when deploying with HTTPS
+            Secure = false,
             SameSite = SameSiteMode.Strict,
             Expires = DateTimeOffset.UtcNow.AddDays(jwtOptions.Value.RefreshExpiresDays),
             Path = "/api/auth"
