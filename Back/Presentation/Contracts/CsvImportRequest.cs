@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Back.Api.Presentation.Requests;
+namespace Back.Api.Presentation.Contracts;
 
 public class CsvImportRequest : IValidatableObject
 {

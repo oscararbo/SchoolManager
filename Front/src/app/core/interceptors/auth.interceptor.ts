@@ -47,8 +47,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
      */
     const addAuth = (r: HttpRequest<unknown>): HttpRequest<unknown> => {
         const token = sessionService.getToken();
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        return r.clone({ withCredentials: true, setHeaders: headers });
+        if (!token) {
+            return r.clone({ withCredentials: true });
+        }
+        return r.clone({ withCredentials: true, setHeaders: { Authorization: `Bearer ${token}` } });
     };
 
     const isAuthUrl = request.url.includes('/auth/login') || request.url.includes('/auth/refresh');

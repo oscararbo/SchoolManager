@@ -14,7 +14,6 @@ describe('HomeLayout', () => {
     nombre: 'Profesor Prueba',
     correo: 'profesorprueba@prueba.com',
     rol: 'profesor',
-    token: 'jwt-test-token',
   };
 
   let getSessionResult: UserSession | null = mockSession;

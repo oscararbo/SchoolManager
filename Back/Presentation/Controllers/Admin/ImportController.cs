@@ -1,7 +1,7 @@
 using Back.Api.Application.Configuration;
 using Back.Api.Application.Services;
 using Back.Api.Presentation.Http;
-using Back.Api.Presentation.Requests;
+using Back.Api.Presentation.Contracts;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

@@ -6,7 +6,7 @@ describe('AlumnoHomeComponent', () => {
   let calledWithId: number | null = null;
 
   const schoolApiMock = {
-    getPanelAlumno: async (id: number) => {
+    getPanelAlumnoResumen: async (id: number) => {
       calledWithId = id;
       return {
         id: 1,
