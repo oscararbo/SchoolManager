@@ -5,7 +5,6 @@ using Back.Api.Application.Configuration;
 using Back.Api.Infrastructure.ErrorHandling;
 using Back.Api.Infrastructure.Security;
 using Back.Api.Infrastructure.Startup;
-using Back.Api.Presentation.OpenApi;
 using Back.Api.Persistence.Context;
 using Back.Api.Persistence.Repositories;
 using Asp.Versioning;
@@ -16,7 +15,6 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -32,28 +30,7 @@ builder.Services.AddApiVersioning(options =>
     options.ReportApiVersions = true;
 });
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "School Manager API",
-        Version = "v1",
-        Description = "API para gestionar cursos, asignaturas, profesores, estudiantes, tareas y notas."
-    });
-
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Description = "Introduce el token JWT en formato: Bearer {token}",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT"
-    });
-
-    options.OperationFilter<CsvImportOperationFilter>();
-
-});
+builder.Services.AddSwaggerGen();
 
 // JWT authentication setup.
 builder.Services.AddOptions<JwtOptions>()
@@ -210,3 +187,4 @@ app.Run();
 
 // Required to expose the entry-point type for WebApplicationFactory<Program> in integration tests.
 public partial class Program { }
+

@@ -11,10 +11,6 @@ namespace Back.Api.Presentation.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/[controller]")]
-[Produces("application/json")]
-[ProducesResponseType(StatusCodes.Status401Unauthorized)]
-[ProducesResponseType(StatusCodes.Status403Forbidden)]
-[ProducesResponseType(StatusCodes.Status500InternalServerError)]
 [Authorize]
 public class EstudiantesController(IEstudiantesService estudiantesService) : ControllerBase
 {
@@ -95,3 +91,4 @@ public class EstudiantesController(IEstudiantesService estudiantesService) : Con
         return this.ToActionResult(await estudiantesService.GetMateriaDetalleAsync(id, asignaturaId, User, HttpContext.RequestAborted));
     }
 }
+

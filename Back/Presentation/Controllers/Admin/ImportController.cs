@@ -1,7 +1,6 @@
 using Back.Api.Application.Configuration;
 using Back.Api.Application.Services;
 using Back.Api.Presentation.Http;
-using Back.Api.Presentation.OpenApi;
 using Back.Api.Presentation.Requests;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
@@ -13,10 +12,6 @@ namespace Back.Api.Presentation.Controllers;
 [ApiVersion("1.0")]
 [Route("api/admin/csv")]
 [Consumes("multipart/form-data")]
-[Produces("application/json")]
-[ProducesResponseType(StatusCodes.Status401Unauthorized)]
-[ProducesResponseType(StatusCodes.Status403Forbidden)]
-[ProducesResponseType(StatusCodes.Status500InternalServerError)]
 [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 public class ImportController(IImportService importService) : ControllerBase
 {
@@ -33,84 +28,30 @@ public class ImportController(IImportService importService) : ControllerBase
         using var reader = new StreamReader(file.OpenReadStream());
         return await reader.ReadToEndAsync();
     }
-
-    /// <summary>
-    /// Importa cursos a partir de un CSV con cabecera: nombre.
-    /// </summary>
     [HttpPost("cursos")]
-    [CsvImportExample("nombre\n1 ESO\n2 ESO")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ImportarCursos([FromForm] CsvImportRequest request)
         => await ImportarCsvAsync(request, importService.ImportarCursosAsync);
-
-    /// <summary>
-    /// Importa asignaturas a partir de un CSV con cabecera: nombre,cursoNombre.
-    /// </summary>
     [HttpPost("asignaturas")]
-    [CsvImportExample("nombre,cursoNombre\nMatematicas,1 ESO\nLengua,1 ESO")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ImportarAsignaturas([FromForm] CsvImportRequest request)
         => await ImportarCsvAsync(request, importService.ImportarAsignaturasAsync);
-
-    /// <summary>
-    /// Importa profesores a partir de un CSV con cabecera: nombre,correo,contrasena.
-    /// </summary>
     [HttpPost("profesores")]
-    [CsvImportExample("nombre,correo,contrasena\nAna Lopez,ana@centro.com,Clave123")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ImportarProfesores([FromForm] CsvImportRequest request)
         => await ImportarCsvAsync(request, importService.ImportarProfesoresAsync);
-
-    /// <summary>
-    /// Importa estudiantes a partir de un CSV con cabecera: nombre,correo,contrasena,cursoNombre.
-    /// </summary>
     [HttpPost("estudiantes")]
-    [CsvImportExample("nombre,correo,contrasena,cursoNombre\nLuis Perez,luis@centro.com,Clave123,1 ESO")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ImportarEstudiantes([FromForm] CsvImportRequest request)
         => await ImportarCsvAsync(request, importService.ImportarEstudiantesAsync);
-
-    /// <summary>
-    /// Importa tareas a partir de un CSV con cabecera: profesorCorreo,asignaturaNombre,cursoNombre,trimestre,tareaNombre.
-    /// </summary>
     [HttpPost("tareas")]
-    [CsvImportExample("profesorCorreo,asignaturaNombre,cursoNombre,trimestre,tareaNombre\nana@centro.com,Matematicas,1 ESO,1,Examen T1")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ImportarTareas([FromForm] CsvImportRequest request)
         => await ImportarCsvAsync(request, importService.ImportarTareasAsync);
-
-    /// <summary>
-    /// Importa matriculas a partir de un CSV con cabecera: estudianteCorreo,asignaturaNombre,cursoNombre.
-    /// </summary>
     [HttpPost("matriculas")]
-    [CsvImportExample("estudianteCorreo,asignaturaNombre,cursoNombre\nluis@centro.com,Matematicas,1 ESO")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ImportarMatriculas([FromForm] CsvImportRequest request)
         => await ImportarCsvAsync(request, importService.ImportarMatriculasAsync);
-
-    /// <summary>
-    /// Importa imparticiones a partir de un CSV con cabecera: profesorCorreo,asignaturaNombre,cursoNombre.
-    /// </summary>
     [HttpPost("imparticiones")]
-    [CsvImportExample("profesorCorreo,asignaturaNombre,cursoNombre\nana@centro.com,Matematicas,1 ESO")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ImportarImparticiones([FromForm] CsvImportRequest request)
         => await ImportarCsvAsync(request, importService.ImportarImparticionesAsync);
-
-    /// <summary>
-    /// Importa notas a partir de un CSV con cabecera: profesorCorreo,estudianteCorreo,asignaturaNombre,cursoNombre,trimestre,tareaNombre,valor.
-    /// </summary>
     [HttpPost("notas")]
-    [CsvImportExample("profesorCorreo,estudianteCorreo,asignaturaNombre,cursoNombre,trimestre,tareaNombre,valor\nana@centro.com,luis@centro.com,Matematicas,1 ESO,1,Examen T1,7.5")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ImportarNotas([FromForm] CsvImportRequest request)
         => await ImportarCsvAsync(request, importService.ImportarNotasAsync);
 }
+
+

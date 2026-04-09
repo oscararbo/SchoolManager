@@ -11,57 +11,43 @@ namespace Back.Api.Presentation.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/[controller]")]
-[Produces("application/json")]
-[ProducesResponseType(StatusCodes.Status401Unauthorized)]
-[ProducesResponseType(StatusCodes.Status403Forbidden)]
-[ProducesResponseType(StatusCodes.Status500InternalServerError)]
 [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 public class CursosController(ICursosService cursosService) : ControllerBase
 {
     [HttpGet]
-    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll()
     {
         return this.ToActionResult(await cursosService.GetAllAsync(HttpContext.RequestAborted));
     }
 
     [HttpGet("simple")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetSimple()
     {
         return this.ToActionResult(await cursosService.GetSimpleAsync(HttpContext.RequestAborted));
     }
 
     [HttpGet("{id:int}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(int id)
     {
         return this.ToActionResult(await cursosService.GetByIdAsync(id, HttpContext.RequestAborted));
     }
 
     [HttpPost]
-    [ProducesResponseType(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create(CreateCursoRequestDto dto)
     {
         return this.ToActionResult(await cursosService.CreateAsync(dto, HttpContext.RequestAborted));
     }
 
     [HttpPut("{id:int}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(int id, CreateCursoRequestDto dto)
     {
         return this.ToActionResult(await cursosService.UpdateAsync(id, dto, HttpContext.RequestAborted));
     }
 
     [HttpDelete("{id:int}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
         return this.ToActionResult(await cursosService.DeleteAsync(id, HttpContext.RequestAborted));
     }
 }
+

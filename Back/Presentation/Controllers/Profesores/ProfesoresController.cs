@@ -11,10 +11,6 @@ namespace Back.Api.Presentation.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/[controller]")]
-[Produces("application/json")]
-[ProducesResponseType(StatusCodes.Status401Unauthorized)]
-[ProducesResponseType(StatusCodes.Status403Forbidden)]
-[ProducesResponseType(StatusCodes.Status500InternalServerError)]
 [Authorize]
 public class ProfesoresController(IProfesoresService profesoresService) : ControllerBase
 {
@@ -144,4 +140,5 @@ public class ProfesoresController(IProfesoresService profesoresService) : Contro
         return this.ToActionResult(await profesoresService.GetStatsAsync(profesorId, User, HttpContext.RequestAborted));
     }
 }
+
 

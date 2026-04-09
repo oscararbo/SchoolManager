@@ -13,17 +13,12 @@ namespace Back.Api.Presentation.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/[controller]")]
-[Produces("application/json")]
-[ProducesResponseType(StatusCodes.Status500InternalServerError)]
 public class AuthController(IAuthService authService, IOptions<JwtOptions> jwtOptions) : ControllerBase
 {
     private const string RefreshTokenCookie = "refresh_token";
 
     [AllowAnonymous]
     [HttpPost("login")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login(LoginRequestDto request)
     {
         var result = await authService.LoginAsync(request, HttpContext.RequestAborted);
@@ -42,8 +37,6 @@ public class AuthController(IAuthService authService, IOptions<JwtOptions> jwtOp
 
     [AllowAnonymous]
     [HttpPost("refresh")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Refresh()
     {
         var refreshToken = Request.Cookies[RefreshTokenCookie];
@@ -62,8 +55,6 @@ public class AuthController(IAuthService authService, IOptions<JwtOptions> jwtOp
 
     [Authorize]
     [HttpPost("logout")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Logout()
     {
         var refreshToken = Request.Cookies[RefreshTokenCookie];
@@ -90,3 +81,4 @@ public class AuthController(IAuthService authService, IOptions<JwtOptions> jwtOp
         Response.Cookies.Delete(RefreshTokenCookie, new CookieOptions { Path = "/api/auth" });
     }
 }
+
