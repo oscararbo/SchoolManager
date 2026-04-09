@@ -25,7 +25,6 @@ export interface LoginResponse {
     nombre: string;
     correo: string;
     token: string;
-    refreshToken: string;
     cursoId?: number;
     curso?: string;
 }
@@ -424,11 +423,9 @@ export class SchoolApiService {
      * Si no hay refreshToken en sesion, solo limpia el almacenamiento local.
      */
     async logout(): Promise<void> {
-        const session = this.sessionService.getSession();
-        if (!session?.refreshToken) { this.sessionService.clearSession(); return; }
         try {
             await firstValueFrom(
-                this.http.post<void>(`${this.apiUrl}/auth/logout`, { refreshToken: session.refreshToken })
+                this.http.post<void>(`${this.apiUrl}/auth/logout`, {})
             );
         } finally {
             this.sessionService.clearSession();

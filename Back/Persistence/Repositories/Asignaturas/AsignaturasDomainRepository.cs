@@ -135,7 +135,7 @@ public class AsignaturasDomainRepository(AppDbContext context) : IAsignaturasDom
             asignatura.IsDeleted = false;
         }
 
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
         return new AsignaturaResumenDto
         {
             Id = asignatura.Id,
@@ -152,7 +152,7 @@ public class AsignaturasDomainRepository(AppDbContext context) : IAsignaturasDom
         if (asignatura is null) return null;
         asignatura.Nombre = nombre;
         asignatura.CursoId = cursoId;
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
         var cursoNombre = await GetCursoNombreAsync(cursoId) ?? string.Empty;
         return new AsignaturaResumenDto
         {
@@ -192,3 +192,4 @@ public class AsignaturasDomainRepository(AppDbContext context) : IAsignaturasDom
 
     #endregion
 }
+

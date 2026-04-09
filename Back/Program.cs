@@ -4,9 +4,11 @@ using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Configuration;
 using Back.Api.Infrastructure.ErrorHandling;
 using Back.Api.Infrastructure.Security;
+using Back.Api.Infrastructure.Startup;
 using Back.Api.Presentation.OpenApi;
 using Back.Api.Persistence.Context;
 using Back.Api.Persistence.Repositories;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,7 +17,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-using Npgsql;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,6 +25,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddControllers();
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -120,9 +127,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy(AuthorizationPolicies.AdminOnly, policy => policy.RequireRole("admin"));
-    options.AddPolicy(AuthorizationPolicies.ProfesorOrAdmin, policy => policy.RequireRole("profesor", "admin"));
-    options.AddPolicy(AuthorizationPolicies.AlumnoOrAdmin, policy => policy.RequireRole("alumno", "admin"));
+    options.AddPolicy(AuthorizationPolicies.AdminOnly, policy => policy.RequireRole(Roles.Admin));
+    options.AddPolicy(AuthorizationPolicies.ProfesorOrAdmin, policy => policy.RequireRole(Roles.Profesor, Roles.Admin));
+    options.AddPolicy(AuthorizationPolicies.AlumnoOrAdmin, policy => policy.RequireRole(Roles.Alumno, Roles.Admin));
 });
 
 builder.Services.AddScoped<IPasswordService, PasswordService>();
@@ -140,76 +147,45 @@ builder.Services.AddScoped<IEstudiantesService, EstudiantesService>();
 builder.Services.AddScoped<ICursosService, CursosService>();
 builder.Services.AddScoped<IAsignaturasService, AsignaturasService>();
 builder.Services.AddScoped<IImportService, ImportService>();
+builder.Services.AddScoped<DatabaseSeeder>();
+builder.Services.AddHostedService<RefreshTokenCleanupService>();
+builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
 
 // Frontend access policy for the Angular app.
 builder.Services.AddCors(options =>
 {
+    var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+    var allowedOrigins = configuredOrigins is { Length: > 0 }
+        ? configuredOrigins
+        : new[] { "http://localhost:4200", "http://127.0.0.1:4200" };
+
     options.AddPolicy("Front", policy =>
-        policy.WithOrigins("http://localhost:4200", "http://127.0.0.1:4200")
+        policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
-            .AllowAnyMethod());
+            .AllowAnyMethod()
+            .AllowCredentials());
 });
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Host=localhost;Port=5432;Database=schooldb;Username=postgres;Password=postgres";
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
+builder.Services.AddDbContextFactory<AppDbContext>(options =>
+    options.UseNpgsql(connectionString));
 
 var app = builder.Build();
 
 app.UseExceptionHandler();
 
-using (var scope = app.Services.CreateScope())
+var seeder = app.Services.GetRequiredService<DatabaseSeeder>();
+if (!await seeder.SeedAsync())
 {
-    try
-    {
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var passwordService = scope.ServiceProvider.GetRequiredService<IPasswordService>();
-        var seedAdminName = builder.Configuration["SeedAdmin:Nombre"] ?? "Administrador";
-        var seedAdminEmail = (builder.Configuration["SeedAdmin:Correo"] ?? "admin@prueba.com").Trim().ToLowerInvariant();
-        var seedAdminPassword = builder.Configuration["SeedAdmin:Contrasena"] ?? "Prueba1";
-
-        if (db.Database.IsRelational())
-        {
-            if (db.Database.GetMigrations().Any())
-                db.Database.Migrate();
-            else
-                db.Database.EnsureCreated();
-        }
-        else
-        {
-            db.Database.EnsureCreated();
-        }
-
-        var adminExistente = db.Admins.FirstOrDefault(a => a.Correo == seedAdminEmail);
-
-        if (adminExistente is null)
-        {
-            db.Admins.Add(new()
-            {
-                Nombre = seedAdminName,
-                Correo = seedAdminEmail,
-                Contrasena = passwordService.Hash(seedAdminPassword)
-            });
-        }
-        else
-        {
-            adminExistente.Nombre = seedAdminName;
-            adminExistente.Correo = seedAdminEmail;
-            adminExistente.Contrasena = passwordService.Hash(seedAdminPassword);
-        }
-
-        db.SaveChanges();
-    }
-    catch (NpgsqlException)
-    {
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine("No se pudo conectar con PostgreSQL.");
-        Console.WriteLine("Levanta la BD antes de ejecutar el backend.");
-        Console.WriteLine("Sugerencia: docker compose up -d postgres");
-        Console.ResetColor();
-        return;
-    }
+    Console.ForegroundColor = ConsoleColor.Yellow;
+    Console.WriteLine("No se pudo conectar con PostgreSQL.");
+    Console.WriteLine("Levanta la BD antes de ejecutar el backend.");
+    Console.WriteLine("Sugerencia: docker compose up -d postgres");
+    Console.ResetColor();
+    return;
 }
 
 if (app.Environment.IsDevelopment())
@@ -227,6 +203,7 @@ app.UseCors("Front");
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHealthChecks("/health");
 app.MapControllers();
 
 app.Run();

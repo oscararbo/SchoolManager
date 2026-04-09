@@ -62,23 +62,15 @@ export class AuthStateService {
      */
     private async _doRefresh(): Promise<boolean> {
         const session = this.sessionService.getSession();
-        if (!session?.refreshToken) {
-            this.sessionService.clearSession();
-            return false;
-        }
+        if (!session) { return false; }
 
         try {
-            const data = await firstValueFrom(this.http.post<{ token: string; refreshToken: string }>(
+            const data = await firstValueFrom(this.http.post<{ token: string }>(
                 `${environment.apiBaseUrl}/auth/refresh`,
-                { refreshToken: session.refreshToken },
-                {
-                    headers: {
-                        'X-Skip-Auth': 'true',
-                        'X-Skip-Error-Toast': 'true'
-                    }
-                }
+                {},
+                { headers: { 'X-Skip-Auth': 'true', 'X-Skip-Error-Toast': 'true' }, withCredentials: true }
             ));
-            this.sessionService.setSession({ ...session, token: data.token, refreshToken: data.refreshToken });
+            this.sessionService.setToken(data.token);
             return true;
         } catch {
             this.sessionService.clearSession();

@@ -6,8 +6,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Back.Api.Persistence.Repositories;
 
-public class AdminDomainRepository(AppDbContext context) : IAdminDomainRepository
+public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDbContext> contextFactory) : IAdminDomainRepository
 {
+    private sealed class AdminTotalsSnapshot
+    {
+        public int TotalCursos { get; set; }
+        public int TotalAsignaturas { get; set; }
+        public int TotalProfesores { get; set; }
+        public int TotalEstudiantes { get; set; }
+        public int TotalMatriculas { get; set; }
+        public int TotalTareas { get; set; }
+    }
+
     public async Task<IEnumerable<AdminListItemDto>> GetAllAsync(CancellationToken cancellationToken = default)
         => await context.Admins
             .AsNoTracking()
@@ -16,12 +26,18 @@ public class AdminDomainRepository(AppDbContext context) : IAdminDomainRepositor
 
     public async Task<AdminStatsDto> GetStatsAsync(CancellationToken cancellationToken = default)
     {
-        var totalCursos = await context.Cursos.CountAsync(cancellationToken);
-        var totalAsignaturas = await context.Asignaturas.CountAsync(cancellationToken);
-        var totalProfesores = await context.Profesores.CountAsync(cancellationToken);
-        var totalEstudiantes = await context.Estudiantes.CountAsync(cancellationToken);
-        var totalMatriculas = await context.EstudianteAsignaturas.CountAsync(cancellationToken);
-        var totalTareas = await context.Tareas.CountAsync(cancellationToken);
+        var totals = await context.Database
+            .SqlQueryRaw<AdminTotalsSnapshot>(
+                """
+                SELECT
+                    (SELECT COUNT(*) FROM \"Cursos\" c WHERE c.\"IsDeleted\" = FALSE) AS \"TotalCursos\",
+                    (SELECT COUNT(*) FROM \"Asignaturas\" a WHERE a.\"IsDeleted\" = FALSE) AS \"TotalAsignaturas\",
+                    (SELECT COUNT(*) FROM \"Profesores\" p WHERE p.\"IsDeleted\" = FALSE) AS \"TotalProfesores\",
+                    (SELECT COUNT(*) FROM \"Estudiantes\" e WHERE e.\"IsDeleted\" = FALSE) AS \"TotalEstudiantes\",
+                    (SELECT COUNT(*) FROM \"EstudianteAsignaturas\" ea WHERE ea.\"IsDeleted\" = FALSE) AS \"TotalMatriculas\",
+                    (SELECT COUNT(*) FROM \"Tareas\" t WHERE t.\"IsDeleted\" = FALSE) AS \"TotalTareas\"
+                """)
+            .SingleAsync(cancellationToken);
 
         var porCurso = await context.Cursos
             .AsNoTracking()
@@ -36,12 +52,12 @@ public class AdminDomainRepository(AppDbContext context) : IAdminDomainRepositor
 
         return new AdminStatsDto
         {
-            TotalCursos = totalCursos,
-            TotalAsignaturas = totalAsignaturas,
-            TotalProfesores = totalProfesores,
-            TotalEstudiantes = totalEstudiantes,
-            TotalMatriculas = totalMatriculas,
-            TotalTareas = totalTareas,
+            TotalCursos = totals.TotalCursos,
+            TotalAsignaturas = totals.TotalAsignaturas,
+            TotalProfesores = totals.TotalProfesores,
+            TotalEstudiantes = totals.TotalEstudiantes,
+            TotalMatriculas = totals.TotalMatriculas,
+            TotalTareas = totals.TotalTareas,
             PorCurso = porCurso
         };
     }
@@ -64,37 +80,34 @@ public class AdminDomainRepository(AppDbContext context) : IAdminDomainRepositor
 
     public async Task<IEnumerable<CursoComparacionItemDto>> CompareCursosAsync(IEnumerable<int> cursoIds, CancellationToken cancellationToken = default)
     {
-        var result = new List<CursoComparacionItemDto>();
+        var ids = cursoIds.Where(id => id > 0).Distinct().ToList();
+        var statsTasks = ids.Select(id => BuildCursoStatsWithFactoryAsync(id, cancellationToken));
+        var statsByCurso = await Task.WhenAll(statsTasks);
 
-        foreach (var cursoId in cursoIds)
-        {
-            var stats = await BuildCursoStatsAsync(cursoId, cancellationToken);
-            if (stats is null)
-                continue;
-
-            result.Add(new CursoComparacionItemDto
+        return statsByCurso
+            .Where(stats => stats is not null)
+            .Select(stats => new CursoComparacionItemDto
             {
-                CursoId = stats.CursoId,
+                CursoId = stats!.CursoId,
                 Curso = stats.Curso,
                 MediaGlobalCurso = stats.MediaGlobalCurso,
                 TotalAlumnos = stats.TotalAlumnos,
                 Aprobados = stats.Aprobados,
                 Suspensos = stats.Suspensos,
                 SinNota = stats.SinNota
-            });
-        }
-
-        return result.OrderBy(x => x.Curso).ToList();
+            })
+            .OrderBy(x => x.Curso)
+            .ToList();
     }
 
     public Task<bool> CorreoDuplicadoAsync(string correo, CancellationToken cancellationToken = default)
-        => context.Admins.AnyAsync(a => a.Correo == correo);
+        => context.Admins.AnyAsync(a => a.Correo == correo, cancellationToken);
 
     public async Task<AdminListItemDto> CreateAsync(string nombre, string correo, string hash, CancellationToken cancellationToken = default)
     {
         var admin = new Admin { Nombre = nombre, Correo = correo, Contrasena = hash };
         context.Admins.Add(admin);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
         return new AdminListItemDto { Id = admin.Id, Nombre = admin.Nombre, Correo = admin.Correo };
     }
 
@@ -139,9 +152,18 @@ public class AdminDomainRepository(AppDbContext context) : IAdminDomainRepositor
             })
             .ToListAsync(cancellationToken);
 
-    private async Task<CursoNotasStatsResponseDto?> BuildCursoStatsAsync(int cursoId, CancellationToken cancellationToken)
+    private async Task<CursoNotasStatsResponseDto?> BuildCursoStatsWithFactoryAsync(int cursoId, CancellationToken cancellationToken)
     {
-        var curso = await context.Cursos
+        await using var isolatedContext = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await BuildCursoStatsAsync(isolatedContext, cursoId, cancellationToken);
+    }
+
+    private Task<CursoNotasStatsResponseDto?> BuildCursoStatsAsync(int cursoId, CancellationToken cancellationToken)
+        => BuildCursoStatsAsync(context, cursoId, cancellationToken);
+
+    private static async Task<CursoNotasStatsResponseDto?> BuildCursoStatsAsync(AppDbContext dbContext, int cursoId, CancellationToken cancellationToken)
+    {
+        var curso = await dbContext.Cursos
             .AsNoTracking()
             .Where(c => c.Id == cursoId)
             .Select(c => new { c.Id, c.Nombre })
@@ -150,7 +172,7 @@ public class AdminDomainRepository(AppDbContext context) : IAdminDomainRepositor
         if (curso is null)
             return null;
 
-        var asignaturas = await context.Asignaturas
+        var asignaturas = await dbContext.Asignaturas
             .AsNoTracking()
             .Where(a => a.CursoId == cursoId)
             .OrderBy(a => a.Nombre)
@@ -158,20 +180,20 @@ public class AdminDomainRepository(AppDbContext context) : IAdminDomainRepositor
             .ToListAsync(cancellationToken);
 
         var asignaturaIds = asignaturas.Select(a => a.Id).ToList();
-        var tareas = await context.Tareas
+        var tareas = await dbContext.Tareas
             .AsNoTracking()
             .Where(t => asignaturaIds.Contains(t.AsignaturaId))
             .Select(t => new { t.Id, t.AsignaturaId, t.Trimestre })
             .ToListAsync(cancellationToken);
 
         var tareaIds = tareas.Select(t => t.Id).ToList();
-        var matriculas = await context.EstudianteAsignaturas
+        var matriculas = await dbContext.EstudianteAsignaturas
             .AsNoTracking()
             .Where(ea => asignaturaIds.Contains(ea.AsignaturaId))
             .Select(ea => new { ea.AsignaturaId, ea.EstudianteId })
             .ToListAsync(cancellationToken);
 
-        var notas = await context.Notas
+        var notas = await dbContext.Notas
             .AsNoTracking()
             .Where(n => tareaIds.Contains(n.TareaId))
             .Select(n => new { n.EstudianteId, n.TareaId, Valor = (double)n.Valor })

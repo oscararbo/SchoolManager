@@ -1,4 +1,5 @@
 using Back.Api.Application.Abstractions.Repositories;
+using Back.Api.Application.Configuration;
 using Back.Api.Persistence.Context;
 using Back.Api.Application.Dtos;
 using Back.Api.Domain.Entities;
@@ -326,7 +327,7 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
             estudiante.IsDeleted = false;
         }
 
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
         var cursoNombre = await GetCursoNombreAsync(cursoId);
         return new EstudianteListItemDto { Id = estudiante.Id, Nombre = estudiante.Nombre, Correo = estudiante.Correo, CursoId = estudiante.CursoId, Curso = cursoNombre };
     }
@@ -368,7 +369,7 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
         estudiante.Correo = correo;
         estudiante.CursoId = cursoId;
         if (hash is not null) estudiante.Contrasena = hash;
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
         var cursoNombre = await GetCursoNombreAsync(cursoId);
         return new EstudianteListItemDto { Id = estudiante.Id, Nombre = estudiante.Nombre, Correo = estudiante.Correo, CursoId = estudiante.CursoId, Curso = cursoNombre };
     }
@@ -382,7 +383,7 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
         context.Notas.RemoveRange(notas);
 
         var tokens = await context.RefreshTokens
-            .Where(t => t.UserId == id && t.Rol == "alumno")
+            .Where(t => t.UserId == id && t.Rol == Roles.Alumno)
             .ToListAsync(cancellationToken);
         context.RefreshTokens.RemoveRange(tokens);
 
@@ -393,3 +394,4 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
 
     #endregion
 }
+

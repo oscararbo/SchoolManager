@@ -1,6 +1,7 @@
 using Back.Api.Application.Common;
 using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Application.Abstractions.Security;
+using Back.Api.Application.Configuration;
 using Back.Api.Application.Dtos;
 using System.Security.Claims;
 
@@ -158,7 +159,7 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         var tareaInfo = await profesoresDomain.GetTareaInfoAsync(dto.TareaId, cancellationToken);
         if (tareaInfo is null)
             return ApplicationResult.NotFound("La tarea no existe.");
-        if (tareaInfo.Value.ProfesorId != profesorId && !user.IsInRole("admin"))
+        if (tareaInfo.Value.ProfesorId != profesorId && !user.IsInRole(Roles.Admin))
             return ApplicationResult.Forbidden();
 
         var estudianteCursoId = await profesoresDomain.GetEstudianteCursoAsync(dto.EstudianteId, cancellationToken);
@@ -241,7 +242,7 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
 
     public async Task<ApplicationResult> GetTareasConNotasAsync(int asignaturaId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
-        if (!user.IsInRole("admin"))
+        if (!user.IsInRole(Roles.Admin))
             return ApplicationResult.Forbidden();
 
         var asignatura = await profesoresDomain.GetAsignaturaInfoAsync(asignaturaId, cancellationToken);
@@ -266,7 +267,7 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
 
     private static bool UsuarioCoincideConProfesor(int profesorId, ClaimsPrincipal user)
     {
-        if (user.IsInRole("admin")) return true;
+        if (user.IsInRole(Roles.Admin)) return true;
         var idClaim = user.FindFirstValue("id") ?? user.FindFirstValue(ClaimTypes.NameIdentifier);
         return int.TryParse(idClaim, out var usuarioId) && usuarioId == profesorId;
     }

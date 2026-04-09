@@ -53,14 +53,7 @@ public class AdminService(
 
     public async Task<ApplicationResult> CreateAsync(CreateAdminRequestDto dto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
-        if (!user.IsInRole("admin"))
-            return ApplicationResult.Forbidden();
-        if (string.IsNullOrWhiteSpace(dto.Nombre))
-            return ApplicationResult.BadRequest("El nombre del administrador es obligatorio.");
-        if (string.IsNullOrWhiteSpace(dto.Correo))
-            return ApplicationResult.BadRequest("El correo del administrador es obligatorio.");
-        if (string.IsNullOrWhiteSpace(dto.Contrasena))
-            return ApplicationResult.BadRequest("La contrasena del administrador es obligatoria.");
+        _ = user;
 
         var correo = dto.Correo.Trim().ToLowerInvariant();
         if (await adminDomain.CorreoDuplicadoAsync(correo, cancellationToken))

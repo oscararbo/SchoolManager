@@ -638,7 +638,7 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
         profesor.Nombre = nombre;
         profesor.Correo = correo;
         if (hash is not null) profesor.Contrasena = hash;
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
 
         var imparticiones = await context.ProfesorAsignaturaCursos
             .AsNoTracking()
@@ -742,11 +742,12 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
 
         var tarea = new Tarea { Nombre = nombre, Trimestre = trimestre, AsignaturaId = asignaturaId, ProfesorId = profesorId };
         context.Tareas.Add(tarea);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
 
         return new TareaDetalleDto { Id = tarea.Id, Nombre = tarea.Nombre, Trimestre = tarea.Trimestre, AsignaturaId = tarea.AsignaturaId, Asignatura = asignaturaNombre };
     }
 
     #endregion
 }
+
 

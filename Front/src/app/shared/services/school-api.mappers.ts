@@ -24,7 +24,6 @@ export function mapLoginResponse(api: ApiLoginResponse): LoginResponse {
     nombre: safeText(api.nombre),
     correo: safeText(api.correo).toLowerCase(),
     token: safeText(api.token),
-    refreshToken: safeText(api.refreshToken),
     cursoId: api.cursoId,
     curso: api.curso ? safeText(api.curso) : undefined
   };

@@ -4,7 +4,6 @@ export interface ApiLoginResponse {
   nombre: string;
   correo: string;
   token: string;
-  refreshToken: string;
   cursoId?: number;
   curso?: string;
 }

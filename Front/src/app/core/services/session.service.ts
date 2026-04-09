@@ -7,8 +7,6 @@ export interface UserSession {
     id: number;
     nombre: string;
     correo: string;
-    token: string;
-    refreshToken?: string;
     cursoId?: number;
     curso?: string;
 }
@@ -16,6 +14,7 @@ export interface UserSession {
 @Injectable({ providedIn: 'root' })
 export class SessionService {
     private readonly storageKey = 'school_session';
+    private _accessToken: string | null = null;
 
     /**
      * Lee y deserializa la sesion de usuario desde `localStorage`.
@@ -48,5 +47,21 @@ export class SessionService {
     /** Elimina la sesion del almacenamiento local. */
     clearSession(): void {
         localStorage.removeItem(this.storageKey);
+        this._accessToken = null;
+    }
+
+    /** Returns the in-memory access token (lost on page reload, restored via silent refresh). */
+    getToken(): string | null {
+        return this._accessToken;
+    }
+
+    /** Stores the access token in memory only — never persisted to localStorage. */
+    setToken(token: string): void {
+        this._accessToken = token;
+    }
+
+    /** Clears the in-memory access token without affecting the session data. */
+    clearToken(): void {
+        this._accessToken = null;
     }
 }

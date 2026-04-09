@@ -131,7 +131,7 @@ public class CursosDomainRepository(AppDbContext context) : ICursosDomainReposit
             curso.IsDeleted = false;
         }
 
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
         return new CursoSimpleDto { Id = curso.Id, Nombre = curso.Nombre };
     }
 
@@ -140,7 +140,7 @@ public class CursosDomainRepository(AppDbContext context) : ICursosDomainReposit
         var curso = await context.Cursos.FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
         if (curso is null) return null;
         curso.Nombre = nombre;
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
         return new CursoSimpleDto { Id = curso.Id, Nombre = curso.Nombre };
     }
 
@@ -156,3 +156,4 @@ public class CursosDomainRepository(AppDbContext context) : ICursosDomainReposit
 
     #endregion
 }
+

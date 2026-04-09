@@ -24,36 +24,36 @@ public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> 
         var admin = await authDomain.FindAdminByCorreoAsync(correo, cancellationToken);
         if (admin is not null && passwordService.Verify(admin.Contrasena, contrasena))
         {
-            var token = GenerarToken(admin.Id, correo, "admin");
-            var refreshToken = await authDomain.CreateRefreshTokenAsync(admin.Id, "admin", jwtOptions.Value.RefreshExpiresDays, cancellationToken);
-            return ApplicationResult.Ok(new LoginResponseDto { Rol = "admin", Id = admin.Id, Nombre = admin.Nombre, Correo = correo, Token = token, RefreshToken = refreshToken });
+            var token = GenerarToken(admin.Id, correo, Roles.Admin);
+            var refreshToken = await authDomain.CreateRefreshTokenAsync(admin.Id, Roles.Admin, jwtOptions.Value.RefreshExpiresDays, cancellationToken);
+            return ApplicationResult.Ok(new LoginResponseDto { Rol = Roles.Admin, Id = admin.Id, Nombre = admin.Nombre, Correo = correo, Token = token, RefreshToken = refreshToken });
         }
 
         var profesor = await authDomain.FindProfesorByCorreoAsync(correo, cancellationToken);
         if (profesor is not null && passwordService.Verify(profesor.Contrasena, contrasena))
         {
-            var token = GenerarToken(profesor.Id, correo, "profesor");
-            var refreshToken = await authDomain.CreateRefreshTokenAsync(profesor.Id, "profesor", jwtOptions.Value.RefreshExpiresDays, cancellationToken);
-            return ApplicationResult.Ok(new LoginResponseDto { Rol = "profesor", Id = profesor.Id, Nombre = profesor.Nombre, Correo = correo, Token = token, RefreshToken = refreshToken });
+            var token = GenerarToken(profesor.Id, correo, Roles.Profesor);
+            var refreshToken = await authDomain.CreateRefreshTokenAsync(profesor.Id, Roles.Profesor, jwtOptions.Value.RefreshExpiresDays, cancellationToken);
+            return ApplicationResult.Ok(new LoginResponseDto { Rol = Roles.Profesor, Id = profesor.Id, Nombre = profesor.Nombre, Correo = correo, Token = token, RefreshToken = refreshToken });
         }
 
         var estudiante = await authDomain.FindEstudianteByCorreoAsync(correo, cancellationToken);
         if (estudiante is not null && passwordService.Verify(estudiante.Contrasena, contrasena))
         {
-            var token = GenerarToken(estudiante.Id, correo, "alumno");
-            var refreshToken = await authDomain.CreateRefreshTokenAsync(estudiante.Id, "alumno", jwtOptions.Value.RefreshExpiresDays, cancellationToken);
-            return ApplicationResult.Ok(new LoginResponseDto { Rol = "alumno", Id = estudiante.Id, Nombre = estudiante.Nombre, Correo = correo, Token = token, RefreshToken = refreshToken, CursoId = estudiante.CursoId, Curso = estudiante.Curso?.Nombre });
+            var token = GenerarToken(estudiante.Id, correo, Roles.Alumno);
+            var refreshToken = await authDomain.CreateRefreshTokenAsync(estudiante.Id, Roles.Alumno, jwtOptions.Value.RefreshExpiresDays, cancellationToken);
+            return ApplicationResult.Ok(new LoginResponseDto { Rol = Roles.Alumno, Id = estudiante.Id, Nombre = estudiante.Nombre, Correo = correo, Token = token, RefreshToken = refreshToken, CursoId = estudiante.CursoId, Curso = estudiante.Curso?.Nombre });
         }
 
         return ApplicationResult.Unauthorized("Credenciales incorrectas.");
     }
 
-    public async Task<ApplicationResult> RefreshAsync(RefreshRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        if (string.IsNullOrWhiteSpace(refreshToken))
             return ApplicationResult.Unauthorized("Refresh token no valido.");
 
-        var storedToken = await authDomain.FindRefreshTokenAsync(request.RefreshToken, cancellationToken);
+        var storedToken = await authDomain.FindRefreshTokenAsync(refreshToken, cancellationToken);
         if (storedToken is null || !storedToken.IsActive)
             return ApplicationResult.Unauthorized("Refresh token no valido o expirado.");
 
@@ -71,9 +71,9 @@ public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> 
         return ApplicationResult.Ok(new RefreshResponseDto { Token = newAccessToken, RefreshToken = newRefreshToken });
     }
 
-    public async Task<ApplicationResult> LogoutAsync(LogoutRequestDto request, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> LogoutAsync(string refreshToken, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        if (string.IsNullOrWhiteSpace(refreshToken))
             return ApplicationResult.BadRequest("Refresh token obligatorio.");
 
         var userIdClaim = user.FindFirstValue("id") ?? user.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -82,7 +82,7 @@ public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> 
         if (!int.TryParse(userIdClaim, out var userId) || string.IsNullOrWhiteSpace(rol))
             return ApplicationResult.Unauthorized();
 
-        var storedToken = await authDomain.FindRefreshTokenAsync(request.RefreshToken, cancellationToken);
+        var storedToken = await authDomain.FindRefreshTokenAsync(refreshToken, cancellationToken);
         if (storedToken is null || !storedToken.IsActive)
             return ApplicationResult.Unauthorized("Refresh token no valido o expirado.");
 

@@ -1,4 +1,5 @@
 using Back.Api.Application.Abstractions.Repositories;
+using Back.Api.Application.Configuration;
 using Back.Api.Persistence.Context;
 using Back.Api.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -45,19 +46,19 @@ public class AuthDomainRepository(AppDbContext context) : IAuthDomainRepository
 
     public async Task<string?> ObtenerCorreoAsync(int userId, string rol, CancellationToken cancellationToken = default)
     {
-        if (rol == "admin")
+        if (rol == Roles.Admin)
             return await context.Admins
                 .Where(a => a.Id == userId)
                 .Select(a => (string?)a.Correo)
                 .FirstOrDefaultAsync(cancellationToken);
 
-        if (rol == "profesor")
+        if (rol == Roles.Profesor)
             return await context.Profesores
                 .Where(p => p.Id == userId)
                 .Select(p => (string?)p.Correo)
                 .FirstOrDefaultAsync(cancellationToken);
 
-        if (rol == "alumno")
+        if (rol == Roles.Alumno)
             return await context.Estudiantes
                 .Where(e => e.Id == userId)
                 .Select(e => (string?)e.Correo)

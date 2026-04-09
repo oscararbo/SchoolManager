@@ -14,7 +14,9 @@ public static class ApplicationResultExtensions
             ApplicationResultType.NoContent => controller.NoContent(),
             ApplicationResultType.BadRequest => result.Value is null ? controller.BadRequest() : controller.BadRequest(result.Value),
             ApplicationResultType.Unauthorized => result.Value is null ? controller.Unauthorized() : controller.Unauthorized(result.Value),
-            ApplicationResultType.Forbidden => controller.Forbid(),
+            ApplicationResultType.Forbidden => result.Value is null
+                ? controller.Forbid()
+                : controller.StatusCode(StatusCodes.Status403Forbidden, result.Value),
             ApplicationResultType.NotFound => result.Value is null ? controller.NotFound() : controller.NotFound(result.Value),
             _ => controller.StatusCode(StatusCodes.Status500InternalServerError)
         };

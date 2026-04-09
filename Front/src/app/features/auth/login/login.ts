@@ -68,13 +68,12 @@ export class Login implements OnInit {
 
             const data = await this.schoolApiService.login(correo, contrasena);
 
+            this.sessionService.setToken(data.token);
             this.sessionService.setSession({
                 rol: data.rol,
                 id: data.id,
                 nombre: data.nombre,
                 correo: data.correo,
-                token: data.token,
-                refreshToken: data.refreshToken,
                 cursoId: data.cursoId,
                 curso: data.curso
             });

@@ -1,6 +1,7 @@
 using Back.Api.Application.Common;
 using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Application.Abstractions.Security;
+using Back.Api.Application.Configuration;
 using Back.Api.Application.Dtos;
 using System.Security.Claims;
 
@@ -146,7 +147,7 @@ public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, 
 
     private static bool UsuarioCoincideConEstudiante(int estudianteId, ClaimsPrincipal user)
     {
-        if (user.IsInRole("admin")) return true;
+        if (user.IsInRole(Roles.Admin)) return true;
         var idClaim = user.FindFirstValue("id") ?? user.FindFirstValue(ClaimsIdentity.DefaultNameClaimType);
         return int.TryParse(idClaim, out var usuarioId) && usuarioId == estudianteId;
     }

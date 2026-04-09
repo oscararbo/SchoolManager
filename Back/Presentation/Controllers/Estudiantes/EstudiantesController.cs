@@ -2,13 +2,19 @@ using Back.Api.Application.Dtos;
 using Back.Api.Application.Configuration;
 using Back.Api.Application.Services;
 using Back.Api.Presentation.Http;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Back.Api.Presentation.Controllers;
 
 [ApiController]
+[ApiVersion("1.0")]
 [Route("api/[controller]")]
+[Produces("application/json")]
+[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+[ProducesResponseType(StatusCodes.Status403Forbidden)]
+[ProducesResponseType(StatusCodes.Status500InternalServerError)]
 [Authorize]
 public class EstudiantesController(IEstudiantesService estudiantesService) : ControllerBase
 {
