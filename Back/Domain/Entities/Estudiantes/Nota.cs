@@ -1,6 +1,6 @@
 namespace Back.Api.Domain.Entities;
 
-public class Nota
+public class Nota : ISoftDeletable
 {
     public int Id { get; set; }
     public int EstudianteId { get; set; }
@@ -8,4 +8,5 @@ public class Nota
     public int TareaId { get; set; }
     public Tarea? Tarea { get; set; }
     public decimal Valor { get; set; }
+    public bool IsDeleted { get; set; }
 }

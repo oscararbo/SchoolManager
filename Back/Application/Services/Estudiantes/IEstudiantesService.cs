@@ -7,9 +7,10 @@ namespace Back.Api.Application.Services;
 public interface IEstudiantesService
 {
     Task<ApplicationResult> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<ApplicationResult> GetSimpleAsync(CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetByIdAsync(int id, CancellationToken cancellationToken = default);
-    Task<ApplicationResult> CreateAsync(CreateEstudianteDto dto, CancellationToken cancellationToken = default);
-    Task<ApplicationResult> UpdateAsync(int id, UpdateEstudianteDto dto, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> CreateAsync(CreateEstudianteRequestDto dto, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> UpdateAsync(int id, UpdateEstudianteRequestDto dto, CancellationToken cancellationToken = default);
     Task<ApplicationResult> DeleteAsync(int id, CancellationToken cancellationToken = default);
     Task<ApplicationResult> MatricularAsync(int id, int asignaturaId, CancellationToken cancellationToken = default);
     Task<ApplicationResult> DesmatricularAsync(int id, int asignaturaId, CancellationToken cancellationToken = default);

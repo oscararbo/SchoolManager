@@ -1,4 +1,5 @@
 using Back.Api.Application.Dtos;
+using Back.Api.Application.Configuration;
 using Back.Api.Application.Services;
 using Back.Api.Presentation.Http;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +9,7 @@ namespace Back.Api.Presentation.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 public class AdminController(IAdminService adminService) : ControllerBase
 {
     [HttpGet]
@@ -54,7 +55,7 @@ public class AdminController(IAdminService adminService) : ControllerBase
     }
 
     [HttpPost("create-admin")]
-    public async Task<IActionResult> CreateAdmin(CreateAdminDto dto)
+    public async Task<IActionResult> CreateAdmin(CreateAdminRequestDto dto)
     {
         return this.ToActionResult(await adminService.CreateAsync(dto, User, HttpContext.RequestAborted));
     }

@@ -49,57 +49,146 @@ public class ImportDomainRepository(AppDbContext context) : IImportDomainReposit
 
     public async Task AddCursosAsync(IEnumerable<string> nombres, CancellationToken cancellationToken = default)
     {
-        context.Cursos.AddRange(nombres.Select(nombre => new Curso { Nombre = nombre }));
+        foreach (var nombre in nombres)
+        {
+            var existente = await context.Cursos
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(c => c.Nombre == nombre, cancellationToken);
+
+            if (existente is null)
+                context.Cursos.Add(new Curso { Nombre = nombre });
+            else
+                existente.IsDeleted = false;
+        }
+
         await context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task AddAsignaturasAsync(IEnumerable<(string Nombre, int CursoId)> asignaturas, CancellationToken cancellationToken = default)
     {
-        context.Asignaturas.AddRange(asignaturas.Select(x => new Asignatura { Nombre = x.Nombre, CursoId = x.CursoId }));
+        foreach (var item in asignaturas)
+        {
+            var existente = await context.Asignaturas
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(a => a.Nombre == item.Nombre && a.CursoId == item.CursoId, cancellationToken);
+
+            if (existente is null)
+                context.Asignaturas.Add(new Asignatura { Nombre = item.Nombre, CursoId = item.CursoId });
+            else
+                existente.IsDeleted = false;
+        }
+
         await context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task AddProfesoresAsync(IEnumerable<(string Nombre, string Correo, string ContrasenaHash)> profesores, CancellationToken cancellationToken = default)
     {
-        context.Profesores.AddRange(profesores.Select(x => new Profesor
+        foreach (var item in profesores)
         {
-            Nombre = x.Nombre,
-            Correo = x.Correo,
-            Contrasena = x.ContrasenaHash
-        }));
+            var existente = await context.Profesores
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(p => p.Correo == item.Correo, cancellationToken);
+
+            if (existente is null)
+            {
+                context.Profesores.Add(new Profesor
+                {
+                    Nombre = item.Nombre,
+                    Correo = item.Correo,
+                    Contrasena = item.ContrasenaHash
+                });
+            }
+            else
+            {
+                existente.Nombre = item.Nombre;
+                existente.Correo = item.Correo;
+                existente.Contrasena = item.ContrasenaHash;
+                existente.IsDeleted = false;
+            }
+        }
+
         await context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task AddEstudiantesAsync(IEnumerable<(string Nombre, string Correo, string ContrasenaHash, int CursoId)> estudiantes, CancellationToken cancellationToken = default)
     {
-        context.Estudiantes.AddRange(estudiantes.Select(x => new Estudiante
+        foreach (var item in estudiantes)
         {
-            Nombre = x.Nombre,
-            Correo = x.Correo,
-            Contrasena = x.ContrasenaHash,
-            CursoId = x.CursoId
-        }));
+            var existente = await context.Estudiantes
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(e => e.Correo == item.Correo, cancellationToken);
+
+            if (existente is null)
+            {
+                context.Estudiantes.Add(new Estudiante
+                {
+                    Nombre = item.Nombre,
+                    Correo = item.Correo,
+                    Contrasena = item.ContrasenaHash,
+                    CursoId = item.CursoId
+                });
+            }
+            else
+            {
+                existente.Nombre = item.Nombre;
+                existente.Correo = item.Correo;
+                existente.Contrasena = item.ContrasenaHash;
+                existente.CursoId = item.CursoId;
+                existente.IsDeleted = false;
+            }
+        }
+
         await context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task AddMatriculasAsync(IEnumerable<(int EstudianteId, int AsignaturaId)> matriculas, CancellationToken cancellationToken = default)
     {
-        context.EstudianteAsignaturas.AddRange(matriculas.Select(x => new EstudianteAsignatura
+        foreach (var item in matriculas)
         {
-            EstudianteId = x.EstudianteId,
-            AsignaturaId = x.AsignaturaId
-        }));
+            var existente = await context.EstudianteAsignaturas
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(x => x.EstudianteId == item.EstudianteId && x.AsignaturaId == item.AsignaturaId, cancellationToken);
+
+            if (existente is null)
+            {
+                context.EstudianteAsignaturas.Add(new EstudianteAsignatura
+                {
+                    EstudianteId = item.EstudianteId,
+                    AsignaturaId = item.AsignaturaId
+                });
+            }
+            else
+            {
+                existente.IsDeleted = false;
+            }
+        }
+
         await context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task AddImparticionesAsync(IEnumerable<(int ProfesorId, int AsignaturaId, int CursoId)> imparticiones, CancellationToken cancellationToken = default)
     {
-        context.ProfesorAsignaturaCursos.AddRange(imparticiones.Select(x => new ProfesorAsignaturaCurso
+        foreach (var item in imparticiones)
         {
-            ProfesorId = x.ProfesorId,
-            AsignaturaId = x.AsignaturaId,
-            CursoId = x.CursoId
-        }));
+            var existente = await context.ProfesorAsignaturaCursos
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(x => x.ProfesorId == item.ProfesorId && x.AsignaturaId == item.AsignaturaId && x.CursoId == item.CursoId, cancellationToken);
+
+            if (existente is null)
+            {
+                context.ProfesorAsignaturaCursos.Add(new ProfesorAsignaturaCurso
+                {
+                    ProfesorId = item.ProfesorId,
+                    AsignaturaId = item.AsignaturaId,
+                    CursoId = item.CursoId
+                });
+            }
+            else
+            {
+                existente.IsDeleted = false;
+            }
+        }
+
         await context.SaveChangesAsync(cancellationToken);
     }
 
@@ -126,6 +215,7 @@ public class ImportDomainRepository(AppDbContext context) : IImportDomainReposit
         var estudianteIds = notasList.Select(n => n.EstudianteId).Distinct().ToList();
         var tareaIds = notasList.Select(n => n.TareaId).Distinct().ToList();
         var existentes = await context.Notas
+            .IgnoreQueryFilters()
             .Where(n => estudianteIds.Contains(n.EstudianteId) && tareaIds.Contains(n.TareaId))
             .ToListAsync(cancellationToken);
         var existentesMap = existentes.ToDictionary(n => (n.EstudianteId, n.TareaId));
@@ -135,6 +225,7 @@ public class ImportDomainRepository(AppDbContext context) : IImportDomainReposit
             if (existentesMap.TryGetValue((nota.EstudianteId, nota.TareaId), out var actual))
             {
                 actual.Valor = nota.Valor;
+                actual.IsDeleted = false;
                 continue;
             }
 

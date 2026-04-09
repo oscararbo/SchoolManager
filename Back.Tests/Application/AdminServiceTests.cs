@@ -13,35 +13,24 @@ public class AdminServiceTests
     public async Task GetCursosStatsSelectorAsync_ReturnsOrderedCursos_WithTotals()
     {
         var service = CreateService(
-            cursos: new FakeCursosRepository
+            admin: new FakeAdminRepository
             {
-                Cursos =
+                CursosStatsSelector =
                 [
-                    new CursoResumenDto
+                    new CursoStatsSelectorDto
                     {
-                        Id = 2,
-                        Nombre = "2 ESO",
-                        Asignaturas = [new CursoAsignaturaDto { Id = 21, Nombre = "Historia" }]
+                        CursoId = 1,
+                        Curso = "1 ESO",
+                        TotalEstudiantes = 2,
+                        TotalAsignaturas = 2
                     },
-                    new CursoResumenDto
+                    new CursoStatsSelectorDto
                     {
-                        Id = 1,
-                        Nombre = "1 ESO",
-                        Asignaturas =
-                        [
-                            new CursoAsignaturaDto { Id = 11, Nombre = "Matematicas" },
-                            new CursoAsignaturaDto { Id = 12, Nombre = "Lengua" }
-                        ]
+                        CursoId = 2,
+                        Curso = "2 ESO",
+                        TotalEstudiantes = 1,
+                        TotalAsignaturas = 1
                     }
-                ]
-            },
-            estudiantes: new FakeEstudiantesRepository
-            {
-                Estudiantes =
-                [
-                    new EstudianteListItemDto { Id = 1, CursoId = 1, Nombre = "A", Correo = "a@x.com" },
-                    new EstudianteListItemDto { Id = 2, CursoId = 1, Nombre = "B", Correo = "b@x.com" },
-                    new EstudianteListItemDto { Id = 3, CursoId = 2, Nombre = "C", Correo = "c@x.com" }
                 ]
             });
 
@@ -62,7 +51,7 @@ public class AdminServiceTests
     [Fact]
     public async Task GetStatsByCursoAsync_ReturnsNotFound_WhenCursoDoesNotExist()
     {
-        var service = CreateService(cursos: new FakeCursosRepository());
+        var service = CreateService(admin: new FakeAdminRepository());
 
         var result = await service.GetStatsByCursoAsync(99, CancellationToken.None);
 
@@ -74,107 +63,40 @@ public class AdminServiceTests
     {
         var cursoId = 1;
         var service = CreateService(
-            cursos: new FakeCursosRepository
+            admin: new FakeAdminRepository
             {
-                CursoById =
+                StatsByCurso =
                 {
-                    [cursoId] = new CursoSimpleDto { Id = cursoId, Nombre = "1 ESO" }
-                }
-            },
-            asignaturas: new FakeAsignaturasRepository
-            {
-                Resumenes =
-                [
-                    new AsignaturaResumenDto
+                    [cursoId] = new CursoNotasStatsResponseDto
                     {
-                        Id = 10,
-                        Nombre = "Matematicas",
-                        Curso = new AsignaturaCursoDto { Id = cursoId, Nombre = "1 ESO" }
-                    },
-                    new AsignaturaResumenDto
-                    {
-                        Id = 20,
-                        Nombre = "Lengua",
-                        Curso = new AsignaturaCursoDto { Id = cursoId, Nombre = "1 ESO" }
-                    },
-                    new AsignaturaResumenDto
-                    {
-                        Id = 30,
-                        Nombre = "Historia",
-                        Curso = new AsignaturaCursoDto { Id = 2, Nombre = "2 ESO" }
-                    }
-                ],
-                DetalleById =
-                {
-                    [10] = new AsignaturaDetalleDto
-                    {
-                        Id = 10,
-                        Nombre = "Matematicas",
-                        Curso = new AsignaturaCursoDto { Id = cursoId, Nombre = "1 ESO" },
-                        Alumnos =
+                        CursoId = cursoId,
+                        Curso = "1 ESO",
+                        MediaGlobalCurso = 5.00,
+                        TotalAlumnos = 5,
+                        Aprobados = 3,
+                        Suspensos = 1,
+                        SinNota = 1,
+                        Asignaturas =
                         [
-                            new AsignaturaAlumnoDetalleDto
+                            new AsignaturaNotasStatsDto
                             {
-                                EstudianteId = 1,
-                                Alumno = "Ana",
-                                Notas =
-                                [
-                                    Nota(1, 6),
-                                    Nota(2, 7),
-                                    Nota(3, 8)
-                                ]
+                                AsignaturaId = 10,
+                                Asignatura = "Matematicas",
+                                TotalAlumnos = 3,
+                                Aprobados = 2,
+                                Suspensos = 0,
+                                SinNota = 1,
+                                Media = 6.00
                             },
-                            new AsignaturaAlumnoDetalleDto
+                            new AsignaturaNotasStatsDto
                             {
-                                EstudianteId = 2,
-                                Alumno = "Beto",
-                                Notas =
-                                [
-                                    Nota(1, 4),
-                                    Nota(2, 5),
-                                    Nota(3, 6)
-                                ]
-                            },
-                            new AsignaturaAlumnoDetalleDto
-                            {
-                                EstudianteId = 3,
-                                Alumno = "Caro",
-                                Notas =
-                                [
-                                    Nota(1, 3),
-                                    Nota(2, 4)
-                                ]
-                            }
-                        ]
-                    },
-                    [20] = new AsignaturaDetalleDto
-                    {
-                        Id = 20,
-                        Nombre = "Lengua",
-                        Curso = new AsignaturaCursoDto { Id = cursoId, Nombre = "1 ESO" },
-                        Alumnos =
-                        [
-                            new AsignaturaAlumnoDetalleDto
-                            {
-                                EstudianteId = 1,
-                                Alumno = "Ana",
-                                Notas =
-                                [
-                                    Nota(1, 2),
-                                    Nota(2, 3),
-                                    Nota(3, 4)
-                                ]
-                            },
-                            new AsignaturaAlumnoDetalleDto
-                            {
-                                EstudianteId = 2,
-                                Alumno = "Beto",
-                                Notas =
-                                [
-                                    Nota(1, 5),
-                                    Nota(2, 5),
-                                    Nota(3, 5)
-                                ]
+                                AsignaturaId = 20,
+                                Asignatura = "Lengua",
+                                TotalAlumnos = 2,
+                                Aprobados = 1,
+                                Suspensos = 1,
+                                SinNota = 0,
+                                Media = 4.00
                             }
                         ]
                     }
@@ -212,7 +134,7 @@ public class AdminServiceTests
     [Fact]
     public async Task CompareCursosAsync_ReturnsBadRequest_WhenLessThanTwoValidDistinctIds()
     {
-        var service = CreateService(cursos: new FakeCursosRepository());
+        var service = CreateService(admin: new FakeAdminRepository());
 
         var result = await service.CompareCursosAsync([1, 1, 0, -2], CancellationToken.None);
 
@@ -223,54 +145,23 @@ public class AdminServiceTests
     public async Task CompareCursosAsync_ReturnsOrderedComparison_AndSkipsMissingCourses()
     {
         var service = CreateService(
-            cursos: new FakeCursosRepository
+            admin: new FakeAdminRepository
             {
-                CursoById =
-                {
-                    [1] = new CursoSimpleDto { Id = 1, Nombre = "1 ESO" },
-                    [2] = new CursoSimpleDto { Id = 2, Nombre = "2 ESO" }
-                }
-            },
-            asignaturas: new FakeAsignaturasRepository
-            {
-                Resumenes =
+                ComparacionCursos =
                 [
-                    new AsignaturaResumenDto { Id = 101, Nombre = "Mat", Curso = new AsignaturaCursoDto { Id = 1, Nombre = "1 ESO" } },
-                    new AsignaturaResumenDto { Id = 201, Nombre = "Bio", Curso = new AsignaturaCursoDto { Id = 2, Nombre = "2 ESO" } }
-                ],
-                DetalleById =
-                {
-                    [101] = new AsignaturaDetalleDto
+                    new CursoComparacionItemDto
                     {
-                        Id = 101,
-                        Nombre = "Mat",
-                        Curso = new AsignaturaCursoDto { Id = 1, Nombre = "1 ESO" },
-                        Alumnos =
-                        [
-                            new AsignaturaAlumnoDetalleDto
-                            {
-                                EstudianteId = 1,
-                                Alumno = "A",
-                                Notas = [Nota(1, 6), Nota(2, 6), Nota(3, 6)]
-                            }
-                        ]
+                        CursoId = 1,
+                        Curso = "1 ESO",
+                        MediaGlobalCurso = 6.00
                     },
-                    [201] = new AsignaturaDetalleDto
+                    new CursoComparacionItemDto
                     {
-                        Id = 201,
-                        Nombre = "Bio",
-                        Curso = new AsignaturaCursoDto { Id = 2, Nombre = "2 ESO" },
-                        Alumnos =
-                        [
-                            new AsignaturaAlumnoDetalleDto
-                            {
-                                EstudianteId = 2,
-                                Alumno = "B",
-                                Notas = [Nota(1, 4), Nota(2, 4), Nota(3, 4)]
-                            }
-                        ]
+                        CursoId = 2,
+                        Curso = "2 ESO",
+                        MediaGlobalCurso = 4.00
                     }
-                }
+                ]
             });
 
         var result = await service.CompareCursosAsync([2, 999, 1], CancellationToken.None);
@@ -294,13 +185,13 @@ public class AdminServiceTests
             {
                 Matriculas =
                 [
-                    new AdminMatriculaListItemDto
+                    new AdminMatriculaListReadModelDto
                     {
                         EstudianteId = 1,
                         Estudiante = "Ana",
                         CursoId = 10,
                         Curso = "1 ESO",
-                        Asignaturas = [new AdminMatriculaAsignaturaItemDto { AsignaturaId = 5, Asignatura = "Matematicas" }]
+                        Asignaturas = [new AdminMatriculaAsignaturaReadModelDto { AsignaturaId = 5, Asignatura = "Matematicas" }]
                     }
                 ]
             });
@@ -308,7 +199,7 @@ public class AdminServiceTests
         var result = await service.GetMatriculasAsync(CancellationToken.None);
 
         Assert.Equal(ApplicationResultType.Ok, result.Type);
-        var payload = Assert.IsAssignableFrom<IEnumerable<AdminMatriculaListItemDto>>(result.Value).ToList();
+        var payload = Assert.IsAssignableFrom<IEnumerable<AdminMatriculaListReadModelDto>>(result.Value).ToList();
         Assert.Single(payload);
         Assert.Equal("Ana", payload[0].Estudiante);
     }
@@ -321,7 +212,7 @@ public class AdminServiceTests
             {
                 Imparticiones =
                 [
-                    new AdminImparticionListItemDto
+                    new AdminImparticionListReadModelDto
                     {
                         ProfesorId = 2,
                         Profesor = "Luis",
@@ -336,32 +227,14 @@ public class AdminServiceTests
         var result = await service.GetImparticionesAsync(CancellationToken.None);
 
         Assert.Equal(ApplicationResultType.Ok, result.Type);
-        var payload = Assert.IsAssignableFrom<IEnumerable<AdminImparticionListItemDto>>(result.Value).ToList();
+        var payload = Assert.IsAssignableFrom<IEnumerable<AdminImparticionListReadModelDto>>(result.Value).ToList();
         Assert.Single(payload);
         Assert.Equal("Luis", payload[0].Profesor);
     }
 
-    private static AsignaturaNotaSimpleDto Nota(int trimestre, decimal valor)
-        => new()
-        {
-            Id = trimestre,
-            Tarea = $"T{trimestre}",
-            Trimestre = trimestre,
-            Valor = valor
-        };
-
-    private static AdminService CreateService(
-        FakeAdminRepository? admin = null,
-        FakeCursosRepository? cursos = null,
-        FakeAsignaturasRepository? asignaturas = null,
-        FakeProfesoresRepository? profesores = null,
-        FakeEstudiantesRepository? estudiantes = null)
+    private static AdminService CreateService(FakeAdminRepository? admin = null)
         => new(
             admin ?? new FakeAdminRepository(),
-            cursos ?? new FakeCursosRepository(),
-            asignaturas ?? new FakeAsignaturasRepository(),
-            profesores ?? new FakeProfesoresRepository(),
-            estudiantes ?? new FakeEstudiantesRepository(),
             new FakePasswordService());
 
     private sealed class FakePasswordService : IPasswordService
@@ -374,8 +247,12 @@ public class AdminServiceTests
 
     private sealed class FakeAdminRepository : IAdminDomainRepository
     {
-        public List<AdminMatriculaListItemDto> Matriculas { get; init; } = [];
-        public List<AdminImparticionListItemDto> Imparticiones { get; init; } = [];
+        public AdminStatsDto Stats { get; init; } = new();
+        public List<CursoStatsSelectorDto> CursosStatsSelector { get; init; } = [];
+        public Dictionary<int, CursoNotasStatsResponseDto> StatsByCurso { get; init; } = new();
+        public List<CursoComparacionItemDto> ComparacionCursos { get; init; } = [];
+        public List<AdminMatriculaListReadModelDto> Matriculas { get; init; } = [];
+        public List<AdminImparticionListReadModelDto> Imparticiones { get; init; } = [];
 
         public Task<IEnumerable<AdminListItemDto>> GetAllAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IEnumerable<AdminListItemDto>>([]);
@@ -386,11 +263,23 @@ public class AdminServiceTests
         public Task<AdminListItemDto> CreateAsync(string nombre, string correo, string hash, CancellationToken cancellationToken = default)
             => Task.FromResult(new AdminListItemDto { Id = 1, Nombre = nombre, Correo = correo });
 
-        public Task<IEnumerable<AdminMatriculaListItemDto>> GetMatriculasAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IEnumerable<AdminMatriculaListItemDto>>(Matriculas);
+        public Task<AdminStatsDto> GetStatsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(Stats);
 
-        public Task<IEnumerable<AdminImparticionListItemDto>> GetImparticionesAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IEnumerable<AdminImparticionListItemDto>>(Imparticiones);
+        public Task<IEnumerable<CursoStatsSelectorDto>> GetCursosStatsSelectorAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IEnumerable<CursoStatsSelectorDto>>(CursosStatsSelector);
+
+        public Task<CursoNotasStatsResponseDto?> GetStatsByCursoAsync(int cursoId, CancellationToken cancellationToken = default)
+            => Task.FromResult(StatsByCurso.GetValueOrDefault(cursoId));
+
+        public Task<IEnumerable<CursoComparacionItemDto>> CompareCursosAsync(IEnumerable<int> cursoIds, CancellationToken cancellationToken = default)
+            => Task.FromResult<IEnumerable<CursoComparacionItemDto>>(ComparacionCursos);
+
+        public Task<IEnumerable<AdminMatriculaListReadModelDto>> GetMatriculasAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IEnumerable<AdminMatriculaListReadModelDto>>(Matriculas);
+
+        public Task<IEnumerable<AdminImparticionListReadModelDto>> GetImparticionesAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IEnumerable<AdminImparticionListReadModelDto>>(Imparticiones);
     }
 
     private sealed class FakeCursosRepository : ICursosDomainRepository
@@ -484,16 +373,20 @@ public class AdminServiceTests
         public Task<(int Id, int AsignaturaId, int ProfesorId)?> GetTareaInfoAsync(int tareaId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<int?> GetEstudianteCursoAsync(int estudianteId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<TareaResumenDto?> GetTareaResumenAsync(int tareaId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<IEnumerable<ProfesorSimpleDto>> GetSimpleAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<IEnumerable<ProfesorListItemDto>> GetAllAsync(CancellationToken cancellationToken = default) => Task.FromResult<IEnumerable<ProfesorListItemDto>>(Profesores);
         public Task<ProfesorDetalleDto?> GetDetalleAsync(int id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<ProfesorPanelDto?> GetPanelAsync(int id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<List<TareaResumenDto>> GetTareasDeAsignaturaAsync(int asignaturaId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<IEnumerable<TareaResumenDto>> GetTareasDeProfesorEnAsignaturaAsync(int profesorId, int asignaturaId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<List<ProfesorAlumnoResumenRow>> GetAlumnosResumenAsync(int asignaturaId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<AsignaturaAlumnosResumenResponseDto?> GetAlumnosResumenResponseAsync(int asignaturaId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<AsignaturaCalificacionesTareaResponseDto?> GetCalificacionesTareaResponseAsync(int asignaturaId, int tareaId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<List<ProfesorTareaCalificacionRow>> GetCalificacionesTareaAsync(int asignaturaId, int tareaId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<ProfesorAlumnoDetalleDto?> GetAlumnoDetalleAsync(int asignaturaId, int estudianteId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<AsignaturaAlumnosResponseDto?> GetAlumnosCompletoAsync(int asignaturaId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<IEnumerable<TareaConNotasDto>> GetTareasConNotasAsync(int asignaturaId, CancellationToken cancellationToken = default) => Task.FromResult<IEnumerable<TareaConNotasDto>>([]);
+        public Task<ProfesorStatsDto?> GetStatsAsync(int profesorId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<ProfesorListItemDto> CreateAsync(string nombre, string correo, string hash, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<ProfesorListItemDto?> UpdateAsync(int id, string nombre, string correo, string? hash, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task DeleteAsync(int id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
@@ -515,6 +408,7 @@ public class AdminServiceTests
         public Task<bool> YaMatriculadoAsync(int estudianteId, int asignaturaId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<bool> AsignaturaEsDelCursoAsync(int asignaturaId, int cursoId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<string?> GetCursoNombreAsync(int cursoId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<IEnumerable<EstudianteSimpleDto>> GetSimpleAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<IEnumerable<EstudianteListItemDto>> GetAllAsync(CancellationToken cancellationToken = default) => Task.FromResult<IEnumerable<EstudianteListItemDto>>(Estudiantes);
         public Task<EstudianteDetalleDto?> GetDetalleAsync(int id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<AlumnoPanelDto?> GetPanelAlumnoAsync(int id, CancellationToken cancellationToken = default) => throw new NotImplementedException();

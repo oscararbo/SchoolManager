@@ -19,7 +19,7 @@ public class AuthServiceTests
         var passwordService = new FakePasswordService();
         var service = CreateService(repository, passwordService);
 
-        var result = await service.LoginAsync(new LoginRequest("noexiste@correo.com", "1234"), CancellationToken.None);
+        var result = await service.LoginAsync(new LoginRequestDto("noexiste@correo.com", "1234"), CancellationToken.None);
 
         Assert.Equal(ApplicationResultType.Unauthorized, result.Type);
     }
@@ -34,7 +34,7 @@ public class AuthServiceTests
         var passwordService = new FakePasswordService();
         var service = CreateService(repository, passwordService);
 
-        var result = await service.LoginAsync(new LoginRequest("admin@prueba.com", "Prueba1"), CancellationToken.None);
+        var result = await service.LoginAsync(new LoginRequestDto("admin@prueba.com", "Prueba1"), CancellationToken.None);
 
         Assert.Equal(ApplicationResultType.Ok, result.Type);
         var payload = Assert.IsType<LoginResponseDto>(result.Value);
@@ -92,3 +92,4 @@ public class AuthServiceTests
             => Task.FromResult<string?>("admin@prueba.com");
     }
 }
+

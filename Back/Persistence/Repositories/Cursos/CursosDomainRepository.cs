@@ -112,19 +112,32 @@ public class CursosDomainRepository(AppDbContext context) : ICursosDomainReposit
         };
     }
 
-    // ── Mutations ─────────────────────────────────────────────────────────────
+    #region Mutations
 
     public async Task<CursoSimpleDto> CreateAsync(string nombre, CancellationToken cancellationToken = default)
     {
-        var curso = new Curso { Nombre = nombre };
-        context.Cursos.Add(curso);
+        var curso = await context.Cursos
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(c => c.Nombre == nombre, cancellationToken);
+
+        if (curso is null)
+        {
+            curso = new Curso { Nombre = nombre };
+            context.Cursos.Add(curso);
+        }
+        else
+        {
+            curso.Nombre = nombre;
+            curso.IsDeleted = false;
+        }
+
         await context.SaveChangesAsync();
         return new CursoSimpleDto { Id = curso.Id, Nombre = curso.Nombre };
     }
 
     public async Task<CursoSimpleDto?> UpdateAsync(int id, string nombre, CancellationToken cancellationToken = default)
     {
-        var curso = await context.Cursos.FindAsync(id);
+        var curso = await context.Cursos.FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
         if (curso is null) return null;
         curso.Nombre = nombre;
         await context.SaveChangesAsync();
@@ -133,11 +146,13 @@ public class CursosDomainRepository(AppDbContext context) : ICursosDomainReposit
 
     public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        var curso = await context.Cursos.FindAsync(id);
+        var curso = await context.Cursos.FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
         if (curso is not null)
         {
             context.Cursos.Remove(curso);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(cancellationToken);
         }
     }
+
+    #endregion
 }

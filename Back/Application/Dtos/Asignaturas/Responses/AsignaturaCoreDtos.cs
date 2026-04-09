@@ -1,15 +1,11 @@
 namespace Back.Api.Application.Dtos;
 
-public class CreateAsignaturaDto
+public class AsignaturaSimpleDto
 {
+    public int Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public int CursoId { get; set; }
-}
-
-public class UpdateAsignaturaDto
-{
-    public string Nombre { get; set; } = string.Empty;
-    public int CursoId { get; set; }
+    public string Curso { get; set; } = string.Empty;
 }
 
 public class AsignaturaCursoDto

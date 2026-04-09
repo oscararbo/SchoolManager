@@ -20,7 +20,7 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebAppFactory>
         _factory = factory;
     }
 
-    // ── Auth guard ────────────────────────────────────────────────────────
+    #region Auth guard
 
     [Theory]
     [InlineData("GET",  "/api/admin/matriculas")]
@@ -35,7 +35,9 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebAppFactory>
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    // ── GET /api/admin/stats/cursos ───────────────────────────────────────
+    #endregion
+
+    #region GET /api/admin/stats/cursos
 
     [Fact]
     public async Task GetCursosStatsSelector_ReturnsOk_WithSeededCourses()
@@ -69,7 +71,9 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebAppFactory>
         Assert.NotNull(payload);
     }
 
-    // ── GET /api/admin/stats/cursos/{cursoId} ─────────────────────────────
+    #endregion
+
+    #region GET /api/admin/stats/cursos/{cursoId}
 
     [Fact]
     public async Task GetStatsByCurso_ReturnsOk_WhenCourseExists()
@@ -96,7 +100,9 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebAppFactory>
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    // ── POST /api/admin/stats/cursos/comparar ─────────────────────────────
+    #endregion
+
+    #region POST /api/admin/stats/cursos/comparar
 
     [Fact]
     public async Task CompareCursos_ReturnsBadRequest_WhenFewerThanTwoValidCourses()
@@ -132,7 +138,9 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebAppFactory>
         Assert.Equal(2, payload.Cursos.Count());
     }
 
-    // ── GET /api/admin/matriculas ─────────────────────────────────────────
+    #endregion
+
+    #region GET /api/admin/matriculas
 
     [Fact]
     public async Task GetMatriculas_ReturnsOk_WithSeededEnrollments()
@@ -168,7 +176,7 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebAppFactory>
         var response = await client.GetAsync("/api/admin/matriculas");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var payload = await response.Content.ReadFromJsonAsync<List<AdminMatriculaListItemDto>>();
+        var payload = await response.Content.ReadFromJsonAsync<List<AdminMatriculaListReadModelDto>>();
         Assert.NotNull(payload);
 
         var anaEntry = payload.FirstOrDefault(m => m.Estudiante == "Ana Test");
@@ -200,7 +208,7 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebAppFactory>
         var response = await client.GetAsync("/api/admin/matriculas");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var payload = await response.Content.ReadFromJsonAsync<List<AdminMatriculaListItemDto>>();
+        var payload = await response.Content.ReadFromJsonAsync<List<AdminMatriculaListReadModelDto>>();
         Assert.NotNull(payload);
 
         var entry = payload.FirstOrDefault(m => m.Estudiante == "Sin Asigs");
@@ -208,7 +216,9 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebAppFactory>
         Assert.Empty(entry.Asignaturas);
     }
 
-    // ── GET /api/admin/imparticiones ──────────────────────────────────────
+    #endregion
+
+    #region GET /api/admin/imparticiones
 
     [Fact]
     public async Task GetImparticiones_ReturnsOk_WithSeededAssignments()
@@ -244,7 +254,7 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebAppFactory>
         var response = await client.GetAsync("/api/admin/imparticiones");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var payload = await response.Content.ReadFromJsonAsync<List<AdminImparticionListItemDto>>();
+        var payload = await response.Content.ReadFromJsonAsync<List<AdminImparticionListReadModelDto>>();
         Assert.NotNull(payload);
 
         var entry = payload.FirstOrDefault(i =>
@@ -260,7 +270,10 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebAppFactory>
         var response = await client.GetAsync("/api/admin/imparticiones");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var payload = await response.Content.ReadFromJsonAsync<List<AdminImparticionListItemDto>>();
+        var payload = await response.Content.ReadFromJsonAsync<List<AdminImparticionListReadModelDto>>();
         Assert.NotNull(payload);
     }
+
+    #endregion
 }
+

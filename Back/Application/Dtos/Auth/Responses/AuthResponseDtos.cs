@@ -1,9 +1,5 @@
 namespace Back.Api.Application.Dtos;
 
-public record LoginRequest(string Correo, string Contrasena);
-public record LogoutRequest(string RefreshToken);
-public record RefreshRequest(string RefreshToken);
-
 public class LoginResponseDto
 {
     public string Rol { get; set; } = string.Empty;

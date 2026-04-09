@@ -80,13 +80,13 @@ public class AdminControllerTests
         {
             GetMatriculasResult = ApplicationResult.Ok(new[]
             {
-                new AdminMatriculaListItemDto
+                new AdminMatriculaListReadModelDto
                 {
                     EstudianteId = 1,
                     Estudiante = "Ana",
                     CursoId = 10,
                     Curso = "1 ESO",
-                    Asignaturas = [new AdminMatriculaAsignaturaItemDto { AsignaturaId = 5, Asignatura = "Matematicas" }]
+                    Asignaturas = [new AdminMatriculaAsignaturaReadModelDto { AsignaturaId = 5, Asignatura = "Matematicas" }]
                 }
             })
         };
@@ -95,7 +95,7 @@ public class AdminControllerTests
         var result = await controller.GetMatriculas();
 
         var ok = Assert.IsType<OkObjectResult>(result);
-        var payload = Assert.IsAssignableFrom<IEnumerable<AdminMatriculaListItemDto>>(ok.Value);
+        var payload = Assert.IsAssignableFrom<IEnumerable<AdminMatriculaListReadModelDto>>(ok.Value);
         Assert.Single(payload);
     }
 
@@ -106,7 +106,7 @@ public class AdminControllerTests
         {
             GetImparticionesResult = ApplicationResult.Ok(new[]
             {
-                new AdminImparticionListItemDto
+                new AdminImparticionListReadModelDto
                 {
                     ProfesorId = 2,
                     Profesor = "Luis",
@@ -122,7 +122,7 @@ public class AdminControllerTests
         var result = await controller.GetImparticiones();
 
         var ok = Assert.IsType<OkObjectResult>(result);
-        var payload = Assert.IsAssignableFrom<IEnumerable<AdminImparticionListItemDto>>(ok.Value);
+        var payload = Assert.IsAssignableFrom<IEnumerable<AdminImparticionListReadModelDto>>(ok.Value);
         Assert.Single(payload);
     }
 
@@ -150,8 +150,8 @@ public class AdminControllerTests
         public ApplicationResult GetCursosSelectorResult { get; init; } = ApplicationResult.Ok(Array.Empty<CursoStatsSelectorDto>());
         public ApplicationResult GetStatsByCursoResult { get; init; } = ApplicationResult.Ok();
         public ApplicationResult CompareCursosResult { get; init; } = ApplicationResult.Ok(new ComparacionCursosResponseDto());
-        public ApplicationResult GetMatriculasResult { get; init; } = ApplicationResult.Ok(Array.Empty<AdminMatriculaListItemDto>());
-        public ApplicationResult GetImparticionesResult { get; init; } = ApplicationResult.Ok(Array.Empty<AdminImparticionListItemDto>());
+        public ApplicationResult GetMatriculasResult { get; init; } = ApplicationResult.Ok(Array.Empty<AdminMatriculaListReadModelDto>());
+        public ApplicationResult GetImparticionesResult { get; init; } = ApplicationResult.Ok(Array.Empty<AdminImparticionListReadModelDto>());
 
         public int LastCursoId { get; private set; }
         public IReadOnlyList<int> LastComparedCursoIds { get; private set; } = [];
@@ -159,7 +159,7 @@ public class AdminControllerTests
         public Task<ApplicationResult> GetAllAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(GetAllResult);
 
-        public Task<ApplicationResult> CreateAsync(CreateAdminDto dto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+        public Task<ApplicationResult> CreateAsync(CreateAdminRequestDto dto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
             => Task.FromResult(CreateResult);
 
         public Task<ApplicationResult> GetStatsAsync(CancellationToken cancellationToken = default)

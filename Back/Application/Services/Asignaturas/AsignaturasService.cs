@@ -9,13 +9,23 @@ public class AsignaturasService(IAsignaturasDomainRepository asignaturasDomain) 
     public async Task<ApplicationResult> GetAllAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await asignaturasDomain.GetAllResumenAsync(cancellationToken));
 
+    public async Task<ApplicationResult> GetSimpleAsync(CancellationToken cancellationToken = default)
+        => ApplicationResult.Ok((await asignaturasDomain.GetAllResumenAsync(cancellationToken))
+            .Select(a => new AsignaturaSimpleDto
+            {
+                Id = a.Id,
+                Nombre = a.Nombre,
+                CursoId = a.Curso.Id,
+                Curso = a.Curso.Nombre
+            }));
+
     public async Task<ApplicationResult> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var asignatura = await asignaturasDomain.GetDetalleAsync(id, cancellationToken);
         return asignatura is null ? ApplicationResult.NotFound() : ApplicationResult.Ok(asignatura);
     }
 
-    public async Task<ApplicationResult> CreateAsync(CreateAsignaturaDto dto, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> CreateAsync(CreateAsignaturaRequestDto dto, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(dto.Nombre))
             return ApplicationResult.BadRequest("El nombre de la asignatura es obligatorio.");
@@ -30,7 +40,7 @@ public class AsignaturasService(IAsignaturasDomainRepository asignaturasDomain) 
         return ApplicationResult.Created($"/api/asignaturas/{result.Id}", result);
     }
 
-    public async Task<ApplicationResult> UpdateAsync(int id, UpdateAsignaturaDto dto, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> UpdateAsync(int id, CreateAsignaturaRequestDto dto, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(dto.Nombre))
             return ApplicationResult.BadRequest("El nombre de la asignatura es obligatorio.");

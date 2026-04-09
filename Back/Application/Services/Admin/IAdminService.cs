@@ -7,7 +7,7 @@ namespace Back.Api.Application.Services;
 public interface IAdminService
 {
     Task<ApplicationResult> GetAllAsync(CancellationToken cancellationToken = default);
-    Task<ApplicationResult> CreateAsync(CreateAdminDto dto, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> CreateAsync(CreateAdminRequestDto dto, ClaimsPrincipal user, CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetStatsAsync(CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetCursosStatsSelectorAsync(CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetStatsByCursoAsync(int cursoId, CancellationToken cancellationToken = default);

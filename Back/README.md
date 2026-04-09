@@ -96,6 +96,16 @@ Back/
 - `Persistence`: EF Core (DbContext y repositorios).
 - `Program.cs`: composition root (DI, auth, CORS, swagger, migraciones).
 
+## Convenciones DTO
+
+- Requests: `*RequestDto`
+- Responses: `*ResponseDto`
+- Read models: `*ReadModelDto`
+- Stats: `*StatsDto`
+- DTOs compartidos simples: `Dtos/Common/`
+
+Referencia completa: `Application/Dtos/DTO_CONVENTIONS.md`.
+
 ## Endpoints clave
 
 ### Auth

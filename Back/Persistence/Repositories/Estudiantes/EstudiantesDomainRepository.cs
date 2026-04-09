@@ -149,7 +149,7 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
         };
     }
 
-    // ── New queries ───────────────────────────────────────────────────────────
+    #region New queries
 
     public async Task<string?> GetCursoNombreAsync(int cursoId, CancellationToken cancellationToken = default)
         => await context.Cursos.AsNoTracking()
@@ -165,6 +165,19 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
                 Id = e.Id,
                 Nombre = e.Nombre,
                 Correo = e.Correo,
+                CursoId = e.CursoId,
+                Curso = e.Curso != null ? e.Curso.Nombre : null
+            })
+            .ToListAsync(cancellationToken);
+
+    public async Task<IEnumerable<EstudianteSimpleDto>> GetSimpleAsync(CancellationToken cancellationToken = default)
+        => await context.Estudiantes
+            .AsNoTracking()
+            .OrderBy(e => e.Nombre)
+            .Select(e => new EstudianteSimpleDto
+            {
+                Id = e.Id,
+                Nombre = e.Nombre,
                 CursoId = e.CursoId,
                 Curso = e.Curso != null ? e.Curso.Nombre : null
             })
@@ -289,12 +302,30 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
         };
     }
 
-    // ── Mutations ─────────────────────────────────────────────────────────────
+    #endregion
+
+    #region Mutations
 
     public async Task<EstudianteListItemDto> CreateAsync(string nombre, string correo, int cursoId, string hash, CancellationToken cancellationToken = default)
     {
-        var estudiante = new Estudiante { Nombre = nombre, Correo = correo, CursoId = cursoId, Contrasena = hash };
-        context.Estudiantes.Add(estudiante);
+        var estudiante = await context.Estudiantes
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(e => e.Correo == correo, cancellationToken);
+
+        if (estudiante is null)
+        {
+            estudiante = new Estudiante { Nombre = nombre, Correo = correo, CursoId = cursoId, Contrasena = hash };
+            context.Estudiantes.Add(estudiante);
+        }
+        else
+        {
+            estudiante.Nombre = nombre;
+            estudiante.Correo = correo;
+            estudiante.CursoId = cursoId;
+            estudiante.Contrasena = hash;
+            estudiante.IsDeleted = false;
+        }
+
         await context.SaveChangesAsync();
         var cursoNombre = await GetCursoNombreAsync(cursoId);
         return new EstudianteListItemDto { Id = estudiante.Id, Nombre = estudiante.Nombre, Correo = estudiante.Correo, CursoId = estudiante.CursoId, Curso = cursoNombre };
@@ -302,8 +333,20 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
 
     public async Task MatricularAsync(int estudianteId, int asignaturaId, CancellationToken cancellationToken = default)
     {
-        context.EstudianteAsignaturas.Add(new EstudianteAsignatura { EstudianteId = estudianteId, AsignaturaId = asignaturaId });
-        await context.SaveChangesAsync();
+        var registro = await context.EstudianteAsignaturas
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.EstudianteId == estudianteId && x.AsignaturaId == asignaturaId, cancellationToken);
+
+        if (registro is null)
+        {
+            context.EstudianteAsignaturas.Add(new EstudianteAsignatura { EstudianteId = estudianteId, AsignaturaId = asignaturaId });
+        }
+        else
+        {
+            registro.IsDeleted = false;
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task DesmatricularAsync(int estudianteId, int asignaturaId, CancellationToken cancellationToken = default)
@@ -319,7 +362,7 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
 
     public async Task<EstudianteListItemDto?> UpdateAsync(int id, string nombre, string correo, int cursoId, string? hash, CancellationToken cancellationToken = default)
     {
-        var estudiante = await context.Estudiantes.FindAsync(id);
+        var estudiante = await context.Estudiantes.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
         if (estudiante is null) return null;
         estudiante.Nombre = nombre;
         estudiante.Correo = correo;
@@ -332,14 +375,21 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
 
     public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        var matriculas = await context.EstudianteAsignaturas.Where(ea => ea.EstudianteId == id).ToListAsync();
+        var matriculas = await context.EstudianteAsignaturas.Where(ea => ea.EstudianteId == id).ToListAsync(cancellationToken);
         context.EstudianteAsignaturas.RemoveRange(matriculas);
 
-        var notas = await context.Notas.Where(n => n.EstudianteId == id).ToListAsync();
+        var notas = await context.Notas.Where(n => n.EstudianteId == id).ToListAsync(cancellationToken);
         context.Notas.RemoveRange(notas);
 
-        var estudiante = await context.Estudiantes.FindAsync(id);
+        var tokens = await context.RefreshTokens
+            .Where(t => t.UserId == id && t.Rol == "alumno")
+            .ToListAsync(cancellationToken);
+        context.RefreshTokens.RemoveRange(tokens);
+
+        var estudiante = await context.Estudiantes.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
         if (estudiante is not null) context.Estudiantes.Remove(estudiante);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
     }
+
+    #endregion
 }

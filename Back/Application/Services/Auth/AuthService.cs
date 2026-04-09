@@ -13,7 +13,7 @@ namespace Back.Api.Application.Services;
 
 public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> jwtOptions, IPasswordService passwordService) : IAuthService
 {
-    public async Task<ApplicationResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> LoginAsync(LoginRequestDto request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Correo) || string.IsNullOrWhiteSpace(request.Contrasena))
             return ApplicationResult.BadRequest("Correo y contrasena son obligatorios.");
@@ -48,7 +48,7 @@ public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> 
         return ApplicationResult.Unauthorized("Credenciales incorrectas.");
     }
 
-    public async Task<ApplicationResult> RefreshAsync(RefreshRequest request, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> RefreshAsync(RefreshRequestDto request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.RefreshToken))
             return ApplicationResult.Unauthorized("Refresh token no valido.");
@@ -71,7 +71,7 @@ public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> 
         return ApplicationResult.Ok(new RefreshResponseDto { Token = newAccessToken, RefreshToken = newRefreshToken });
     }
 
-    public async Task<ApplicationResult> LogoutAsync(LogoutRequest request, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> LogoutAsync(LogoutRequestDto request, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.RefreshToken))
             return ApplicationResult.BadRequest("Refresh token obligatorio.");

@@ -11,6 +11,9 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
     public async Task<ApplicationResult> GetAllAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await profesoresDomain.GetAllAsync(cancellationToken));
 
+    public async Task<ApplicationResult> GetSimpleAsync(CancellationToken cancellationToken = default)
+        => ApplicationResult.Ok(await profesoresDomain.GetSimpleAsync(cancellationToken));
+
     public async Task<ApplicationResult> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var profesor = await profesoresDomain.GetDetalleAsync(id, cancellationToken);
@@ -19,7 +22,7 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
             : ApplicationResult.Ok(profesor);
     }
 
-    public async Task<ApplicationResult> CreateAsync(CreateProfesorDto dto, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> CreateAsync(CreateProfesorRequestDto dto, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(dto.Nombre))
             return ApplicationResult.BadRequest("El nombre del profesor es obligatorio.");
@@ -71,33 +74,10 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         if (!await profesoresDomain.ProfesorImparteAsignaturaAsync(profesorId, asignaturaId, cancellationToken))
             return ApplicationResult.BadRequest("El profesor no imparte esta asignatura.");
 
-        var asignaturaInfo = await profesoresDomain.GetAsignaturaInfoAsync(asignaturaId, cancellationToken);
-        if (asignaturaInfo is null)
-            return ApplicationResult.NotFound("La asignatura no existe.");
-
-        var tareas = await profesoresDomain.GetTareasDeAsignaturaAsync(asignaturaId, cancellationToken);
-        var alumnosBase = await profesoresDomain.GetAlumnosResumenAsync(asignaturaId, cancellationToken);
-
-        var alumnos = new List<AsignaturaAlumnoResumenDto>();
-        foreach (var alumno in alumnosBase)
-        {
-            var detalle = await profesoresDomain.GetAlumnoDetalleAsync(asignaturaId, alumno.EstudianteId, cancellationToken);
-            if (detalle is null) continue;
-            alumnos.Add(new AsignaturaAlumnoResumenDto
-            {
-                EstudianteId = detalle.EstudianteId,
-                Alumno = detalle.Alumno,
-                Medias = detalle.Medias,
-                NotaFinal = detalle.NotaFinal
-            });
-        }
-
-        return ApplicationResult.Ok(new AsignaturaAlumnosResumenResponseDto
-        {
-            Asignatura = asignaturaInfo,
-            Tareas = tareas,
-            Alumnos = alumnos
-        });
+        var result = await profesoresDomain.GetAlumnosResumenResponseAsync(asignaturaId, cancellationToken);
+        return result is null
+            ? ApplicationResult.NotFound("La asignatura no existe.")
+            : ApplicationResult.Ok(result);
     }
 
     public async Task<ApplicationResult> GetAlumnoDetalleDeAsignaturaAsync(int profesorId, int asignaturaId, int estudianteId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
@@ -126,26 +106,13 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         if (!await profesoresDomain.ProfesorImparteTareaAsync(profesorId, tareaId, cancellationToken))
             return ApplicationResult.BadRequest("El profesor no tiene acceso a esa tarea.");
 
-        var tarea = await profesoresDomain.GetTareaResumenAsync(tareaId, cancellationToken);
-        if (tarea is null)
-            return ApplicationResult.NotFound("La tarea no existe.");
-
-        var calificaciones = await profesoresDomain.GetCalificacionesTareaAsync(asignaturaId, tareaId, cancellationToken);
-        return ApplicationResult.Ok(new AsignaturaCalificacionesTareaResponseDto
-        {
-            TareaId = tarea.TareaId,
-            Tarea = tarea.Nombre,
-            Trimestre = tarea.Trimestre,
-            Calificaciones = calificaciones.Select(c => new AsignaturaCalificacionTareaDto
-            {
-                EstudianteId = c.EstudianteId,
-                Alumno = c.Alumno,
-                Valor = c.Valor
-            }).ToList()
-        });
+        var result = await profesoresDomain.GetCalificacionesTareaResponseAsync(asignaturaId, tareaId, cancellationToken);
+        return result is null
+            ? ApplicationResult.NotFound("La tarea no existe.")
+            : ApplicationResult.Ok(result);
     }
 
-    public async Task<ApplicationResult> AsignarImparticionAsync(int profesorId, AsignarImparticionDto dto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> AsignarImparticionAsync(int profesorId, AsignarImparticionRequestDto dto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
         if (!UsuarioCoincideConProfesor(profesorId, user))
             return ApplicationResult.Forbidden();
@@ -181,7 +148,7 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         return ApplicationResult.NoContent();
     }
 
-    public async Task<ApplicationResult> PonerNotaAsync(int profesorId, PonerNotaDto dto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> PonerNotaAsync(int profesorId, PonerNotaRequestDto dto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
         if (!UsuarioCoincideConProfesor(profesorId, user))
             return ApplicationResult.Forbidden();
@@ -206,7 +173,7 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         return ApplicationResult.Ok();
     }
 
-    public async Task<ApplicationResult> CrearTareaAsync(int profesorId, CreateTareaDto dto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> CrearTareaAsync(int profesorId, CreateTareaRequestDto dto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
         if (!UsuarioCoincideConProfesor(profesorId, user))
             return ApplicationResult.Forbidden();
@@ -240,7 +207,7 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         return ApplicationResult.Ok(tareas);
     }
 
-    public async Task<ApplicationResult> UpdateAsync(int id, UpdateProfesorDto dto, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> UpdateAsync(int id, UpdateProfesorRequestDto dto, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(dto.Nombre))
             return ApplicationResult.BadRequest("El nombre del profesor es obligatorio.");
@@ -290,83 +257,12 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         if (!UsuarioCoincideConProfesor(profesorId, user))
             return ApplicationResult.Forbidden();
 
-        var panel = await profesoresDomain.GetPanelAsync(profesorId, cancellationToken);
-        if (panel is null)
+        var result = await profesoresDomain.GetStatsAsync(profesorId, cancellationToken);
+        if (result is null)
             return ApplicationResult.NotFound("El profesor no existe.");
 
-        var asignaturasStats = new List<AsignaturaStatsProfesorDto>();
-        var mediasGlobales = new List<double>();
-
-        foreach (var curso in panel.Cursos.OrderBy(c => c.Curso))
-        {
-            foreach (var asignatura in curso.Asignaturas.OrderBy(a => a.Nombre))
-            {
-                var alumnosBase = await profesoresDomain.GetAlumnosResumenAsync(asignatura.AsignaturaId, cancellationToken);
-                var tareasProfesor = (await profesoresDomain.GetTareasDeProfesorEnAsignaturaAsync(profesorId, asignatura.AsignaturaId, cancellationToken)).ToList();
-
-                var detallesAlumnos = new List<ProfesorAlumnoDetalleDto>();
-                foreach (var alumno in alumnosBase)
-                {
-                    var detalle = await profesoresDomain.GetAlumnoDetalleAsync(asignatura.AsignaturaId, alumno.EstudianteId, cancellationToken);
-                    if (detalle is not null)
-                    {
-                        detallesAlumnos.Add(detalle);
-                    }
-                }
-
-                var finales = detallesAlumnos
-                    .Where(d => d.NotaFinal.HasValue)
-                    .Select(d => (double)d.NotaFinal!.Value)
-                    .ToList();
-
-                mediasGlobales.AddRange(finales);
-
-                var porTarea = new List<TareaStatsDto>();
-                foreach (var tarea in tareasProfesor)
-                {
-                    var calificaciones = await profesoresDomain.GetCalificacionesTareaAsync(asignatura.AsignaturaId, tarea.TareaId, cancellationToken);
-                    var notas = calificaciones.Where(c => c.Valor.HasValue).Select(c => (double)c.Valor!.Value).ToList();
-
-                    porTarea.Add(new TareaStatsDto
-                    {
-                        TareaId = tarea.TareaId,
-                        Nombre = tarea.Nombre,
-                        Trimestre = tarea.Trimestre,
-                        Media = notas.Count > 0 ? Math.Round(notas.Average(), 2) : null,
-                        TotalNotas = notas.Count,
-                        SinNota = calificaciones.Count - notas.Count,
-                        NotaMax = notas.Count > 0 ? NotaMaxima(notas) : null,
-                        NotaMin = notas.Count > 0 ? NotaMinima(notas) : null
-                    });
-                }
-
-                asignaturasStats.Add(new AsignaturaStatsProfesorDto
-                {
-                    AsignaturaId = asignatura.AsignaturaId,
-                    Asignatura = asignatura.Nombre,
-                    Curso = curso.Curso,
-                    TotalAlumnos = alumnosBase.Count,
-                    Aprobados = detallesAlumnos.Count(d => d.NotaFinal.HasValue && d.NotaFinal.Value >= 5),
-                    Suspensos = detallesAlumnos.Count(d => d.NotaFinal.HasValue && d.NotaFinal.Value < 5),
-                    SinNota = detallesAlumnos.Count(d => !d.NotaFinal.HasValue),
-                    Media = finales.Count > 0 ? Math.Round(finales.Average(), 2) : null,
-                    PorTarea = porTarea
-                });
-            }
-        }
-
-        return ApplicationResult.Ok(new ProfesorStatsDto
-        {
-            ProfesorId = panel.Id,
-            Nombre = panel.Nombre,
-            MediaGlobal = mediasGlobales.Count > 0 ? Math.Round(mediasGlobales.Average(), 2) : null,
-            Asignaturas = asignaturasStats
-        });
+        return ApplicationResult.Ok(result);
     }
-
-    private static double NotaMaxima(IEnumerable<double> notas) => notas.Max();
-
-    private static double NotaMinima(IEnumerable<double> notas) => notas.Min();
 
     private static bool UsuarioCoincideConProfesor(int profesorId, ClaimsPrincipal user)
     {

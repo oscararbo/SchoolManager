@@ -1,9 +1,10 @@
 namespace Back.Api.Domain.Entities;
 
-public class Asignatura
+public class Asignatura : ISoftDeletable
 {
     public int Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
+    public bool IsDeleted { get; set; }
     public int CursoId { get; set; }
     public Curso? Curso { get; set; }
     public ICollection<EstudianteAsignatura> EstudianteAsignaturas { get; set; } = new List<EstudianteAsignatura>();

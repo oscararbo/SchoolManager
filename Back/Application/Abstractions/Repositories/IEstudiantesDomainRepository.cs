@@ -12,6 +12,7 @@ public interface IEstudiantesDomainRepository
     Task<bool> YaMatriculadoAsync(int estudianteId, int asignaturaId, CancellationToken cancellationToken = default);
     Task<bool> AsignaturaEsDelCursoAsync(int asignaturaId, int cursoId, CancellationToken cancellationToken = default);
     Task<string?> GetCursoNombreAsync(int cursoId, CancellationToken cancellationToken = default);
+    Task<IEnumerable<EstudianteSimpleDto>> GetSimpleAsync(CancellationToken cancellationToken = default);
     Task<IEnumerable<EstudianteListItemDto>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<EstudianteDetalleDto?> GetDetalleAsync(int id, CancellationToken cancellationToken = default);
     Task<AlumnoPanelDto?> GetPanelAlumnoAsync(int id, CancellationToken cancellationToken = default);

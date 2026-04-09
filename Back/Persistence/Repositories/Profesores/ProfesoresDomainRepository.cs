@@ -8,7 +8,10 @@ namespace Back.Api.Persistence.Repositories;
 
 public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomainRepository
 {
-    // ── Checks ────────────────────────────────────────────────────────────────
+    private sealed record ProfesorAlumnoStatsRow(int EstudianteId, string Alumno, int AsignaturaId);
+    private sealed record ProfesorTareaStatsRow(int TareaId, string Nombre, int Trimestre, int AsignaturaId, int ProfesorId);
+
+    #region Checks
 
     public Task<bool> ProfesorExisteAsync(int profesorId, CancellationToken cancellationToken = default)
         => context.Profesores.AnyAsync(p => p.Id == profesorId);
@@ -49,7 +52,9 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
         => context.Tareas
             .AnyAsync(t => t.AsignaturaId == asignaturaId && t.Trimestre == trimestre && t.Nombre == nombre);
 
-    // ── Simple lookups ────────────────────────────────────────────────────────
+    #endregion
+
+    #region Simple lookups
 
     public async Task<AsignaturaInfoDto?> GetAsignaturaInfoAsync(int asignaturaId, CancellationToken cancellationToken = default)
         => await context.Asignaturas
@@ -98,7 +103,20 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
         return result;
     }
 
-    // ── Queries ───────────────────────────────────────────────────────────────
+    #endregion
+
+    #region Queries
+
+    public async Task<IEnumerable<ProfesorSimpleDto>> GetSimpleAsync(CancellationToken cancellationToken = default)
+        => await context.Profesores
+            .AsNoTracking()
+            .OrderBy(p => p.Nombre)
+            .Select(p => new ProfesorSimpleDto
+            {
+                Id = p.Id,
+                Nombre = p.Nombre
+            })
+            .ToListAsync(cancellationToken);
 
     public async Task<IEnumerable<ProfesorListItemDto>> GetAllAsync(CancellationToken cancellationToken = default)
         => await context.Profesores
@@ -263,6 +281,31 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
             .Select(ea => new ProfesorAlumnoResumenRow(ea.EstudianteId, ea.Estudiante!.Nombre))
             .ToListAsync(cancellationToken);
 
+    public async Task<AsignaturaAlumnosResumenResponseDto?> GetAlumnosResumenResponseAsync(int asignaturaId, CancellationToken cancellationToken = default)
+    {
+        var asignaturaInfo = await GetAsignaturaInfoAsync(asignaturaId, cancellationToken);
+        if (asignaturaInfo is null) return null;
+
+        var tareas = await GetTareasDeAsignaturaAsync(asignaturaId, cancellationToken);
+        var alumnos = await GetAlumnosResumenAsync(asignaturaId, cancellationToken);
+        var alumnoIds = alumnos.Select(a => a.EstudianteId).ToList();
+        var tareaIds = tareas.Select(t => t.TareaId).ToList();
+
+        var notaMap = await context.Notas
+            .AsNoTracking()
+            .Where(n => alumnoIds.Contains(n.EstudianteId) && tareaIds.Contains(n.TareaId))
+            .ToDictionaryAsync(n => (n.EstudianteId, n.TareaId), n => (decimal?)n.Valor, cancellationToken);
+
+        return new AsignaturaAlumnosResumenResponseDto
+        {
+            Asignatura = asignaturaInfo,
+            Tareas = tareas,
+            Alumnos = alumnos
+                .Select(alumno => BuildAlumnoResumen(alumno.EstudianteId, alumno.Alumno, tareas, notaMap))
+                .ToList()
+        };
+    }
+
     public async Task<List<ProfesorTareaCalificacionRow>> GetCalificacionesTareaAsync(int asignaturaId, int tareaId, CancellationToken cancellationToken = default)
     {
         var alumnos = await GetAlumnosResumenAsync(asignaturaId, cancellationToken);
@@ -274,6 +317,27 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
             a.EstudianteId, a.Alumno,
             notas.TryGetValue(a.EstudianteId, out var v) ? v : null
         )).ToList();
+    }
+
+    public async Task<AsignaturaCalificacionesTareaResponseDto?> GetCalificacionesTareaResponseAsync(int asignaturaId, int tareaId, CancellationToken cancellationToken = default)
+    {
+        var tarea = await GetTareaResumenAsync(tareaId, cancellationToken);
+        if (tarea is null)
+            return null;
+
+        var calificaciones = await GetCalificacionesTareaAsync(asignaturaId, tareaId, cancellationToken);
+        return new AsignaturaCalificacionesTareaResponseDto
+        {
+            TareaId = tarea.TareaId,
+            Tarea = tarea.Nombre,
+            Trimestre = tarea.Trimestre,
+            Calificaciones = calificaciones.Select(c => new AsignaturaCalificacionTareaDto
+            {
+                EstudianteId = c.EstudianteId,
+                Alumno = c.Alumno,
+                Valor = c.Valor
+            }).ToList()
+        };
     }
 
     public async Task<ProfesorAlumnoDetalleDto?> GetAlumnoDetalleAsync(int asignaturaId, int estudianteId, CancellationToken cancellationToken = default)
@@ -367,19 +431,208 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
         });
     }
 
-    // ── Mutations ─────────────────────────────────────────────────────────────
+    public async Task<ProfesorStatsDto?> GetStatsAsync(int profesorId, CancellationToken cancellationToken = default)
+    {
+        var profesor = await context.Profesores
+            .AsNoTracking()
+            .Where(p => p.Id == profesorId)
+            .Select(p => new { p.Id, p.Nombre })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (profesor is null)
+            return null;
+
+        var asignaciones = await context.ProfesorAsignaturaCursos
+            .AsNoTracking()
+            .Where(i => i.ProfesorId == profesorId)
+            .OrderBy(i => i.Curso!.Nombre)
+            .ThenBy(i => i.Asignatura!.Nombre)
+            .Select(i => new { i.AsignaturaId, Asignatura = i.Asignatura!.Nombre, Curso = i.Curso!.Nombre })
+            .ToListAsync(cancellationToken);
+
+        var asignaturaIds = asignaciones.Select(x => x.AsignaturaId).Distinct().ToList();
+        if (asignaturaIds.Count == 0)
+        {
+            return new ProfesorStatsDto
+            {
+                ProfesorId = profesor.Id,
+                Nombre = profesor.Nombre,
+                MediaGlobal = null,
+                Asignaturas = []
+            };
+        }
+
+        var alumnos = await context.EstudianteAsignaturas
+            .AsNoTracking()
+            .Where(ea => asignaturaIds.Contains(ea.AsignaturaId))
+            .OrderBy(ea => ea.Estudiante!.Nombre)
+            .Select(ea => new ProfesorAlumnoStatsRow(ea.EstudianteId, ea.Estudiante!.Nombre, ea.AsignaturaId))
+            .ToListAsync(cancellationToken);
+
+        var tareas = await context.Tareas
+            .AsNoTracking()
+            .Where(t => asignaturaIds.Contains(t.AsignaturaId))
+            .OrderBy(t => t.Trimestre)
+            .ThenBy(t => t.Nombre)
+            .Select(t => new ProfesorTareaStatsRow(t.Id, t.Nombre, t.Trimestre, t.AsignaturaId, t.ProfesorId))
+            .ToListAsync(cancellationToken);
+
+        var tareaIds = tareas.Select(t => t.TareaId).ToList();
+        var alumnoIds = alumnos.Select(a => a.EstudianteId).Distinct().ToList();
+        var notaMap = await context.Notas
+            .AsNoTracking()
+            .Where(n => tareaIds.Contains(n.TareaId) && alumnoIds.Contains(n.EstudianteId))
+            .ToDictionaryAsync(n => (n.EstudianteId, n.TareaId), n => (decimal?)n.Valor, cancellationToken);
+
+        var mediasGlobales = new List<double>();
+        var asignaturasStats = new List<AsignaturaStatsProfesorDto>();
+
+        foreach (var asignacion in asignaciones)
+        {
+            var alumnosAsignatura = alumnos
+                .Where(a => a.AsignaturaId == asignacion.AsignaturaId)
+                .ToList();
+
+            var tareasAsignatura = tareas
+                .Where(t => t.AsignaturaId == asignacion.AsignaturaId)
+                .Select(t => new TareaResumenDto { TareaId = t.TareaId, Nombre = t.Nombre, Trimestre = t.Trimestre })
+                .ToList();
+
+            var tareasProfesor = tareas
+                .Where(t => t.AsignaturaId == asignacion.AsignaturaId && t.ProfesorId == profesorId)
+                .ToList();
+
+            var alumnosResumen = alumnosAsignatura
+                .Select(alumno => BuildAlumnoResumen(alumno.EstudianteId, alumno.Alumno, tareasAsignatura, notaMap))
+                .ToList();
+
+            var finales = alumnosResumen
+                .Where(a => a.NotaFinal.HasValue)
+                .Select(a => (double)a.NotaFinal!.Value)
+                .ToList();
+
+            mediasGlobales.AddRange(finales);
+
+            asignaturasStats.Add(new AsignaturaStatsProfesorDto
+            {
+                AsignaturaId = asignacion.AsignaturaId,
+                Asignatura = asignacion.Asignatura,
+                Curso = asignacion.Curso,
+                TotalAlumnos = alumnosResumen.Count,
+                Aprobados = alumnosResumen.Count(a => a.NotaFinal.HasValue && a.NotaFinal.Value >= 5),
+                Suspensos = alumnosResumen.Count(a => a.NotaFinal.HasValue && a.NotaFinal.Value < 5),
+                SinNota = alumnosResumen.Count(a => !a.NotaFinal.HasValue),
+                Media = finales.Count > 0 ? Math.Round(finales.Average(), 2) : null,
+                PorTarea = tareasProfesor
+                    .Select(tarea => BuildTareaStats(tarea, alumnosAsignatura, notaMap))
+                    .ToList()
+            });
+        }
+
+        return new ProfesorStatsDto
+        {
+            ProfesorId = profesor.Id,
+            Nombre = profesor.Nombre,
+            MediaGlobal = mediasGlobales.Count > 0 ? Math.Round(mediasGlobales.Average(), 2) : null,
+            Asignaturas = asignaturasStats
+        };
+    }
+
+    private static AsignaturaAlumnoResumenDto BuildAlumnoResumen(
+        int estudianteId,
+        string alumno,
+        IEnumerable<TareaResumenDto> tareas,
+        IReadOnlyDictionary<(int EstudianteId, int TareaId), decimal?> notaMap)
+    {
+        var tareasList = tareas.ToList();
+
+        decimal? MediaTrimestre(int trimestre)
+        {
+            var valores = tareasList
+                .Where(t => t.Trimestre == trimestre)
+                .Select(t => notaMap.TryGetValue((estudianteId, t.TareaId), out var valor) ? valor : null)
+                .Where(v => v.HasValue)
+                .Select(v => v!.Value)
+                .ToList();
+
+            return valores.Count > 0 ? Math.Round(valores.Average(), 2) : null;
+        }
+
+        var t1 = MediaTrimestre(1);
+        var t2 = MediaTrimestre(2);
+        var t3 = MediaTrimestre(3);
+
+        return new AsignaturaAlumnoResumenDto
+        {
+            EstudianteId = estudianteId,
+            Alumno = alumno,
+            Medias = new MediasTrimestralesDto
+            {
+                T1 = t1,
+                T2 = t2,
+                T3 = t3
+            },
+            NotaFinal = (t1.HasValue && t2.HasValue && t3.HasValue)
+                ? Math.Round((t1.Value + t2.Value + t3.Value) / 3, 2)
+                : null
+        };
+    }
+
+    private static TareaStatsDto BuildTareaStats(
+        ProfesorTareaStatsRow tarea,
+        IEnumerable<ProfesorAlumnoStatsRow> alumnos,
+        IReadOnlyDictionary<(int EstudianteId, int TareaId), decimal?> notaMap)
+    {
+        var alumnosList = alumnos.ToList();
+        var valores = alumnosList
+            .Select(alumno => notaMap.TryGetValue((alumno.EstudianteId, tarea.TareaId), out var valor) ? valor : null)
+            .Where(v => v.HasValue)
+            .Select(v => (double)v!.Value)
+            .ToList();
+
+        return new TareaStatsDto
+        {
+            TareaId = tarea.TareaId,
+            Nombre = tarea.Nombre,
+            Trimestre = tarea.Trimestre,
+            Media = valores.Count > 0 ? Math.Round(valores.Average(), 2) : null,
+            TotalNotas = valores.Count,
+            SinNota = alumnosList.Count - valores.Count,
+            NotaMax = valores.Count > 0 ? valores.Max() : null,
+            NotaMin = valores.Count > 0 ? valores.Min() : null
+        };
+    }
+
+    #endregion
+
+    #region Mutations
 
     public async Task<ProfesorListItemDto> CreateAsync(string nombre, string correo, string hash, CancellationToken cancellationToken = default)
     {
-        var profesor = new Profesor { Nombre = nombre, Correo = correo, Contrasena = hash };
-        context.Profesores.Add(profesor);
-        await context.SaveChangesAsync();
+        var profesor = await context.Profesores
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Correo == correo, cancellationToken);
+
+        if (profesor is null)
+        {
+            profesor = new Profesor { Nombre = nombre, Correo = correo, Contrasena = hash };
+            context.Profesores.Add(profesor);
+        }
+        else
+        {
+            profesor.Nombre = nombre;
+            profesor.Correo = correo;
+            profesor.Contrasena = hash;
+            profesor.IsDeleted = false;
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
         return new ProfesorListItemDto { Id = profesor.Id, Nombre = profesor.Nombre, Correo = profesor.Correo, Imparticiones = new() };
     }
 
     public async Task<ProfesorListItemDto?> UpdateAsync(int id, string nombre, string correo, string? hash, CancellationToken cancellationToken = default)
     {
-        var profesor = await context.Profesores.FindAsync(id);
+        var profesor = await context.Profesores.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
         if (profesor is null) return null;
 
         profesor.Nombre = nombre;
@@ -405,33 +658,50 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
     public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
         var imparticiones = await context.ProfesorAsignaturaCursos
-            .Where(i => i.ProfesorId == id).ToListAsync();
+            .Where(i => i.ProfesorId == id).ToListAsync(cancellationToken);
         context.ProfesorAsignaturaCursos.RemoveRange(imparticiones);
 
         var tareaIds = await context.Tareas
-            .Where(t => t.ProfesorId == id).Select(t => t.Id).ToListAsync();
+            .Where(t => t.ProfesorId == id).Select(t => t.Id).ToListAsync(cancellationToken);
         if (tareaIds.Count > 0)
         {
-            var notas = await context.Notas.Where(n => tareaIds.Contains(n.TareaId)).ToListAsync();
+            var notas = await context.Notas.Where(n => tareaIds.Contains(n.TareaId)).ToListAsync(cancellationToken);
             context.Notas.RemoveRange(notas);
-            var tareas = await context.Tareas.Where(t => t.ProfesorId == id).ToListAsync();
+            var tareas = await context.Tareas.Where(t => t.ProfesorId == id).ToListAsync(cancellationToken);
             context.Tareas.RemoveRange(tareas);
         }
 
-        var profesor = await context.Profesores.FindAsync(id);
+        var tokens = await context.RefreshTokens
+            .Where(t => t.UserId == id && t.Rol == "profesor")
+            .ToListAsync(cancellationToken);
+        context.RefreshTokens.RemoveRange(tokens);
+
+        var profesor = await context.Profesores.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
         if (profesor is not null) context.Profesores.Remove(profesor);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task AsignarImparticionAsync(int profesorId, int asignaturaId, int cursoId, CancellationToken cancellationToken = default)
     {
-        context.ProfesorAsignaturaCursos.Add(new ProfesorAsignaturaCurso
+        var registro = await context.ProfesorAsignaturaCursos
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(i => i.ProfesorId == profesorId && i.AsignaturaId == asignaturaId && i.CursoId == cursoId, cancellationToken);
+
+        if (registro is null)
         {
-            ProfesorId = profesorId,
-            AsignaturaId = asignaturaId,
-            CursoId = cursoId
-        });
-        await context.SaveChangesAsync();
+            context.ProfesorAsignaturaCursos.Add(new ProfesorAsignaturaCurso
+            {
+                ProfesorId = profesorId,
+                AsignaturaId = asignaturaId,
+                CursoId = cursoId
+            });
+        }
+        else
+        {
+            registro.IsDeleted = false;
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task EliminarImparticionAsync(int profesorId, int asignaturaId, int cursoId, CancellationToken cancellationToken = default)
@@ -448,14 +718,18 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
     public async Task SetNotaAsync(int estudianteId, int tareaId, decimal valor, CancellationToken cancellationToken = default)
     {
         var nota = await context.Notas
-            .FirstOrDefaultAsync(n => n.EstudianteId == estudianteId && n.TareaId == tareaId);
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(n => n.EstudianteId == estudianteId && n.TareaId == tareaId, cancellationToken);
 
         if (nota is null)
             context.Notas.Add(new Nota { EstudianteId = estudianteId, TareaId = tareaId, Valor = valor });
         else
+        {
             nota.Valor = valor;
+            nota.IsDeleted = false;
+        }
 
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<TareaDetalleDto> CrearTareaAsync(string nombre, int trimestre, int asignaturaId, int profesorId, CancellationToken cancellationToken = default)
@@ -472,5 +746,7 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
 
         return new TareaDetalleDto { Id = tarea.Id, Nombre = tarea.Nombre, Trimestre = tarea.Trimestre, AsignaturaId = tarea.AsignaturaId, Asignatura = asignaturaNombre };
     }
+
+    #endregion
 }
 

@@ -48,7 +48,7 @@ public class WebAppFactory : WebApplicationFactory<Program>
 
         builder.ConfigureTestServices(services =>
         {
-            // ── Replace PostgreSQL with InMemory ──────────────────────────
+            #region Replace PostgreSQL with InMemory
             // EF Core 8+ registers IDbContextOptionsConfiguration<TContext> alongside
             // DbContextOptions<TContext>. We must remove both to prevent
             // "two database providers registered" runtime errors.
@@ -67,7 +67,9 @@ public class WebAppFactory : WebApplicationFactory<Program>
             services.AddDbContext<AppDbContext>(opts =>
                 opts.UseInMemoryDatabase(_dbName));
 
-            // ── Replace JWT auth with a header-driven test scheme ─────────
+            #endregion
+
+            #region Replace JWT auth with a header-driven test scheme
             services.AddAuthentication("TestScheme")
                 .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(
                     "TestScheme", _ => { });
@@ -78,10 +80,12 @@ public class WebAppFactory : WebApplicationFactory<Program>
                 opts.DefaultChallengeScheme    = "TestScheme";
                 opts.DefaultForbidScheme       = "TestScheme";
             });
+
+            #endregion
         });
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────
+    #region Helpers
 
     /// <summary>Returns a client that presents itself as an authenticated admin.</summary>
     public HttpClient CreateAdminClient()
@@ -102,6 +106,8 @@ public class WebAppFactory : WebApplicationFactory<Program>
         seed(db);
         db.SaveChanges();
     }
+
+    #endregion
 }
 
 /// <summary>
@@ -134,3 +140,4 @@ public class TestAuthHandler(
         return Task.FromResult(AuthenticateResult.Success(ticket));
     }
 }
+

@@ -99,6 +99,17 @@ cd Front
 npm run build
 ```
 
+## Convencion de contratos DTO
+
+El backend usa convencion explicita de contratos para evitar acoplamiento y sobre-exposicion:
+
+- `*RequestDto` para entrada
+- `*ResponseDto` para salida
+- `*ReadModelDto` para lecturas compuestas
+- `*StatsDto` para proyecciones analiticas
+
+Detalle en `Back/Application/Dtos/DTO_CONVENTIONS.md`.
+
 ## Documentacion detallada
 
 - Backend: `Back/README.md`

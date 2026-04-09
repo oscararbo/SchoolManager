@@ -114,13 +114,27 @@ public class AsignaturasDomainRepository(AppDbContext context) : IAsignaturasDom
         };
     }
 
-    // ── Mutations ─────────────────────────────────────────────────────────
+    #region Mutations
 
     public async Task<AsignaturaResumenDto> CreateAsync(string nombre, int cursoId, CancellationToken cancellationToken = default)
     {
         var cursoNombre = await GetCursoNombreAsync(cursoId) ?? string.Empty;
-        var asignatura = new Asignatura { Nombre = nombre, CursoId = cursoId };
-        context.Asignaturas.Add(asignatura);
+        var asignatura = await context.Asignaturas
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(a => a.CursoId == cursoId && a.Nombre == nombre, cancellationToken);
+
+        if (asignatura is null)
+        {
+            asignatura = new Asignatura { Nombre = nombre, CursoId = cursoId };
+            context.Asignaturas.Add(asignatura);
+        }
+        else
+        {
+            asignatura.Nombre = nombre;
+            asignatura.CursoId = cursoId;
+            asignatura.IsDeleted = false;
+        }
+
         await context.SaveChangesAsync();
         return new AsignaturaResumenDto
         {
@@ -134,7 +148,7 @@ public class AsignaturasDomainRepository(AppDbContext context) : IAsignaturasDom
 
     public async Task<AsignaturaResumenDto?> UpdateAsync(int id, string nombre, int cursoId, CancellationToken cancellationToken = default)
     {
-        var asignatura = await context.Asignaturas.FindAsync(id);
+        var asignatura = await context.Asignaturas.FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
         if (asignatura is null) return null;
         asignatura.Nombre = nombre;
         asignatura.CursoId = cursoId;
@@ -153,25 +167,28 @@ public class AsignaturasDomainRepository(AppDbContext context) : IAsignaturasDom
     public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
         var imparticiones = await context.ProfesorAsignaturaCursos
-            .Where(i => i.AsignaturaId == id).ToListAsync();
+            .Where(i => i.AsignaturaId == id).ToListAsync(cancellationToken);
         context.ProfesorAsignaturaCursos.RemoveRange(imparticiones);
 
         var matriculas = await context.EstudianteAsignaturas
-            .Where(ea => ea.AsignaturaId == id).ToListAsync();
+            .Where(ea => ea.AsignaturaId == id).ToListAsync(cancellationToken);
         context.EstudianteAsignaturas.RemoveRange(matriculas);
 
         var tareaIds = await context.Tareas
-            .Where(t => t.AsignaturaId == id).Select(t => t.Id).ToListAsync();
+            .Where(t => t.AsignaturaId == id).Select(t => t.Id).ToListAsync(cancellationToken);
         if (tareaIds.Count > 0)
         {
-            var notas = await context.Notas.Where(n => tareaIds.Contains(n.TareaId)).ToListAsync();
+            var notas = await context.Notas.Where(n => tareaIds.Contains(n.TareaId)).ToListAsync(cancellationToken);
             context.Notas.RemoveRange(notas);
-            var tareas = await context.Tareas.Where(t => t.AsignaturaId == id).ToListAsync();
+
+            var tareas = await context.Tareas.Where(t => t.AsignaturaId == id).ToListAsync(cancellationToken);
             context.Tareas.RemoveRange(tareas);
         }
 
-        var asignatura = await context.Asignaturas.FindAsync(id);
+        var asignatura = await context.Asignaturas.FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
         if (asignatura is not null) context.Asignaturas.Remove(asignatura);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
     }
+
+    #endregion
 }

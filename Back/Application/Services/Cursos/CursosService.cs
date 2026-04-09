@@ -9,6 +9,10 @@ public class CursosService(ICursosDomainRepository cursosDomain) : ICursosServic
     public async Task<ApplicationResult> GetAllAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await cursosDomain.GetAllResumenAsync(cancellationToken));
 
+    public async Task<ApplicationResult> GetSimpleAsync(CancellationToken cancellationToken = default)
+        => ApplicationResult.Ok((await cursosDomain.GetAllResumenAsync(cancellationToken))
+            .Select(c => new CursoSimpleDto { Id = c.Id, Nombre = c.Nombre }));
+
     public async Task<ApplicationResult> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var curso = await cursosDomain.GetDetalleAsync(id, cancellationToken);
@@ -17,7 +21,7 @@ public class CursosService(ICursosDomainRepository cursosDomain) : ICursosServic
             : ApplicationResult.Ok(curso);
     }
 
-    public async Task<ApplicationResult> CreateAsync(CreateCursoDto dto, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> CreateAsync(CreateCursoRequestDto dto, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(dto.Nombre))
             return ApplicationResult.BadRequest("El nombre del curso es obligatorio.");
@@ -26,7 +30,7 @@ public class CursosService(ICursosDomainRepository cursosDomain) : ICursosServic
         return ApplicationResult.Created($"/api/cursos/{result.Id}", result);
     }
 
-    public async Task<ApplicationResult> UpdateAsync(int id, UpdateCursoDto dto, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> UpdateAsync(int id, CreateCursoRequestDto dto, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(dto.Nombre))
             return ApplicationResult.BadRequest("El nombre del curso es obligatorio.");

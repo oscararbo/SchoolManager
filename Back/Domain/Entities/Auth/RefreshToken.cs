@@ -1,6 +1,6 @@
 namespace Back.Api.Domain.Entities;
 
-public class RefreshToken
+public class RefreshToken : ISoftDeletable
 {
     public int Id { get; set; }
     public int UserId { get; set; }
@@ -9,6 +9,7 @@ public class RefreshToken
     public DateTime CreatedAtUtc { get; set; }
     public DateTime ExpiresAtUtc { get; set; }
     public DateTime? RevokedAtUtc { get; set; }
+    public bool IsDeleted { get; set; }
 
     public bool IsActive => RevokedAtUtc is null && ExpiresAtUtc > DateTime.UtcNow;
 }

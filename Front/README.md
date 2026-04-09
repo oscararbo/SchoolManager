@@ -134,6 +134,11 @@ Orden recomendado de carga CSV:
 - Medias por trimestre y nota final.
 - Detalle de tareas agrupadas por trimestre.
 
+## Contratos API (DTO)
+
+El backend mantiene contratos separados para entrada/salida (`RequestDto`, `ResponseDto`) y lecturas compuestas (`ReadModelDto`).
+Esto reduce cambios accidentales en cliente cuando evoluciona la logica interna del servidor.
+
 ## Servicios e infraestructura
 
 ### `school-api.service.ts`

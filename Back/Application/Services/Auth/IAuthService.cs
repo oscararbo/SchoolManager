@@ -6,7 +6,7 @@ namespace Back.Api.Application.Services;
 
 public interface IAuthService
 {
-    Task<ApplicationResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
-    Task<ApplicationResult> RefreshAsync(RefreshRequest request, CancellationToken cancellationToken = default);
-    Task<ApplicationResult> LogoutAsync(LogoutRequest request, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> LoginAsync(LoginRequestDto request, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> RefreshAsync(RefreshRequestDto request, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> LogoutAsync(LogoutRequestDto request, ClaimsPrincipal user, CancellationToken cancellationToken = default);
 }

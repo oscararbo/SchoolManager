@@ -11,13 +11,16 @@ public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, 
     public async Task<ApplicationResult> GetAllAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await estudiantesDomain.GetAllAsync(cancellationToken));
 
+    public async Task<ApplicationResult> GetSimpleAsync(CancellationToken cancellationToken = default)
+        => ApplicationResult.Ok(await estudiantesDomain.GetSimpleAsync(cancellationToken));
+
     public async Task<ApplicationResult> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var estudiante = await estudiantesDomain.GetDetalleAsync(id, cancellationToken);
         return estudiante is null ? ApplicationResult.NotFound() : ApplicationResult.Ok(estudiante);
     }
 
-    public async Task<ApplicationResult> CreateAsync(CreateEstudianteDto dto, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> CreateAsync(CreateEstudianteRequestDto dto, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(dto.Nombre))
             return ApplicationResult.BadRequest("El nombre del estudiante es obligatorio.");
@@ -105,7 +108,7 @@ public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, 
             : ApplicationResult.Ok(detalle);
     }
 
-    public async Task<ApplicationResult> UpdateAsync(int id, UpdateEstudianteDto dto, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> UpdateAsync(int id, UpdateEstudianteRequestDto dto, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(dto.Nombre))
             return ApplicationResult.BadRequest("El nombre del estudiante es obligatorio.");

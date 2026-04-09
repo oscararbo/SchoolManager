@@ -14,7 +14,7 @@ public class CursosServiceTests
         var repository = new FakeCursosRepository();
         var service = new CursosService(repository);
 
-        var result = await service.CreateAsync(new CreateCursoDto { Nombre = "  1 ESO A  " }, CancellationToken.None);
+        var result = await service.CreateAsync(new CreateCursoRequestDto { Nombre = "  1 ESO A  " }, CancellationToken.None);
 
         Assert.Equal(ApplicationResultType.Created, result.Type);
         Assert.Equal("1 ESO A", repository.LastCreatedName);

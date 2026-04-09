@@ -4,6 +4,7 @@ using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Configuration;
 using Back.Api.Infrastructure.ErrorHandling;
 using Back.Api.Infrastructure.Security;
+using Back.Api.Presentation.OpenApi;
 using Back.Api.Persistence.Context;
 using Back.Api.Persistence.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -42,6 +43,8 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "bearer",
         BearerFormat = "JWT"
     });
+
+    options.OperationFilter<CsvImportOperationFilter>();
 
 });
 
@@ -117,9 +120,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly", policy => policy.RequireRole("admin"));
-    options.AddPolicy("ProfesorOrAdmin", policy => policy.RequireRole("profesor", "admin"));
-    options.AddPolicy("AlumnoOrAdmin", policy => policy.RequireRole("alumno", "admin"));
+    options.AddPolicy(AuthorizationPolicies.AdminOnly, policy => policy.RequireRole("admin"));
+    options.AddPolicy(AuthorizationPolicies.ProfesorOrAdmin, policy => policy.RequireRole("profesor", "admin"));
+    options.AddPolicy(AuthorizationPolicies.AlumnoOrAdmin, policy => policy.RequireRole("alumno", "admin"));
 });
 
 builder.Services.AddScoped<IPasswordService, PasswordService>();
