@@ -14,12 +14,12 @@ public class ImportDomainRepository(AppDbContext context) : IImportDomainReposit
 
     public Task<List<ImportProfesorLookup>> GetProfesoresAsync(CancellationToken cancellationToken = default) => context.Profesores
         .AsNoTracking()
-        .Select(p => new ImportProfesorLookup(p.Id, p.Correo))
+        .Select(p => new ImportProfesorLookup(p.Id, p.Cuenta!.Correo))
         .ToListAsync(cancellationToken);
 
     public Task<List<ImportEstudianteLookup>> GetEstudiantesAsync(CancellationToken cancellationToken = default) => context.Estudiantes
         .AsNoTracking()
-        .Select(e => new ImportEstudianteLookup(e.Id, e.Correo, e.CursoId))
+        .Select(e => new ImportEstudianteLookup(e.Id, e.Cuenta!.Correo, e.CursoId))
         .ToListAsync(cancellationToken);
 
     public Task<List<ImportAsignaturaLookup>> GetAsignaturasAsync(CancellationToken cancellationToken = default) => context.Asignaturas
@@ -81,60 +81,96 @@ public class ImportDomainRepository(AppDbContext context) : IImportDomainReposit
         await context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task AddProfesoresAsync(IEnumerable<(string Nombre, string Correo, string ContrasenaHash)> profesores, CancellationToken cancellationToken = default)
+    public async Task AddProfesoresAsync(IEnumerable<(string Nombre, string Correo, string ContrasenaHash, string Apellidos, string DNI, string Telefono, string Especialidad)> profesores, CancellationToken cancellationToken = default)
     {
         foreach (var item in profesores)
         {
             var existente = await context.Profesores
                 .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(p => p.Correo == item.Correo, cancellationToken);
+                .Include(p => p.Cuenta)
+                .FirstOrDefaultAsync(p => p.Cuenta != null && p.Cuenta.Correo == item.Correo, cancellationToken);
 
             if (existente is null)
             {
                 context.Profesores.Add(new Profesor
                 {
                     Nombre = item.Nombre,
-                    Correo = item.Correo,
-                    Contrasena = item.ContrasenaHash
+                    Apellidos = item.Apellidos,
+                    DNI = item.DNI,
+                    Telefono = item.Telefono,
+                    Especialidad = item.Especialidad,
+                    Cuenta = new Cuenta
+                    {
+                        Correo = item.Correo,
+                        Contrasena = item.ContrasenaHash,
+                        Rol = "profesor"
+                    }
                 });
             }
             else
             {
                 existente.Nombre = item.Nombre;
-                existente.Correo = item.Correo;
-                existente.Contrasena = item.ContrasenaHash;
+                existente.Apellidos = item.Apellidos;
+                existente.DNI = item.DNI;
+                existente.Telefono = item.Telefono;
+                existente.Especialidad = item.Especialidad;
                 existente.IsDeleted = false;
+                if (existente.Cuenta is not null)
+                {
+                    existente.Cuenta.Correo = item.Correo;
+                    existente.Cuenta.Contrasena = item.ContrasenaHash;
+                    existente.Cuenta.Rol = "profesor";
+                    existente.Cuenta.IsDeleted = false;
+                }
             }
         }
 
         await context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task AddEstudiantesAsync(IEnumerable<(string Nombre, string Correo, string ContrasenaHash, int CursoId)> estudiantes, CancellationToken cancellationToken = default)
+    public async Task AddEstudiantesAsync(IEnumerable<(string Nombre, string Correo, string ContrasenaHash, int CursoId, string Apellidos, string DNI, string Telefono, DateOnly FechaNacimiento)> estudiantes, CancellationToken cancellationToken = default)
     {
         foreach (var item in estudiantes)
         {
             var existente = await context.Estudiantes
                 .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(e => e.Correo == item.Correo, cancellationToken);
+                .Include(e => e.Cuenta)
+                .FirstOrDefaultAsync(e => e.Cuenta != null && e.Cuenta.Correo == item.Correo, cancellationToken);
 
             if (existente is null)
             {
                 context.Estudiantes.Add(new Estudiante
                 {
                     Nombre = item.Nombre,
-                    Correo = item.Correo,
-                    Contrasena = item.ContrasenaHash,
-                    CursoId = item.CursoId
+                    Apellidos = item.Apellidos,
+                    DNI = item.DNI,
+                    Telefono = item.Telefono,
+                    FechaNacimiento = item.FechaNacimiento,
+                    CursoId = item.CursoId,
+                    Cuenta = new Cuenta
+                    {
+                        Correo = item.Correo,
+                        Contrasena = item.ContrasenaHash,
+                        Rol = "alumno"
+                    }
                 });
             }
             else
             {
                 existente.Nombre = item.Nombre;
-                existente.Correo = item.Correo;
-                existente.Contrasena = item.ContrasenaHash;
+                existente.Apellidos = item.Apellidos;
+                existente.DNI = item.DNI;
+                existente.Telefono = item.Telefono;
+                existente.FechaNacimiento = item.FechaNacimiento;
                 existente.CursoId = item.CursoId;
                 existente.IsDeleted = false;
+                if (existente.Cuenta is not null)
+                {
+                    existente.Cuenta.Correo = item.Correo;
+                    existente.Cuenta.Contrasena = item.ContrasenaHash;
+                    existente.Cuenta.Rol = "alumno";
+                    existente.Cuenta.IsDeleted = false;
+                }
             }
         }
 

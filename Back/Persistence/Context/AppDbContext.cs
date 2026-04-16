@@ -6,6 +6,7 @@ namespace Back.Api.Persistence.Context;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    public DbSet<Cuenta> Cuentas => Set<Cuenta>();
     public DbSet<Curso> Cursos => Set<Curso>();
     public DbSet<Estudiante> Estudiantes => Set<Estudiante>();
     public DbSet<Profesor> Profesores => Set<Profesor>();
@@ -19,6 +20,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        ConfigureSoftDelete<Cuenta>(modelBuilder);
         ConfigureSoftDelete<Curso>(modelBuilder);
         ConfigureSoftDelete<Estudiante>(modelBuilder);
         ConfigureSoftDelete<Profesor>(modelBuilder);
@@ -30,20 +32,28 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         ConfigureSoftDelete<Tarea>(modelBuilder);
         ConfigureSoftDelete<RefreshToken>(modelBuilder);
 
-        modelBuilder.Entity<Profesor>()
-            .HasIndex(p => p.Correo)
+        modelBuilder.Entity<Cuenta>()
+            .HasIndex(c => c.Correo)
             .IsUnique()
             .HasFilter("\"IsDeleted\" = FALSE");
 
         modelBuilder.Entity<Admin>()
-            .HasIndex(a => a.Correo)
-            .IsUnique()
-            .HasFilter("\"IsDeleted\" = FALSE");
+            .HasOne(a => a.Cuenta)
+            .WithOne(c => c.Admin)
+            .HasForeignKey<Admin>(a => a.CuentaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Profesor>()
+            .HasOne(p => p.Cuenta)
+            .WithOne(c => c.Profesor)
+            .HasForeignKey<Profesor>(p => p.CuentaId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Estudiante>()
-            .HasIndex(e => e.Correo)
-            .IsUnique()
-            .HasFilter("\"IsDeleted\" = FALSE");
+            .HasOne(e => e.Cuenta)
+            .WithOne(c => c.Estudiante)
+            .HasForeignKey<Estudiante>(e => e.CuentaId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Asignatura>()
             .HasOne(a => a.Curso)
@@ -84,6 +94,41 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<RefreshToken>()
             .HasIndex(x => new { x.UserId, x.Rol });
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasIndex(x => x.ExpiresAtUtc);
+
+        // Length constraints
+        modelBuilder.Entity<Curso>().Property(c => c.Nombre).HasMaxLength(100);
+
+        modelBuilder.Entity<Asignatura>().Property(a => a.Nombre).HasMaxLength(100);
+
+        modelBuilder.Entity<Cuenta>().Property(c => c.Correo).HasMaxLength(255);
+        modelBuilder.Entity<Cuenta>().Property(c => c.Rol).HasMaxLength(32);
+
+        modelBuilder.Entity<Profesor>().Property(p => p.Nombre).HasMaxLength(150);
+        modelBuilder.Entity<Profesor>().Property(p => p.Apellidos).HasMaxLength(150).IsRequired();
+        modelBuilder.Entity<Profesor>().Property(p => p.DNI).HasMaxLength(20).IsRequired();
+        modelBuilder.Entity<Profesor>().Property(p => p.Telefono).HasMaxLength(20).IsRequired();
+        modelBuilder.Entity<Profesor>().Property(p => p.Especialidad).HasMaxLength(100).IsRequired();
+
+        modelBuilder.Entity<Estudiante>().Property(e => e.Nombre).HasMaxLength(150);
+        modelBuilder.Entity<Estudiante>().Property(e => e.Apellidos).HasMaxLength(150).IsRequired();
+        modelBuilder.Entity<Estudiante>().Property(e => e.DNI).HasMaxLength(20).IsRequired();
+        modelBuilder.Entity<Estudiante>().Property(e => e.Telefono).HasMaxLength(20).IsRequired();
+
+        modelBuilder.Entity<Admin>().Property(a => a.Nombre).HasMaxLength(150);
+
+        // FK performance indexes
+        modelBuilder.Entity<Admin>().HasIndex(a => a.CuentaId).IsUnique();
+        modelBuilder.Entity<Profesor>().HasIndex(p => p.CuentaId).IsUnique();
+        modelBuilder.Entity<Estudiante>().HasIndex(e => e.CuentaId).IsUnique();
+
+        modelBuilder.Entity<Estudiante>()
+            .HasIndex(e => e.CursoId);
+
+        modelBuilder.Entity<Nota>()
+            .HasIndex(n => n.TareaId);
 
         base.OnModelCreating(modelBuilder);
     }

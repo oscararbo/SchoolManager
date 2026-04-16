@@ -22,7 +22,7 @@ public class AsignaturasService(IAsignaturasDomainRepository asignaturasDomain) 
     public async Task<ApplicationResult> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var asignatura = await asignaturasDomain.GetDetalleAsync(id, cancellationToken);
-        return asignatura is null ? ApplicationResult.NotFound() : ApplicationResult.Ok(asignatura);
+        return asignatura is null ? ApplicationResult.NotFound("La asignatura no existe.") : ApplicationResult.Ok(asignatura);
     }
 
     public async Task<ApplicationResult> CreateAsync(CreateAsignaturaRequestDto dto, CancellationToken cancellationToken = default)

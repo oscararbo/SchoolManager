@@ -29,7 +29,12 @@ public class AuthServiceTests
     {
         var repository = new FakeAuthRepository
         {
-            Admin = new Admin { Id = 10, Nombre = "Admin", Correo = "admin@prueba.com", Contrasena = "hashed" }
+            Admin = new Admin
+            {
+                Id = 10,
+                Nombre = "Admin",
+                Cuenta = new Cuenta { Correo = "admin@prueba.com", Contrasena = "hashed", Rol = Roles.Admin }
+            }
         };
         var passwordService = new FakePasswordService();
         var service = CreateService(repository, passwordService);
@@ -71,7 +76,7 @@ public class AuthServiceTests
         public Admin? Admin { get; init; }
 
         public Task<Admin?> FindAdminByCorreoAsync(string correo, CancellationToken cancellationToken = default)
-            => Task.FromResult(Admin?.Correo == correo ? Admin : null);
+            => Task.FromResult(Admin?.Cuenta?.Correo == correo ? Admin : null);
 
         public Task<Profesor?> FindProfesorByCorreoAsync(string correo, CancellationToken cancellationToken = default)
             => Task.FromResult<Profesor?>(null);

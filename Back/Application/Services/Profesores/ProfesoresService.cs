@@ -36,7 +36,7 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         if (await profesoresDomain.CorreoDuplicadoAsync(correo, cancellationToken))
             return ApplicationResult.BadRequest("Ya existe un profesor con ese correo.");
 
-        var result = await profesoresDomain.CreateAsync(dto.Nombre.Trim(), correo, passwordService.Hash(dto.Contrasena.Trim()), cancellationToken);
+        var result = await profesoresDomain.CreateAsync(dto.Nombre.Trim(), correo, passwordService.Hash(dto.Contrasena.Trim()), dto.Apellidos.Trim(), dto.DNI.Trim(), dto.Telefono.Trim(), dto.Especialidad.Trim(), cancellationToken);
         return ApplicationResult.Created($"/api/profesores/{result.Id}", result);
     }
 
@@ -225,7 +225,7 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
             ? null
             : passwordService.Hash(dto.NuevaContrasena.Trim());
 
-        var result = await profesoresDomain.UpdateAsync(id, dto.Nombre.Trim(), correo, hash, cancellationToken);
+        var result = await profesoresDomain.UpdateAsync(id, dto.Nombre.Trim(), correo, hash, dto.Apellidos.Trim(), dto.DNI.Trim(), dto.Telefono.Trim(), dto.Especialidad.Trim(), cancellationToken);
         return result is null
             ? ApplicationResult.NotFound("El profesor no existe.")
             : ApplicationResult.Ok(result);

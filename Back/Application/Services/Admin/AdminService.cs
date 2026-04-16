@@ -1,6 +1,7 @@
 using Back.Api.Application.Common;
 using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Application.Abstractions.Security;
+using Back.Api.Application.Configuration;
 using Back.Api.Application.Dtos;
 using System.Security.Claims;
 
@@ -53,7 +54,8 @@ public class AdminService(
 
     public async Task<ApplicationResult> CreateAsync(CreateAdminRequestDto dto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
-        _ = user;
+        if (!user.IsInRole(Roles.Admin))
+            return ApplicationResult.Forbidden("No tienes permisos para crear administradores.");
 
         var correo = dto.Correo.Trim().ToLowerInvariant();
         if (await adminDomain.CorreoDuplicadoAsync(correo, cancellationToken))

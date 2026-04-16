@@ -177,7 +177,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("Front");
-app.UseHttpsRedirection();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseHttpsRedirection();
+}
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapHealthChecks("/health");

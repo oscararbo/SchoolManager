@@ -24,10 +24,10 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
         => context.Tareas.AnyAsync(t => t.Id == tareaId && t.ProfesorId == profesorId);
 
     public Task<bool> CorreoDuplicadoAsync(string correo, CancellationToken cancellationToken = default)
-        => context.Profesores.AnyAsync(p => p.Correo == correo);
+        => context.Cuentas.AnyAsync(c => c.Correo == correo);
 
     public Task<bool> CorreoDuplicadoExceptAsync(string correo, int exceptId, CancellationToken cancellationToken = default)
-        => context.Profesores.AnyAsync(p => p.Correo == correo && p.Id != exceptId);
+        => context.Cuentas.AnyAsync(c => c.Correo == correo && (c.Profesor == null || c.Profesor.Id != exceptId));
 
     public Task<bool> CursoExisteAsync(int cursoId, CancellationToken cancellationToken = default)
         => context.Cursos.AnyAsync(c => c.Id == cursoId);
@@ -125,7 +125,11 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
             {
                 Id = p.Id,
                 Nombre = p.Nombre,
-                Correo = p.Correo,
+                Apellidos = p.Apellidos,
+                DNI = p.DNI,
+                Telefono = p.Telefono,
+                Especialidad = p.Especialidad,
+                Correo = p.Cuenta!.Correo,
                 Imparticiones = p.ProfesorAsignaturaCursos.Select(i => new ProfesorImparticionDto
                 {
                     AsignaturaId = i.AsignaturaId,
@@ -141,7 +145,7 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
         var profesor = await context.Profesores
             .AsNoTracking()
             .Where(p => p.Id == id)
-            .Select(p => new { p.Id, p.Nombre, p.Correo })
+            .Select(p => new { p.Id, p.Nombre, p.Apellidos, p.DNI, p.Telefono, p.Especialidad, Correo = p.Cuenta!.Correo })
             .FirstOrDefaultAsync();
 
         if (profesor is null) return null;
@@ -157,6 +161,10 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
         {
             Id = profesor.Id,
             Nombre = profesor.Nombre,
+            Apellidos = profesor.Apellidos,
+            DNI = profesor.DNI,
+            Telefono = profesor.Telefono,
+            Especialidad = profesor.Especialidad,
             Correo = profesor.Correo,
             Cursos = cursos
                 .GroupBy(i => new { i.CursoId, i.Curso })
@@ -607,37 +615,70 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
 
     #region Mutations
 
-    public async Task<ProfesorListItemDto> CreateAsync(string nombre, string correo, string hash, CancellationToken cancellationToken = default)
+    public async Task<ProfesorListItemDto> CreateAsync(string nombre, string correo, string hash, string apellidos, string dni, string telefono, string especialidad, CancellationToken cancellationToken = default)
     {
         var profesor = await context.Profesores
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(p => p.Correo == correo, cancellationToken);
+            .Include(p => p.Cuenta)
+            .FirstOrDefaultAsync(p => p.Cuenta != null && p.Cuenta.Correo == correo, cancellationToken);
 
         if (profesor is null)
         {
-            profesor = new Profesor { Nombre = nombre, Correo = correo, Contrasena = hash };
+            profesor = new Profesor
+            {
+                Nombre = nombre,
+                Apellidos = apellidos,
+                DNI = dni,
+                Telefono = telefono,
+                Especialidad = especialidad,
+                Cuenta = new Cuenta
+                {
+                    Correo = correo,
+                    Contrasena = hash,
+                    Rol = "profesor"
+                }
+            };
             context.Profesores.Add(profesor);
         }
         else
         {
             profesor.Nombre = nombre;
-            profesor.Correo = correo;
-            profesor.Contrasena = hash;
+            profesor.Apellidos = apellidos;
+            profesor.DNI = dni;
+            profesor.Telefono = telefono;
+            profesor.Especialidad = especialidad;
             profesor.IsDeleted = false;
+            if (profesor.Cuenta is not null)
+            {
+                profesor.Cuenta.Correo = correo;
+                profesor.Cuenta.Contrasena = hash;
+                profesor.Cuenta.Rol = "profesor";
+                profesor.Cuenta.IsDeleted = false;
+            }
         }
 
         await context.SaveChangesAsync(cancellationToken);
-        return new ProfesorListItemDto { Id = profesor.Id, Nombre = profesor.Nombre, Correo = profesor.Correo, Imparticiones = new() };
+        return new ProfesorListItemDto { Id = profesor.Id, Nombre = profesor.Nombre, Apellidos = profesor.Apellidos, DNI = profesor.DNI, Telefono = profesor.Telefono, Especialidad = profesor.Especialidad, Correo = profesor.Cuenta!.Correo, Imparticiones = new() };
     }
 
-    public async Task<ProfesorListItemDto?> UpdateAsync(int id, string nombre, string correo, string? hash, CancellationToken cancellationToken = default)
+    public async Task<ProfesorListItemDto?> UpdateAsync(int id, string nombre, string correo, string? hash, string apellidos, string dni, string telefono, string especialidad, CancellationToken cancellationToken = default)
     {
-        var profesor = await context.Profesores.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+        var profesor = await context.Profesores
+            .Include(p => p.Cuenta)
+            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
         if (profesor is null) return null;
 
         profesor.Nombre = nombre;
-        profesor.Correo = correo;
-        if (hash is not null) profesor.Contrasena = hash;
+        profesor.Apellidos = apellidos;
+        profesor.DNI = dni;
+        profesor.Telefono = telefono;
+        profesor.Especialidad = especialidad;
+        if (profesor.Cuenta is not null)
+        {
+            profesor.Cuenta.Correo = correo;
+            if (hash is not null) profesor.Cuenta.Contrasena = hash;
+        }
+
         await context.SaveChangesAsync(cancellationToken);
 
         var imparticiones = await context.ProfesorAsignaturaCursos
@@ -652,7 +693,7 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
             })
             .ToListAsync();
 
-        return new ProfesorListItemDto { Id = profesor.Id, Nombre = profesor.Nombre, Correo = profesor.Correo, Imparticiones = imparticiones };
+        return new ProfesorListItemDto { Id = profesor.Id, Nombre = profesor.Nombre, Apellidos = profesor.Apellidos, DNI = profesor.DNI, Telefono = profesor.Telefono, Especialidad = profesor.Especialidad, Correo = profesor.Cuenta!.Correo, Imparticiones = imparticiones };
     }
 
     public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
@@ -676,8 +717,16 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
             .ToListAsync(cancellationToken);
         foreach (var token in tokens) token.IsDeleted = true;
 
-        var profesor = await context.Profesores.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
-        if (profesor is not null) profesor.IsDeleted = true;
+        var profesor = await context.Profesores
+            .Include(p => p.Cuenta)
+            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+        if (profesor is not null)
+        {
+            profesor.IsDeleted = true;
+            if (profesor.Cuenta is not null)
+                profesor.Cuenta.IsDeleted = true;
+        }
+
         await context.SaveChangesAsync(cancellationToken);
     }
 

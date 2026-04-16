@@ -18,7 +18,7 @@ public class CursosServiceTests
 
         Assert.Equal(ApplicationResultType.Created, result.Type);
         Assert.Equal("1 ESO A", repository.LastCreatedName);
-        var payload = Assert.IsType<CursoSimpleDto>(result.Value);
+        var payload = Assert.IsType<CursoLookupDto>(result.Value);
         Assert.Equal("1 ESO A", payload.Nombre);
     }
 
@@ -56,8 +56,8 @@ public class CursosServiceTests
         public Task<bool> TieneAsignaturasAsync(int id, CancellationToken cancellationToken = default)
             => Task.FromResult(HasAsignaturas);
 
-        public Task<CursoSimpleDto?> GetSimpleAsync(int id, CancellationToken cancellationToken = default)
-            => Task.FromResult<CursoSimpleDto?>(null);
+        public Task<CursoLookupDto?> GetSimpleAsync(int id, CancellationToken cancellationToken = default)
+            => Task.FromResult<CursoLookupDto?>(null);
 
         public Task<IEnumerable<CursoResumenDto>> GetAllResumenAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IEnumerable<CursoResumenDto>>(Array.Empty<CursoResumenDto>());
@@ -65,14 +65,14 @@ public class CursosServiceTests
         public Task<CursoDetalleDto?> GetDetalleAsync(int id, CancellationToken cancellationToken = default)
             => Task.FromResult<CursoDetalleDto?>(null);
 
-        public Task<CursoSimpleDto> CreateAsync(string nombre, CancellationToken cancellationToken = default)
+        public Task<CursoLookupDto> CreateAsync(string nombre, CancellationToken cancellationToken = default)
         {
             LastCreatedName = nombre;
-            return Task.FromResult(new CursoSimpleDto { Id = 1, Nombre = nombre });
+            return Task.FromResult(new CursoLookupDto { Id = 1, Nombre = nombre });
         }
 
-        public Task<CursoSimpleDto?> UpdateAsync(int id, string nombre, CancellationToken cancellationToken = default)
-            => Task.FromResult<CursoSimpleDto?>(null);
+        public Task<CursoLookupDto?> UpdateAsync(int id, string nombre, CancellationToken cancellationToken = default)
+            => Task.FromResult<CursoLookupDto?>(null);
 
         public Task DeleteAsync(int id, CancellationToken cancellationToken = default)
         {

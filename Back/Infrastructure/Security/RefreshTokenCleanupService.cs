@@ -26,19 +26,28 @@ public sealed class RefreshTokenCleanupService(IServiceScopeFactory scopeFactory
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var nowUtc = DateTime.UtcNow;
 
-            var expiredTokens = await context.RefreshTokens
-                .Where(t => t.ExpiresAtUtc <= nowUtc)
-                .ToListAsync(cancellationToken);
+            var query = context.RefreshTokens
+                .IgnoreQueryFilters()
+                .Where(t => t.ExpiresAtUtc <= nowUtc);
 
-            if (expiredTokens.Count == 0)
-                return;
+            int deleted;
+            try
+            {
+                deleted = await query.ExecuteDeleteAsync(cancellationToken);
+            }
+            catch (InvalidOperationException)
+            {
+                // Some providers (e.g. InMemory in tests) do not support ExecuteDelete.
+                var expiredTokens = await query.ToListAsync(cancellationToken);
+                if (expiredTokens.Count == 0)
+                    return;
 
-            foreach (var expiredToken in expiredTokens)
-                expiredToken.IsDeleted = true;
+                context.RefreshTokens.RemoveRange(expiredTokens);
+                deleted = await context.SaveChangesAsync(cancellationToken);
+            }
 
-            await context.SaveChangesAsync(cancellationToken);
-
-            logger.LogInformation("Se eliminaron {Count} refresh tokens expirados.", expiredTokens.Count);
+            if (deleted > 0)
+                logger.LogInformation("Se eliminaron {Count} refresh tokens expirados.", deleted);
         }
         catch (OperationCanceledException)
         {

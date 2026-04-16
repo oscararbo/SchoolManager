@@ -285,7 +285,7 @@ public class AdminServiceTests
     private sealed class FakeCursosRepository : ICursosDomainRepository
     {
         public List<CursoResumenDto> Cursos { get; init; } = [];
-        public Dictionary<int, CursoSimpleDto> CursoById { get; init; } = new();
+        public Dictionary<int, CursoLookupDto> CursoById { get; init; } = new();
 
         public Task<bool> ExisteAsync(int id, CancellationToken cancellationToken = default)
             => Task.FromResult(CursoById.ContainsKey(id));
@@ -296,7 +296,7 @@ public class AdminServiceTests
         public Task<bool> TieneAsignaturasAsync(int id, CancellationToken cancellationToken = default)
             => Task.FromResult(false);
 
-        public Task<CursoSimpleDto?> GetSimpleAsync(int id, CancellationToken cancellationToken = default)
+        public Task<CursoLookupDto?> GetSimpleAsync(int id, CancellationToken cancellationToken = default)
             => Task.FromResult(CursoById.GetValueOrDefault(id));
 
         public Task<IEnumerable<CursoResumenDto>> GetAllResumenAsync(CancellationToken cancellationToken = default)
@@ -305,11 +305,11 @@ public class AdminServiceTests
         public Task<CursoDetalleDto?> GetDetalleAsync(int id, CancellationToken cancellationToken = default)
             => Task.FromResult<CursoDetalleDto?>(null);
 
-        public Task<CursoSimpleDto> CreateAsync(string nombre, CancellationToken cancellationToken = default)
-            => Task.FromResult(new CursoSimpleDto { Id = 1, Nombre = nombre });
+        public Task<CursoLookupDto> CreateAsync(string nombre, CancellationToken cancellationToken = default)
+            => Task.FromResult(new CursoLookupDto { Id = 1, Nombre = nombre });
 
-        public Task<CursoSimpleDto?> UpdateAsync(int id, string nombre, CancellationToken cancellationToken = default)
-            => Task.FromResult<CursoSimpleDto?>(null);
+        public Task<CursoLookupDto?> UpdateAsync(int id, string nombre, CancellationToken cancellationToken = default)
+            => Task.FromResult<CursoLookupDto?>(null);
 
         public Task DeleteAsync(int id, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
@@ -373,7 +373,7 @@ public class AdminServiceTests
         public Task<(int Id, int AsignaturaId, int ProfesorId)?> GetTareaInfoAsync(int tareaId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<int?> GetEstudianteCursoAsync(int estudianteId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<TareaResumenDto?> GetTareaResumenAsync(int tareaId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<IEnumerable<ProfesorSimpleDto>> GetSimpleAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<IEnumerable<ProfesorLookupDto>> GetSimpleAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<IEnumerable<ProfesorListItemDto>> GetAllAsync(CancellationToken cancellationToken = default) => Task.FromResult<IEnumerable<ProfesorListItemDto>>(Profesores);
         public Task<ProfesorDetalleDto?> GetDetalleAsync(int id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<ProfesorPanelDto?> GetPanelAsync(int id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
@@ -387,8 +387,8 @@ public class AdminServiceTests
         public Task<AsignaturaAlumnosResponseDto?> GetAlumnosCompletoAsync(int asignaturaId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<IEnumerable<TareaConNotasDto>> GetTareasConNotasAsync(int asignaturaId, CancellationToken cancellationToken = default) => Task.FromResult<IEnumerable<TareaConNotasDto>>([]);
         public Task<ProfesorStatsDto?> GetStatsAsync(int profesorId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<ProfesorListItemDto> CreateAsync(string nombre, string correo, string hash, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<ProfesorListItemDto?> UpdateAsync(int id, string nombre, string correo, string? hash, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<ProfesorListItemDto> CreateAsync(string nombre, string correo, string hash, string apellidos, string dni, string telefono, string especialidad, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<ProfesorListItemDto?> UpdateAsync(int id, string nombre, string correo, string? hash, string apellidos, string dni, string telefono, string especialidad, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task DeleteAsync(int id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task AsignarImparticionAsync(int profesorId, int asignaturaId, int cursoId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task EliminarImparticionAsync(int profesorId, int asignaturaId, int cursoId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
@@ -408,16 +408,16 @@ public class AdminServiceTests
         public Task<bool> YaMatriculadoAsync(int estudianteId, int asignaturaId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<bool> AsignaturaEsDelCursoAsync(int asignaturaId, int cursoId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<string?> GetCursoNombreAsync(int cursoId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<IEnumerable<EstudianteSimpleDto>> GetSimpleAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<IEnumerable<EstudianteLookupDto>> GetSimpleAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<IEnumerable<EstudianteListItemDto>> GetAllAsync(CancellationToken cancellationToken = default) => Task.FromResult<IEnumerable<EstudianteListItemDto>>(Estudiantes);
         public Task<EstudianteDetalleDto?> GetDetalleAsync(int id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<AlumnoPanelDto?> GetPanelAlumnoAsync(int id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<AlumnoPanelResumenDto?> GetPanelResumenAsync(int id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<AlumnoMateriaDetalleDto?> GetMateriaDetalleAsync(int estudianteId, int asignaturaId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<EstudianteListItemDto> CreateAsync(string nombre, string correo, int cursoId, string hash, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<EstudianteListItemDto> CreateAsync(string nombre, string correo, int cursoId, string hash, string apellidos, string dni, string telefono, DateOnly fechaNacimiento, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task MatricularAsync(int estudianteId, int asignaturaId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task DesmatricularAsync(int estudianteId, int asignaturaId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<EstudianteListItemDto?> UpdateAsync(int id, string nombre, string correo, int cursoId, string? hash, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<EstudianteListItemDto?> UpdateAsync(int id, string nombre, string correo, int cursoId, string? hash, string apellidos, string dni, string telefono, DateOnly fechaNacimiento, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task DeleteAsync(int id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 }

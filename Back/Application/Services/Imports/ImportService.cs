@@ -3,11 +3,14 @@ using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Dtos;
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace Back.Api.Application.Services;
 
 public class ImportService(IImportDomainRepository importRepository, IPasswordService passwordService) : IImportService
 {
+    private static readonly Regex DniRegex = new(@"^\d{8}[TRWAGMYFPDXBNJZSQVHLCKE]$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex TelefonoRegex = new(@"^[6-9]\d{8}$", RegexOptions.Compiled);
     private sealed record CsvRow(int LineNumber, string[] Columns);
 
     public async Task<ApplicationResult> ImportarCursosAsync(string csvText, CancellationToken cancellationToken = default)
@@ -112,7 +115,7 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
 
     public async Task<ApplicationResult> ImportarProfesoresAsync(string csvText, CancellationToken cancellationToken = default)
     {
-        var creados = new List<(string Nombre, string Correo, string ContrasenaHash)>();
+        var creados = new List<(string Nombre, string Correo, string ContrasenaHash, string Apellidos, string DNI, string Telefono, string Especialidad)>();
         var errores = new List<string>();
         var correos = (await importRepository.GetProfesoresAsync(cancellationToken))
             .Select(p => p.Correo)
@@ -120,19 +123,35 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
 
         foreach (var row in ParseCsv(csvText))
         {
-            if (row.Columns.Length < 3)
+            if (row.Columns.Length < 7)
             {
-                errores.Add($"Linea {row.LineNumber}: se esperaban al menos nombre,correo,contrasena.");
+                errores.Add($"Linea {row.LineNumber}: se esperaban las columnas nombre,apellidos,dni,telefono,especialidad,correo,contrasena.");
                 continue;
             }
 
             var nombre = row.Columns[0].Trim();
-            var correo = row.Columns[1].Trim().ToLowerInvariant();
-            var contrasena = row.Columns[2].Trim();
+            var apellidos = row.Columns[1].Trim();
+            var dni = row.Columns[2].Trim();
+            var telefono = row.Columns[3].Trim();
+            var especialidad = row.Columns[4].Trim();
+            var correo = row.Columns[5].Trim().ToLowerInvariant();
+            var contrasena = row.Columns[6].Trim();
 
             if (string.IsNullOrWhiteSpace(correo) || string.IsNullOrWhiteSpace(contrasena))
             {
                 errores.Add($"Linea {row.LineNumber}: datos incompletos para '{nombre}'.");
+                continue;
+            }
+
+            if (!DniRegex.IsMatch(dni))
+            {
+                errores.Add($"Linea {row.LineNumber}: DNI '{dni}' con formato invalido (debe ser 8 digitos + letra valida).");
+                continue;
+            }
+
+            if (!TelefonoRegex.IsMatch(telefono))
+            {
+                errores.Add($"Linea {row.LineNumber}: telefono '{telefono}' con formato invalido (debe ser 9 digitos empezando por 6-9).");
                 continue;
             }
 
@@ -142,7 +161,7 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
                 continue;
             }
 
-            creados.Add((nombre, correo, passwordService.Hash(contrasena)));
+            creados.Add((nombre, correo, passwordService.Hash(contrasena), apellidos, dni, telefono, especialidad));
         }
 
         if (creados.Count > 0)
@@ -159,7 +178,7 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
 
     public async Task<ApplicationResult> ImportarEstudiantesAsync(string csvText, CancellationToken cancellationToken = default)
     {
-        var creados = new List<(string Nombre, string Correo, string ContrasenaHash, int CursoId)>();
+        var creados = new List<(string Nombre, string Correo, string ContrasenaHash, int CursoId, string Apellidos, string DNI, string Telefono, DateOnly FechaNacimiento)>();
         var errores = new List<string>();
         var cursos = (await importRepository.GetCursosAsync(cancellationToken))
             .ToDictionary(c => c.Nombre, c => c, StringComparer.OrdinalIgnoreCase);
@@ -169,20 +188,42 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
 
         foreach (var row in ParseCsv(csvText))
         {
-            if (row.Columns.Length < 4)
+            if (row.Columns.Length < 8)
             {
-                errores.Add($"Linea {row.LineNumber}: se esperaban las columnas nombre,correo,contrasena,cursoNombre.");
+                errores.Add($"Linea {row.LineNumber}: se esperaban las columnas nombre,apellidos,dni,telefono,fechaNacimiento,correo,contrasena,cursoNombre.");
                 continue;
             }
 
             var nombre = row.Columns[0].Trim();
-            var correo = row.Columns[1].Trim().ToLowerInvariant();
-            var contrasena = row.Columns[2].Trim();
-            var cursoNombre = row.Columns[3].Trim();
+            var apellidos = row.Columns[1].Trim();
+            var dni = row.Columns[2].Trim();
+            var telefono = row.Columns[3].Trim();
+            var fechaNacimientoStr = row.Columns[4].Trim();
+            var correo = row.Columns[5].Trim().ToLowerInvariant();
+            var contrasena = row.Columns[6].Trim();
+            var cursoNombre = row.Columns[7].Trim();
+
+            if (!DateOnly.TryParse(fechaNacimientoStr, out var fechaNacimiento))
+            {
+                errores.Add($"Linea {row.LineNumber}: fecha de nacimiento invalida '{fechaNacimientoStr}'.");
+                continue;
+            }
 
             if (string.IsNullOrWhiteSpace(correo) || string.IsNullOrWhiteSpace(contrasena))
             {
                 errores.Add($"Linea {row.LineNumber}: datos incompletos para '{nombre}'.");
+                continue;
+            }
+
+            if (!DniRegex.IsMatch(dni))
+            {
+                errores.Add($"Linea {row.LineNumber}: DNI '{dni}' con formato invalido (debe ser 8 digitos + letra valida).");
+                continue;
+            }
+
+            if (!TelefonoRegex.IsMatch(telefono))
+            {
+                errores.Add($"Linea {row.LineNumber}: telefono '{telefono}' con formato invalido (debe ser 9 digitos empezando por 6-9).");
                 continue;
             }
 
@@ -198,7 +239,7 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
                 continue;
             }
 
-            creados.Add((nombre, correo, passwordService.Hash(contrasena), curso.Id));
+            creados.Add((nombre, correo, passwordService.Hash(contrasena), curso.Id, apellidos, dni, telefono, fechaNacimiento));
         }
 
         if (errores.Count > 0)

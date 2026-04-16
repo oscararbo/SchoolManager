@@ -21,7 +21,7 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
     public async Task<IEnumerable<AdminListItemDto>> GetAllAsync(CancellationToken cancellationToken = default)
         => await context.Admins
             .AsNoTracking()
-            .Select(a => new AdminListItemDto { Id = a.Id, Nombre = a.Nombre, Correo = a.Correo })
+            .Select(a => new AdminListItemDto { Id = a.Id, Nombre = a.Nombre, Correo = a.Cuenta!.Correo })
             .ToListAsync(cancellationToken);
 
     public async Task<AdminStatsDto> GetStatsAsync(CancellationToken cancellationToken = default)
@@ -39,16 +39,33 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
                 """)
             .SingleAsync(cancellationToken);
 
-        var porCurso = await context.Cursos
+        var estudiantesPorCurso = await context.Estudiantes
+            .AsNoTracking()
+            .GroupBy(e => e.CursoId)
+            .Select(g => new { CursoId = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        var asignaturasPorCurso = await context.Asignaturas
+            .AsNoTracking()
+            .GroupBy(a => a.CursoId)
+            .Select(g => new { CursoId = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        var estudiantesMap = estudiantesPorCurso.ToDictionary(x => x.CursoId, x => x.Count);
+        var asignaturasMap = asignaturasPorCurso.ToDictionary(x => x.CursoId, x => x.Count);
+
+        var cursos = await context.Cursos
             .AsNoTracking()
             .OrderBy(c => c.Nombre)
-            .Select(c => new CursoStatsItemDto
-            {
-                Curso = c.Nombre,
-                Estudiantes = context.Estudiantes.Count(e => e.CursoId == c.Id),
-                Asignaturas = context.Asignaturas.Count(a => a.CursoId == c.Id)
-            })
+            .Select(c => new { c.Id, c.Nombre })
             .ToListAsync(cancellationToken);
+
+        var porCurso = cursos.Select(c => new CursoStatsItemDto
+        {
+            Curso = c.Nombre,
+            Estudiantes = estudiantesMap.GetValueOrDefault(c.Id),
+            Asignaturas = asignaturasMap.GetValueOrDefault(c.Id)
+        }).ToList();
 
         return new AdminStatsDto
         {
@@ -63,17 +80,36 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
     }
 
     public async Task<IEnumerable<CursoStatsSelectorDto>> GetCursosStatsSelectorAsync(CancellationToken cancellationToken = default)
-        => await context.Cursos
+    {
+        var estudiantesPorCurso = await context.Estudiantes
+            .AsNoTracking()
+            .GroupBy(e => e.CursoId)
+            .Select(g => new { CursoId = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        var asignaturasPorCurso = await context.Asignaturas
+            .AsNoTracking()
+            .GroupBy(a => a.CursoId)
+            .Select(g => new { CursoId = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        var estudiantesMap = estudiantesPorCurso.ToDictionary(x => x.CursoId, x => x.Count);
+        var asignaturasMap = asignaturasPorCurso.ToDictionary(x => x.CursoId, x => x.Count);
+
+        var cursos = await context.Cursos
             .AsNoTracking()
             .OrderBy(c => c.Nombre)
-            .Select(c => new CursoStatsSelectorDto
-            {
-                CursoId = c.Id,
-                Curso = c.Nombre,
-                TotalEstudiantes = context.Estudiantes.Count(e => e.CursoId == c.Id),
-                TotalAsignaturas = context.Asignaturas.Count(a => a.CursoId == c.Id)
-            })
+            .Select(c => new { c.Id, c.Nombre })
             .ToListAsync(cancellationToken);
+
+        return cursos.Select(c => new CursoStatsSelectorDto
+        {
+            CursoId = c.Id,
+            Curso = c.Nombre,
+            TotalEstudiantes = estudiantesMap.GetValueOrDefault(c.Id),
+            TotalAsignaturas = asignaturasMap.GetValueOrDefault(c.Id)
+        }).ToList();
+    }
 
     public Task<CursoNotasStatsResponseDto?> GetStatsByCursoAsync(int cursoId, CancellationToken cancellationToken = default)
         => BuildCursoStatsAsync(cursoId, cancellationToken);
@@ -101,19 +137,31 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
     }
 
     public Task<bool> CorreoDuplicadoAsync(string correo, CancellationToken cancellationToken = default)
-        => context.Admins.AnyAsync(a => a.Correo == correo, cancellationToken);
+        => context.Cuentas.AnyAsync(c => c.Correo == correo, cancellationToken);
 
     public async Task<AdminListItemDto> CreateAsync(string nombre, string correo, string hash, CancellationToken cancellationToken = default)
     {
-        var admin = new Admin { Nombre = nombre, Correo = correo, Contrasena = hash };
+        var admin = new Admin
+        {
+            Nombre = nombre,
+            Cuenta = new Cuenta
+            {
+                Correo = correo,
+                Contrasena = hash,
+                Rol = "admin"
+            }
+        };
         context.Admins.Add(admin);
         await context.SaveChangesAsync(cancellationToken);
-        return new AdminListItemDto { Id = admin.Id, Nombre = admin.Nombre, Correo = admin.Correo };
+        return new AdminListItemDto { Id = admin.Id, Nombre = admin.Nombre, Correo = admin.Cuenta!.Correo };
     }
 
     public async Task<IEnumerable<AdminMatriculaListReadModelDto>> GetMatriculasAsync(CancellationToken cancellationToken = default)
         => await context.Estudiantes
             .AsNoTracking()
+            .Include(e => e.EstudianteAsignaturas)
+                .ThenInclude(ea => ea.Asignatura)
+            .Include(e => e.Curso)
             .OrderBy(e => e.Nombre)
             .Select(e => new AdminMatriculaListReadModelDto
             {
@@ -121,16 +169,13 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
                 Estudiante = e.Nombre,
                 CursoId = e.CursoId,
                 Curso = e.Curso != null ? e.Curso.Nombre : null,
-                Asignaturas = context.EstudianteAsignaturas
-                    .Where(ea => ea.EstudianteId == e.Id)
-                    .Join(context.Asignaturas,
-                        ea => ea.AsignaturaId,
-                        a => a.Id,
-                        (_, a) => new AdminMatriculaAsignaturaReadModelDto
-                        {
-                            AsignaturaId = a.Id,
-                            Asignatura = a.Nombre
-                        })
+                Asignaturas = e.EstudianteAsignaturas
+                    .Where(ea => !ea.IsDeleted)
+                    .Select(ea => new AdminMatriculaAsignaturaReadModelDto
+                    {
+                        AsignaturaId = ea.AsignaturaId,
+                        Asignatura = ea.Asignatura != null ? ea.Asignatura.Nombre : string.Empty
+                    })
                     .OrderBy(a => a.Asignatura)
                     .ToList()
             })

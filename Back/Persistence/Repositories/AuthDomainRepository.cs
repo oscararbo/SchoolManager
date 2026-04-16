@@ -9,13 +9,20 @@ namespace Back.Api.Persistence.Repositories;
 public class AuthDomainRepository(AppDbContext context) : IAuthDomainRepository
 {
     public Task<Admin?> FindAdminByCorreoAsync(string correo, CancellationToken cancellationToken = default)
-        => context.Admins.FirstOrDefaultAsync(a => a.Correo == correo, cancellationToken);
+        => context.Admins
+            .Include(a => a.Cuenta)
+            .FirstOrDefaultAsync(a => a.Cuenta != null && a.Cuenta.Correo == correo, cancellationToken);
 
     public Task<Profesor?> FindProfesorByCorreoAsync(string correo, CancellationToken cancellationToken = default)
-        => context.Profesores.FirstOrDefaultAsync(p => p.Correo == correo, cancellationToken);
+        => context.Profesores
+            .Include(p => p.Cuenta)
+            .FirstOrDefaultAsync(p => p.Cuenta != null && p.Cuenta.Correo == correo, cancellationToken);
 
     public Task<Estudiante?> FindEstudianteByCorreoAsync(string correo, CancellationToken cancellationToken = default)
-        => context.Estudiantes.Include(e => e.Curso).FirstOrDefaultAsync(e => e.Correo == correo, cancellationToken);
+        => context.Estudiantes
+            .Include(e => e.Curso)
+            .Include(e => e.Cuenta)
+            .FirstOrDefaultAsync(e => e.Cuenta != null && e.Cuenta.Correo == correo, cancellationToken);
 
     public Task<RefreshToken?> FindRefreshTokenAsync(string token, CancellationToken cancellationToken = default)
         => context.RefreshTokens.FirstOrDefaultAsync(t => t.Token == token, cancellationToken);
@@ -49,19 +56,19 @@ public class AuthDomainRepository(AppDbContext context) : IAuthDomainRepository
         if (rol == Roles.Admin)
             return await context.Admins
                 .Where(a => a.Id == userId)
-                .Select(a => (string?)a.Correo)
+                .Select(a => (string?)a.Cuenta!.Correo)
                 .FirstOrDefaultAsync(cancellationToken);
 
         if (rol == Roles.Profesor)
             return await context.Profesores
                 .Where(p => p.Id == userId)
-                .Select(p => (string?)p.Correo)
+                .Select(p => (string?)p.Cuenta!.Correo)
                 .FirstOrDefaultAsync(cancellationToken);
 
         if (rol == Roles.Alumno)
             return await context.Estudiantes
                 .Where(e => e.Id == userId)
-                .Select(e => (string?)e.Correo)
+                .Select(e => (string?)e.Cuenta!.Correo)
                 .FirstOrDefaultAsync(cancellationToken);
 
         return null;

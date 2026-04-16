@@ -5,7 +5,7 @@ import {
     SchoolApiService,
     CursoItem, AsignaturaItem, ProfesorListItem, EstudianteItem,
     UpdateProfesorData, UpdateEstudianteData, CsvImportResult, CsvImportEntity, CsvImportError,
-    AdminMatriculaListItem, AdminImparticionListItem
+    AdminMatriculaListItem, AdminImparticionListItem, TareaConNotas
 } from '../../../../../shared/services/school-api.service';
 import { ToastService } from '../../../../../core/services/toast.service';
 import { ConfirmDialogComponent } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
@@ -139,8 +139,8 @@ export class AdminManagementViewComponent implements OnInit {
 
     // Task Management
     mostrarModalTareas = signal(false);
-    tareasConNotas = signal<any[]>([]);
-    tareaEnDetalle = signal<any | null>(null);
+    tareasConNotas = signal<TareaConNotas[]>([]);
+    tareaEnDetalle = signal<TareaConNotas | null>(null);
     cargandoTareas = signal(false);
 
     // CSV Import
@@ -1192,7 +1192,7 @@ export class AdminManagementViewComponent implements OnInit {
         }
     }
 
-    seleccionarTarea(tarea: any): void {
+    seleccionarTarea(tarea: TareaConNotas): void {
         this.tareaEnDetalle.set(tarea);
     }
 

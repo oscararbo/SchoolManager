@@ -95,6 +95,22 @@ public class WebAppFactory : WebApplicationFactory<Program>
         return client;
     }
 
+    /// <summary>Returns a client that presents itself as an authenticated profesor.</summary>
+    public HttpClient CreateProfesorClient()
+    {
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-Role", "profesor");
+        return client;
+    }
+
+    /// <summary>Returns a client that presents itself as an authenticated alumno.</summary>
+    public HttpClient CreateAlumnoClient()
+    {
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-Role", "alumno");
+        return client;
+    }
+
     /// <summary>Returns a client with no authentication credentials.</summary>
     public HttpClient CreateAnonymousClient() => CreateClient();
 

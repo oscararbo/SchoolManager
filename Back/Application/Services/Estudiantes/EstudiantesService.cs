@@ -18,7 +18,7 @@ public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, 
     public async Task<ApplicationResult> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var estudiante = await estudiantesDomain.GetDetalleAsync(id, cancellationToken);
-        return estudiante is null ? ApplicationResult.NotFound() : ApplicationResult.Ok(estudiante);
+        return estudiante is null ? ApplicationResult.NotFound("El estudiante no existe.") : ApplicationResult.Ok(estudiante);
     }
 
     public async Task<ApplicationResult> CreateAsync(CreateEstudianteRequestDto dto, CancellationToken cancellationToken = default)
@@ -38,7 +38,7 @@ public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, 
         if (!await estudiantesDomain.CursoExisteAsync(dto.CursoId, cancellationToken))
             return ApplicationResult.BadRequest("El curso indicado no existe.");
 
-        var result = await estudiantesDomain.CreateAsync(dto.Nombre.Trim(), correo, dto.CursoId, passwordService.Hash(dto.Contrasena.Trim()), cancellationToken);
+        var result = await estudiantesDomain.CreateAsync(dto.Nombre.Trim(), correo, dto.CursoId, passwordService.Hash(dto.Contrasena.Trim()), dto.Apellidos.Trim(), dto.DNI.Trim(), dto.Telefono.Trim(), dto.FechaNacimiento, cancellationToken);
         return ApplicationResult.Created($"/api/estudiantes/{result.Id}", result);
     }
 
@@ -130,7 +130,7 @@ public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, 
             ? null
             : passwordService.Hash(dto.NuevaContrasena.Trim());
 
-        var result = await estudiantesDomain.UpdateAsync(id, dto.Nombre.Trim(), correo, dto.CursoId, hash, cancellationToken);
+        var result = await estudiantesDomain.UpdateAsync(id, dto.Nombre.Trim(), correo, dto.CursoId, hash, dto.Apellidos.Trim(), dto.DNI.Trim(), dto.Telefono.Trim(), dto.FechaNacimiento, cancellationToken);
         return result is null
             ? ApplicationResult.NotFound("El estudiante no existe.")
             : ApplicationResult.Ok(result);

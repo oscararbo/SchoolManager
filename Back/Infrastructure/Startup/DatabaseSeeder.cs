@@ -1,4 +1,6 @@
 using Back.Api.Application.Abstractions.Security;
+using Back.Api.Application.Configuration;
+using Back.Api.Domain.Entities;
 using Back.Api.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -43,21 +45,32 @@ public sealed class DatabaseSeeder
                 await db.Database.EnsureCreatedAsync(cancellationToken);
             }
 
-            var adminExistente = await db.Admins.FirstOrDefaultAsync(a => a.Correo == seedAdminEmail, cancellationToken);
+            var adminExistente = await db.Admins
+                .Include(a => a.Cuenta)
+                .FirstOrDefaultAsync(a => a.Cuenta != null && a.Cuenta.Correo == seedAdminEmail, cancellationToken);
+
             if (adminExistente is null)
             {
                 db.Admins.Add(new()
                 {
                     Nombre = seedAdminName,
-                    Correo = seedAdminEmail,
-                    Contrasena = passwordService.Hash(seedAdminPassword)
+                    Cuenta = new Cuenta
+                    {
+                        Correo = seedAdminEmail,
+                        Contrasena = passwordService.Hash(seedAdminPassword),
+                        Rol = Roles.Admin
+                    }
                 });
             }
             else
             {
                 adminExistente.Nombre = seedAdminName;
-                adminExistente.Correo = seedAdminEmail;
-                adminExistente.Contrasena = passwordService.Hash(seedAdminPassword);
+                if (adminExistente.Cuenta is not null)
+                {
+                    adminExistente.Cuenta.Correo = seedAdminEmail;
+                    adminExistente.Cuenta.Contrasena = passwordService.Hash(seedAdminPassword);
+                    adminExistente.Cuenta.Rol = Roles.Admin;
+                }
             }
 
             await db.SaveChangesAsync(cancellationToken);

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, Input, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
     SchoolApiService,
@@ -49,6 +49,14 @@ export class ProfesorHomeComponent implements OnInit {
 
     private api = inject(SchoolApiService);
     private toast = inject(ToastService);
+    private destroyRef = inject(DestroyRef);
+    private isDestroyed = false;
+
+    constructor() {
+        this.destroyRef.onDestroy(() => {
+            this.isDestroyed = true;
+        });
+    }
 
     async ngOnInit(): Promise<void> {
         await this.cargarPanel();
@@ -62,12 +70,19 @@ export class ProfesorHomeComponent implements OnInit {
                 this.api.getPanelProfesor(this.profesorId),
                 this.api.getProfesorStats(this.profesorId)
             ]);
+            if (this.isDestroyed) {
+                return;
+            }
             this.panel.set(panel);
             this.stats.set(stats);
         } catch (e) {
-            this.error.set((e as Error).message);
+            if (!this.isDestroyed) {
+                this.error.set((e as Error).message);
+            }
         } finally {
-            this.cargando.set(false);
+            if (!this.isDestroyed) {
+                this.cargando.set(false);
+            }
         }
     }
 
@@ -84,9 +99,14 @@ export class ProfesorHomeComponent implements OnInit {
 
         try {
             const data = await this.api.getAlumnosResumenDeAsignatura(this.profesorId, asignaturaId);
+            if (this.isDestroyed) {
+                return;
+            }
             this.detalleAsignatura.set(data);
         } catch (e) {
-            this.error.set((e as Error).message);
+            if (!this.isDestroyed) {
+                this.error.set((e as Error).message);
+            }
         }
     }
 
@@ -101,6 +121,9 @@ export class ProfesorHomeComponent implements OnInit {
 
         try {
             const result = await this.api.getCalificacionesDeTarea(this.profesorId, asignaturaId, tarea.tareaId);
+            if (this.isDestroyed) {
+                return;
+            }
             const inputs: Record<number, number | null> = {};
             const actuales: Record<number, number | null> = {};
 
@@ -112,7 +135,9 @@ export class ProfesorHomeComponent implements OnInit {
             this.notaInputs.set(inputs);
             this.calificacionesActuales.set(actuales);
         } catch (e) {
-            this.error.set((e as Error).message);
+            if (!this.isDestroyed) {
+                this.error.set((e as Error).message);
+            }
         }
     }
 
@@ -171,9 +196,13 @@ export class ProfesorHomeComponent implements OnInit {
             }
             await this.recargarStatsSilencioso();
         } catch (e) {
-            this.error.set((e as Error).message);
+            if (!this.isDestroyed) {
+                this.error.set((e as Error).message);
+            }
         } finally {
-            this.guardandoNota.set(false);
+            if (!this.isDestroyed) {
+                this.guardandoNota.set(false);
+            }
         }
     }
 
@@ -220,9 +249,13 @@ export class ProfesorHomeComponent implements OnInit {
             await this.recargarStatsSilencioso();
             this.toast.show(`Tarea "${nombre}" creada.`, 'success');
         } catch (e) {
-            this.error.set((e as Error).message);
+            if (!this.isDestroyed) {
+                this.error.set((e as Error).message);
+            }
         } finally {
-            this.creandoTarea.set(false);
+            if (!this.isDestroyed) {
+                this.creandoTarea.set(false);
+            }
         }
     }
 
@@ -341,12 +374,19 @@ export class ProfesorHomeComponent implements OnInit {
         this.alumnoDetallesLoading.update(m => ({ ...m, [estudianteId]: true }));
         try {
             const detalle = await this.api.getAlumnoDetalleDeAsignatura(this.profesorId, asignaturaId, estudianteId);
+            if (this.isDestroyed) {
+                return;
+            }
             this.alumnoDetalles.update(m => ({ ...m, [estudianteId]: detalle }));
             this.actualizarResumenDesdeDetalle(detalle);
         } catch (e) {
-            this.error.set((e as Error).message);
+            if (!this.isDestroyed) {
+                this.error.set((e as Error).message);
+            }
         } finally {
-            this.alumnoDetallesLoading.update(m => ({ ...m, [estudianteId]: false }));
+            if (!this.isDestroyed) {
+                this.alumnoDetallesLoading.update(m => ({ ...m, [estudianteId]: false }));
+            }
         }
     }
 
@@ -369,7 +409,10 @@ export class ProfesorHomeComponent implements OnInit {
 
     private async recargarStatsSilencioso(): Promise<void> {
         try {
-            this.stats.set(await this.api.getProfesorStats(this.profesorId));
+            const stats = await this.api.getProfesorStats(this.profesorId);
+            if (!this.isDestroyed) {
+                this.stats.set(stats);
+            }
         } catch {
             // Si falla esta recarga no debe bloquear la operacion principal.
         }

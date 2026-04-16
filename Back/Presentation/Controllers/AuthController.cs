@@ -13,7 +13,7 @@ namespace Back.Api.Presentation.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/[controller]")]
-public class AuthController(IAuthService authService, IOptions<JwtOptions> jwtOptions) : ControllerBase
+public class AuthController(IAuthService authService, IOptions<JwtOptions> jwtOptions, IWebHostEnvironment env) : ControllerBase
 {
     private const string RefreshTokenCookie = "refresh_token";
 
@@ -69,8 +69,8 @@ public class AuthController(IAuthService authService, IOptions<JwtOptions> jwtOp
         Response.Cookies.Append(RefreshTokenCookie, token, new CookieOptions
         {
             HttpOnly = true,
-            Secure = false,
-            SameSite = SameSiteMode.Strict,
+            Secure = !env.IsDevelopment(),
+            SameSite = SameSiteMode.Lax,
             Expires = DateTimeOffset.UtcNow.AddDays(jwtOptions.Value.RefreshExpiresDays),
             Path = "/api/auth"
         });

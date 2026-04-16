@@ -3,6 +3,7 @@ using System;
 using Back.Api.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Back.Api.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260416073550_AddStringLengthsAndIndexes")]
+    partial class AddStringLengthsAndIndexes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -30,8 +33,14 @@ namespace Back.Api.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CuentaId")
-                        .HasColumnType("integer");
+                    b.Property<string>("Contrasena")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Correo")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
@@ -45,8 +54,9 @@ namespace Back.Api.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CuentaId")
-                        .IsUnique();
+                    b.HasIndex("Correo")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
 
                     b.ToTable("Admins");
                 });
@@ -81,42 +91,6 @@ namespace Back.Api.Persistence.Migrations
                     b.ToTable("Asignaturas");
                 });
 
-            modelBuilder.Entity("Back.Api.Domain.Entities.Cuenta", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Contrasena")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Correo")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
-                    b.Property<string>("Rol")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Correo")
-                        .IsUnique()
-                        .HasFilter("\"IsDeleted\" = FALSE");
-
-                    b.ToTable("Cuentas");
-                });
-
             modelBuilder.Entity("Back.Api.Domain.Entities.Curso", b =>
                 {
                     b.Property<int>("Id")
@@ -148,24 +122,17 @@ namespace Back.Api.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Apellidos")
+                    b.Property<string>("Contrasena")
                         .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
+                        .HasColumnType("text");
 
-                    b.Property<int>("CuentaId")
-                        .HasColumnType("integer");
+                    b.Property<string>("Correo")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<int>("CursoId")
                         .HasColumnType("integer");
-
-                    b.Property<string>("DNI")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<DateOnly>("FechaNacimiento")
-                        .HasColumnType("date");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
@@ -177,15 +144,11 @@ namespace Back.Api.Persistence.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
-                    b.Property<string>("Telefono")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("CuentaId")
-                        .IsUnique();
+                    b.HasIndex("Correo")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
 
                     b.HasIndex("CursoId");
 
@@ -254,23 +217,14 @@ namespace Back.Api.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Apellidos")
+                    b.Property<string>("Contrasena")
                         .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
+                        .HasColumnType("text");
 
-                    b.Property<int>("CuentaId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("DNI")
+                    b.Property<string>("Correo")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<string>("Especialidad")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
@@ -282,15 +236,11 @@ namespace Back.Api.Persistence.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
-                    b.Property<string>("Telefono")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("CuentaId")
-                        .IsUnique();
+                    b.HasIndex("Correo")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
 
                     b.ToTable("Profesores");
                 });
@@ -401,17 +351,6 @@ namespace Back.Api.Persistence.Migrations
                     b.ToTable("Tareas");
                 });
 
-            modelBuilder.Entity("Back.Api.Domain.Entities.Admin", b =>
-                {
-                    b.HasOne("Back.Api.Domain.Entities.Cuenta", "Cuenta")
-                        .WithOne("Admin")
-                        .HasForeignKey("Back.Api.Domain.Entities.Admin", "CuentaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Cuenta");
-                });
-
             modelBuilder.Entity("Back.Api.Domain.Entities.Asignatura", b =>
                 {
                     b.HasOne("Back.Api.Domain.Entities.Curso", "Curso")
@@ -425,19 +364,11 @@ namespace Back.Api.Persistence.Migrations
 
             modelBuilder.Entity("Back.Api.Domain.Entities.Estudiante", b =>
                 {
-                    b.HasOne("Back.Api.Domain.Entities.Cuenta", "Cuenta")
-                        .WithOne("Estudiante")
-                        .HasForeignKey("Back.Api.Domain.Entities.Estudiante", "CuentaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Back.Api.Domain.Entities.Curso", "Curso")
                         .WithMany("Estudiantes")
                         .HasForeignKey("CursoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Cuenta");
 
                     b.Navigation("Curso");
                 });
@@ -478,17 +409,6 @@ namespace Back.Api.Persistence.Migrations
                     b.Navigation("Estudiante");
 
                     b.Navigation("Tarea");
-                });
-
-            modelBuilder.Entity("Back.Api.Domain.Entities.Profesor", b =>
-                {
-                    b.HasOne("Back.Api.Domain.Entities.Cuenta", "Cuenta")
-                        .WithOne("Profesor")
-                        .HasForeignKey("Back.Api.Domain.Entities.Profesor", "CuentaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Cuenta");
                 });
 
             modelBuilder.Entity("Back.Api.Domain.Entities.ProfesorAsignaturaCurso", b =>
@@ -544,15 +464,6 @@ namespace Back.Api.Persistence.Migrations
                     b.Navigation("ProfesorAsignaturaCursos");
 
                     b.Navigation("Tareas");
-                });
-
-            modelBuilder.Entity("Back.Api.Domain.Entities.Cuenta", b =>
-                {
-                    b.Navigation("Admin");
-
-                    b.Navigation("Estudiante");
-
-                    b.Navigation("Profesor");
                 });
 
             modelBuilder.Entity("Back.Api.Domain.Entities.Curso", b =>

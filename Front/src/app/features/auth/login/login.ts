@@ -6,6 +6,11 @@ import { Router } from '@angular/router';
 import { SchoolApiService } from '../../../shared/services/school-api.service';
 import { SessionService } from '../../../core/services/session.service';
 
+interface LoginNavigationState {
+    email?: string;
+    password?: string;
+}
+
 @Component({
     selector: 'app-login',
     imports: [ReactiveFormsModule, NgClass, CommonModule],
@@ -15,7 +20,7 @@ import { SessionService } from '../../../core/services/session.service';
 })
 export class Login implements OnInit {
     formLogin: FormGroup;
-    cargando: boolean = false;
+    cargando = signal(false);
     mostrarErrores: boolean = false;
     errorMessage = signal<string | null>(null);
     private router = inject(Router);
@@ -36,7 +41,7 @@ export class Login implements OnInit {
      * Precarga correo y contrasena si se viene del flujo de registro.
      */
     ngOnInit() {
-        const state = (history as any).state;
+        const state = history.state as LoginNavigationState | null;
         if (state?.email && state?.password) {
             this.formLogin.patchValue({
                 email: state.email,
@@ -60,7 +65,7 @@ export class Login implements OnInit {
             return;
         }
 
-        this.cargando = true;
+        this.cargando.set(true);
 
         try {
             const correo = this.formLogin.value.email;
@@ -82,7 +87,7 @@ export class Login implements OnInit {
         } catch (error) {
             this.errorMessage.set((error as Error).message || 'No se pudo iniciar sesion.');
         } finally {
-            this.cargando = false;
+            this.cargando.set(false);
         }
     }
 // #endregion

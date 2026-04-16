@@ -35,6 +35,36 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebAppFactory>
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Theory]
+    [InlineData("GET", "/api/admin/matriculas")]
+    [InlineData("GET", "/api/admin/imparticiones")]
+    [InlineData("GET", "/api/admin/stats/cursos")]
+    [InlineData("GET", "/api/admin/stats/cursos/1")]
+    public async Task ProfesorRequest_ToAdminEndpoints_ReturnsForbidden(string method, string path)
+    {
+        var client = _factory.CreateProfesorClient();
+        var request = new HttpRequestMessage(new HttpMethod(method), path);
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("GET", "/api/admin/matriculas")]
+    [InlineData("GET", "/api/admin/imparticiones")]
+    [InlineData("GET", "/api/admin/stats/cursos")]
+    [InlineData("GET", "/api/admin/stats/cursos/1")]
+    public async Task AlumnoRequest_ToAdminEndpoints_ReturnsForbidden(string method, string path)
+    {
+        var client = _factory.CreateAlumnoClient();
+        var request = new HttpRequestMessage(new HttpMethod(method), path);
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     #endregion
 
     #region GET /api/admin/stats/cursos
@@ -158,9 +188,13 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebAppFactory>
             var estudiante = new Estudiante
             {
                 Nombre = "Ana Test",
-                Correo = $"ana_mat_{Guid.NewGuid():N}@test.com",
-                Contrasena = "hash",
-                CursoId = curso.Id
+                CursoId = curso.Id,
+                Cuenta = new Cuenta
+                {
+                    Correo = $"ana_mat_{Guid.NewGuid():N}@test.com",
+                    Contrasena = "hash",
+                    Rol = "alumno"
+                }
             };
             db.Estudiantes.Add(estudiante);
             db.SaveChanges();
@@ -198,9 +232,13 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebAppFactory>
             db.Estudiantes.Add(new Estudiante
             {
                 Nombre = "Sin Asigs",
-                Correo = $"sinasigs_{Guid.NewGuid():N}@test.com",
-                Contrasena = "hash",
-                CursoId = curso.Id
+                CursoId = curso.Id,
+                Cuenta = new Cuenta
+                {
+                    Correo = $"sinasigs_{Guid.NewGuid():N}@test.com",
+                    Contrasena = "hash",
+                    Rol = "alumno"
+                }
             });
         });
 
@@ -236,8 +274,12 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebAppFactory>
             var profesor = new Profesor
             {
                 Nombre = "Luis Test",
-                Correo = $"luis_{Guid.NewGuid():N}@test.com",
-                Contrasena = "hash"
+                Cuenta = new Cuenta
+                {
+                    Correo = $"luis_{Guid.NewGuid():N}@test.com",
+                    Contrasena = "hash",
+                    Rol = "profesor"
+                }
             };
             db.Profesores.Add(profesor);
             db.SaveChanges();
