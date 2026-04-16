@@ -24,8 +24,13 @@
 - `Dtos/<Module>/Responses/Panel/` for dashboard/panel-specific payloads
 - `Dtos/<Module>/ReadModels/`
 - `Dtos/<Module>/Stats/`
+<<<<<<< HEAD
 - Shared primitives/value objects directly in `Dtos/`
 - Shared response bases directly in `Dtos/`
+=======
+- Shared primitives/value objects in `Dtos/Common/`
+- Shared response bases in `Dtos/Common/Bases/`
+>>>>>>> f66dfb610f2a51b7c4a41d1cb70f9d8cf302f25a
 
 ### Optional deep grouping
 - When a folder grows, group by feature/use case under `ReadModels` and `Stats`.
