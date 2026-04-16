@@ -6,16 +6,31 @@
 
 ## Naming
 - Request DTOs: `*RequestDto`
-- Response DTOs: `*ResponseDto`
+- Response envelopes: `*ResponseDto`
 - Read models: `*ReadModelDto`
 - Stats projections: `*StatsDto`
+- Lookup lists/minimal selectors: `*LookupDto`
+- Detailed payloads: `*DetalleDto`
+- Summary payloads: `*ResumenDto`
+
+### Language policy
+- Domain DTO names are in Spanish (`Detalle`, `Resumen`, `Alumno`, `Curso`, etc.).
+- Technical suffixes remain in English (`Request`, `Response`, `ReadModel`, `Stats`, `Lookup`).
+- Avoid `*SimpleDto`; use `*LookupDto` or `*ResumenDto` based on intent.
 
 ## Folder layout
 - `Dtos/<Module>/Requests/`
 - `Dtos/<Module>/Responses/`
+- `Dtos/<Module>/Responses/Panel/` for dashboard/panel-specific payloads
 - `Dtos/<Module>/ReadModels/`
 - `Dtos/<Module>/Stats/`
-- Shared primitives/value objects in `Dtos/Common/`
+- Shared primitives/value objects directly in `Dtos/`
+- Shared response bases directly in `Dtos/`
+
+### Optional deep grouping
+- When a folder grows, group by feature/use case under `ReadModels` and `Stats`.
+- Example: `Dtos/Admin/ReadModels/Matriculas/`, `Dtos/Admin/ReadModels/Imparticiones/`, `Dtos/Admin/Stats/Cursos/`.
+- Keep namespaces stable (`Back.Api.Application.Dtos`) unless a broader namespace refactor is planned.
 
 ## Rules
 - DTOs must not include business logic.
