@@ -47,9 +47,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<Asignatura>()
             .HasOne(a => a.Curso)
-            .WithMany()
+            .WithMany(c => c.Asignaturas)
             .HasForeignKey(a => a.CursoId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Tarea>()
+            .HasOne(t => t.Profesor)
+            .WithMany(p => p.Tareas)
+            .HasForeignKey(t => t.ProfesorId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Asignatura>()
             .HasIndex(a => new { a.CursoId, a.Nombre })

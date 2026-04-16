@@ -23,7 +23,7 @@ public interface IProfesoresDomainRepository
     Task<(int Id, int AsignaturaId, int ProfesorId)?> GetTareaInfoAsync(int tareaId, CancellationToken cancellationToken = default);
     Task<int?> GetEstudianteCursoAsync(int estudianteId, CancellationToken cancellationToken = default);
     Task<TareaResumenDto?> GetTareaResumenAsync(int tareaId, CancellationToken cancellationToken = default);
-    Task<IEnumerable<ProfesorSimpleDto>> GetSimpleAsync(CancellationToken cancellationToken = default);
+    Task<IEnumerable<ProfesorLookupDto>> GetSimpleAsync(CancellationToken cancellationToken = default);
     Task<IEnumerable<ProfesorListItemDto>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<ProfesorDetalleDto?> GetDetalleAsync(int id, CancellationToken cancellationToken = default);
     Task<ProfesorPanelDto?> GetPanelAsync(int id, CancellationToken cancellationToken = default);

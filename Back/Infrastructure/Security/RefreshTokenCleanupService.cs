@@ -33,14 +33,15 @@ public sealed class RefreshTokenCleanupService(IServiceScopeFactory scopeFactory
             if (expiredTokens.Count == 0)
                 return;
 
-            context.RefreshTokens.RemoveRange(expiredTokens);
+            foreach (var expiredToken in expiredTokens)
+                expiredToken.IsDeleted = true;
+
             await context.SaveChangesAsync(cancellationToken);
 
             logger.LogInformation("Se eliminaron {Count} refresh tokens expirados.", expiredTokens.Count);
         }
         catch (OperationCanceledException)
         {
-            // Shutdown path.
         }
         catch (Exception ex)
         {

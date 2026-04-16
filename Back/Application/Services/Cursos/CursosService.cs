@@ -11,7 +11,7 @@ public class CursosService(ICursosDomainRepository cursosDomain) : ICursosServic
 
     public async Task<ApplicationResult> GetSimpleAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok((await cursosDomain.GetAllResumenAsync(cancellationToken))
-            .Select(c => new CursoSimpleDto { Id = c.Id, Nombre = c.Nombre }));
+            .Select(c => new CursoLookupDto { Id = c.Id, Nombre = c.Nombre }));
 
     public async Task<ApplicationResult> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {

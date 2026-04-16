@@ -11,7 +11,7 @@ public class AsignaturasService(IAsignaturasDomainRepository asignaturasDomain) 
 
     public async Task<ApplicationResult> GetSimpleAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok((await asignaturasDomain.GetAllResumenAsync(cancellationToken))
-            .Select(a => new AsignaturaSimpleDto
+            .Select(a => new AsignaturaLookupDto
             {
                 Id = a.Id,
                 Nombre = a.Nombre,

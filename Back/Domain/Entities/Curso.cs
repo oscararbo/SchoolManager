@@ -1,12 +1,11 @@
 namespace Back.Api.Domain.Entities;
 
-public class Profesor : ISoftDeletable
+public class Curso : ISoftDeletable
 {
     public int Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
-    public string Correo { get; set; } = string.Empty;
-    public string Contrasena { get; set; } = string.Empty;
     public bool IsDeleted { get; set; }
+    public ICollection<Asignatura> Asignaturas { get; set; } = new List<Asignatura>();
+    public ICollection<Estudiante> Estudiantes { get; set; } = new List<Estudiante>();
     public ICollection<ProfesorAsignaturaCurso> ProfesorAsignaturaCursos { get; set; } = new List<ProfesorAsignaturaCurso>();
-    public ICollection<Tarea> Tareas { get; set; } = new List<Tarea>();
 }
