@@ -6,15 +6,15 @@ namespace Back.Api.Application.Services;
 
 public interface IEstudiantesService
 {
-    Task<ApplicationResult> GetAllAsync(CancellationToken cancellationToken = default);
-    Task<ApplicationResult> GetSimpleAsync(CancellationToken cancellationToken = default);
-    Task<ApplicationResult> GetByIdAsync(int id, CancellationToken cancellationToken = default);
-    Task<ApplicationResult> CreateAsync(CreateEstudianteRequestDto dto, CancellationToken cancellationToken = default);
-    Task<ApplicationResult> UpdateAsync(int id, UpdateEstudianteRequestDto dto, CancellationToken cancellationToken = default);
-    Task<ApplicationResult> DeleteAsync(int id, CancellationToken cancellationToken = default);
-    Task<ApplicationResult> MatricularAsync(int id, int asignaturaId, CancellationToken cancellationToken = default);
-    Task<ApplicationResult> DesmatricularAsync(int id, int asignaturaId, CancellationToken cancellationToken = default);
-    Task<ApplicationResult> GetPanelAlumnoAsync(int id, ClaimsPrincipal user, CancellationToken cancellationToken = default);
-    Task<ApplicationResult> GetPanelResumenAsync(int id, ClaimsPrincipal user, CancellationToken cancellationToken = default);
-    Task<ApplicationResult> GetMateriaDetalleAsync(int id, int asignaturaId, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> GetAllEstudiantesAsync(CancellationToken cancellationToken = default);
+    Task<ApplicationResult> GetSimpleEstudiantesAsync(CancellationToken cancellationToken = default);
+    Task<ApplicationResult> GetEstudianteByIdAsync(int estudianteId, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> CreateEstudianteAsync(CreateEstudianteRequestDto createEstudianteRequestDto, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> UpdateEstudianteAsync(int estudianteId, UpdateEstudianteRequestDto updateEstudianteRequestDto, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> DeleteEstudianteAsync(int estudianteId, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> MatricularAsync(int estudianteId, int asignaturaId, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> DesmatricularAsync(int estudianteId, int asignaturaId, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> GetPanelAlumnoAsync(int estudianteId, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> GetPanelResumenAsync(int estudianteId, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> GetMateriaDetalleAsync(int estudianteId, int asignaturaId, ClaimsPrincipal user, CancellationToken cancellationToken = default);
 }

@@ -168,6 +168,10 @@
                             <h5 class="card-title">Editar profesor</h5>
                             <form [formGroup]="editProfesorForm">
                                 <div class="mb-2"><label class="form-label">Nombre</label><input class="form-control" type="text" formControlName="nombre"></div>
+                                <div class="mb-2"><label class="form-label">Apellidos</label><input class="form-control" type="text" formControlName="apellidos"></div>
+                                <div class="mb-2"><label class="form-label">DNI</label><input class="form-control" type="text" formControlName="dni" placeholder="12345678Z"></div>
+                                <div class="mb-2"><label class="form-label">Telefono</label><input class="form-control" type="tel" formControlName="telefono" placeholder="612345678"></div>
+                                <div class="mb-2"><label class="form-label">Especialidad</label><input class="form-control" type="text" formControlName="especialidad"></div>
                                 <div class="mb-2"><label class="form-label">Correo</label><input class="form-control" type="email" formControlName="correo"></div>
                                 <div class="mb-2"><label class="form-label">Nueva contraseña (opcional)</label><input class="form-control" type="password" formControlName="nuevaContrasena" placeholder="Dejar en blanco para no cambiar"></div>
 
@@ -182,6 +186,10 @@
                             <h5 class="card-title">Nuevo profesor</h5>
                             <form [formGroup]="profesorForm" (ngSubmit)="crearProfesor()">
                                 <div class="mb-2"><label class="form-label">Nombre</label><input class="form-control" type="text" formControlName="nombre"></div>
+                                <div class="mb-2"><label class="form-label">Apellidos</label><input class="form-control" type="text" formControlName="apellidos"></div>
+                                <div class="mb-2"><label class="form-label">DNI</label><input class="form-control" type="text" formControlName="dni" placeholder="12345678Z"></div>
+                                <div class="mb-2"><label class="form-label">Telefono</label><input class="form-control" type="tel" formControlName="telefono" placeholder="612345678"></div>
+                                <div class="mb-2"><label class="form-label">Especialidad</label><input class="form-control" type="text" formControlName="especialidad"></div>
                                 <div class="mb-2"><label class="form-label">Correo</label><input class="form-control" type="email" formControlName="correo"></div>
                                 <div class="mb-2"><label class="form-label">Contrasena</label><input class="form-control" type="password" formControlName="contrasena"></div>
 
@@ -244,6 +252,10 @@
                             <h5 class="card-title">Editar estudiante</h5>
                             <form [formGroup]="editEstudianteForm">
                                 <div class="mb-2"><label class="form-label">Nombre</label><input class="form-control" type="text" formControlName="nombre"></div>
+                                <div class="mb-2"><label class="form-label">Apellidos</label><input class="form-control" type="text" formControlName="apellidos"></div>
+                                <div class="mb-2"><label class="form-label">DNI</label><input class="form-control" type="text" formControlName="dni" placeholder="12345678Z"></div>
+                                <div class="mb-2"><label class="form-label">Telefono</label><input class="form-control" type="tel" formControlName="telefono" placeholder="612345678"></div>
+                                <div class="mb-2"><label class="form-label">Fecha nacimiento</label><input class="form-control" type="date" formControlName="fechaNacimiento"></div>
                                 <div class="mb-2"><label class="form-label">Correo</label><input class="form-control" type="email" formControlName="correo"></div>
                                 <div class="mb-2"><label class="form-label">Nueva contraseña (opcional)</label><input class="form-control" type="password" formControlName="nuevaContrasena" placeholder="Dejar en blanco para no cambiar"></div>
                                 <div class="mb-3">
@@ -263,6 +275,10 @@
                             <h5 class="card-title">Nuevo estudiante</h5>
                             <form [formGroup]="estudianteForm" (ngSubmit)="crearEstudiante()">
                                 <div class="mb-2"><label class="form-label">Nombre</label><input class="form-control" type="text" formControlName="nombre"></div>
+                                <div class="mb-2"><label class="form-label">Apellidos</label><input class="form-control" type="text" formControlName="apellidos"></div>
+                                <div class="mb-2"><label class="form-label">DNI</label><input class="form-control" type="text" formControlName="dni" placeholder="12345678Z"></div>
+                                <div class="mb-2"><label class="form-label">Telefono</label><input class="form-control" type="tel" formControlName="telefono" placeholder="612345678"></div>
+                                <div class="mb-2"><label class="form-label">Fecha nacimiento</label><input class="form-control" type="date" formControlName="fechaNacimiento"></div>
                                 <div class="mb-2"><label class="form-label">Correo</label><input class="form-control" type="email" formControlName="correo"></div>
                                 <div class="mb-2"><label class="form-label">Contrasena</label><input class="form-control" type="password" formControlName="contrasena"></div>
                                 <div class="mb-3">

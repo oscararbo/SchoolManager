@@ -18,42 +18,42 @@ public class ProfesoresController(IProfesoresService profesoresService) : Contro
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
     public async Task<IActionResult> GetAll()
     {
-        return this.ToActionResult(await profesoresService.GetAllAsync(HttpContext.RequestAborted));
+        return this.ToActionResult(await profesoresService.GetAllProfesoresAsync(HttpContext.RequestAborted));
     }
 
     [HttpGet("simple")]
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
     public async Task<IActionResult> GetSimple()
     {
-        return this.ToActionResult(await profesoresService.GetSimpleAsync(HttpContext.RequestAborted));
+        return this.ToActionResult(await profesoresService.GetSimpleProfesoresAsync(HttpContext.RequestAborted));
     }
 
     [HttpGet("{id:int}")]
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
     public async Task<IActionResult> GetById(int id)
     {
-        return this.ToActionResult(await profesoresService.GetByIdAsync(id, HttpContext.RequestAborted));
+        return this.ToActionResult(await profesoresService.GetProfesorByIdAsync(id, HttpContext.RequestAborted));
     }
 
     [HttpPost]
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
-    public async Task<IActionResult> Create(CreateProfesorRequestDto dto)
+    public async Task<IActionResult> Create(CreateProfesorRequestDto createProfesorRequestDto)
     {
-        return this.ToActionResult(await profesoresService.CreateAsync(dto, HttpContext.RequestAborted));
+        return this.ToActionResult(await profesoresService.CreateProfesorAsync(createProfesorRequestDto, HttpContext.RequestAborted));
     }
 
     [HttpPut("{id:int}")]
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
-    public async Task<IActionResult> Update(int id, UpdateProfesorRequestDto dto)
+    public async Task<IActionResult> Update(int id, UpdateProfesorRequestDto updateProfesorRequestDto)
     {
-        return this.ToActionResult(await profesoresService.UpdateAsync(id, dto, HttpContext.RequestAborted));
+        return this.ToActionResult(await profesoresService.UpdateProfesorAsync(id, updateProfesorRequestDto, HttpContext.RequestAborted));
     }
 
     [HttpDelete("{id:int}")]
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
     public async Task<IActionResult> Delete(int id)
     {
-        return this.ToActionResult(await profesoresService.DeleteAsync(id, HttpContext.RequestAborted));
+        return this.ToActionResult(await profesoresService.DeleteProfesorAsync(id, HttpContext.RequestAborted));
     }
 
     [HttpGet("{id:int}/panel")]
@@ -93,9 +93,9 @@ public class ProfesoresController(IProfesoresService profesoresService) : Contro
 
     [HttpPost("{profesorId:int}/imparticiones")]
     [Authorize(Policy = AuthorizationPolicies.ProfesorOrAdmin)]
-    public async Task<IActionResult> AsignarImparticion(int profesorId, AsignarImparticionRequestDto dto)
+    public async Task<IActionResult> AsignarImparticion(int profesorId, AsignarImparticionRequestDto asignarImparticionRequestDto)
     {
-        return this.ToActionResult(await profesoresService.AsignarImparticionAsync(profesorId, dto, User, HttpContext.RequestAborted));
+        return this.ToActionResult(await profesoresService.AsignarImparticionAsync(profesorId, asignarImparticionRequestDto, User, HttpContext.RequestAborted));
     }
 
     [HttpDelete("{profesorId:int}/imparticiones/{asignaturaId:int}/{cursoId:int}")]
@@ -107,16 +107,16 @@ public class ProfesoresController(IProfesoresService profesoresService) : Contro
 
     [HttpPost("{profesorId:int}/notas")]
     [Authorize(Policy = AuthorizationPolicies.ProfesorOrAdmin)]
-    public async Task<IActionResult> PonerNota(int profesorId, PonerNotaRequestDto dto)
+    public async Task<IActionResult> PonerNota(int profesorId, PonerNotaRequestDto ponerNotaRequestDto)
     {
-        return this.ToActionResult(await profesoresService.PonerNotaAsync(profesorId, dto, User, HttpContext.RequestAborted));
+        return this.ToActionResult(await profesoresService.PonerNotaAsync(profesorId, ponerNotaRequestDto, User, HttpContext.RequestAborted));
     }
 
     [HttpPost("{profesorId:int}/tareas")]
     [Authorize(Policy = AuthorizationPolicies.ProfesorOrAdmin)]
-    public async Task<IActionResult> CrearTarea(int profesorId, CreateTareaRequestDto dto)
+    public async Task<IActionResult> CrearTarea(int profesorId, CreateTareaRequestDto createTareaRequestDto)
     {
-        return this.ToActionResult(await profesoresService.CrearTareaAsync(profesorId, dto, User, HttpContext.RequestAborted));
+        return this.ToActionResult(await profesoresService.CrearTareaAsync(profesorId, createTareaRequestDto, User, HttpContext.RequestAborted));
     }
 
     [HttpGet("{profesorId:int}/asignaturas/{asignaturaId:int}/tareas")]

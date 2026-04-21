@@ -31,6 +31,10 @@ export interface ApiProfesorImparticion {
 export interface ApiProfesorListItem {
   id: number;
   nombre: string;
+  apellidos: string;
+  dni: string;
+  telefono: string;
+  especialidad: string;
   correo: string;
   imparticiones: ApiProfesorImparticion[];
 }
@@ -38,6 +42,10 @@ export interface ApiProfesorListItem {
 export interface ApiEstudianteItem {
   id: number;
   nombre: string;
+  apellidos: string;
+  dni: string;
+  telefono: string;
+  fechaNacimiento: string;
   correo: string;
   cursoId: number;
   curso: string | null;

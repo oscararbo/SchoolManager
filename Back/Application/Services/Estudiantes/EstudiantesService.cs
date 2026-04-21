@@ -9,139 +9,139 @@ namespace Back.Api.Application.Services;
 
 public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, IPasswordService passwordService) : IEstudiantesService
 {
-    public async Task<ApplicationResult> GetAllAsync(CancellationToken cancellationToken = default)
-        => ApplicationResult.Ok(await estudiantesDomain.GetAllAsync(cancellationToken));
+    public async Task<ApplicationResult> GetAllEstudiantesAsync(CancellationToken cancellationToken = default)
+        => ApplicationResult.Ok(await estudiantesDomain.GetAllEstudiantesAsync(cancellationToken));
 
-    public async Task<ApplicationResult> GetSimpleAsync(CancellationToken cancellationToken = default)
-        => ApplicationResult.Ok(await estudiantesDomain.GetSimpleAsync(cancellationToken));
+    public async Task<ApplicationResult> GetSimpleEstudiantesAsync(CancellationToken cancellationToken = default)
+        => ApplicationResult.Ok(await estudiantesDomain.GetSimpleEstudiantesAsync(cancellationToken));
 
-    public async Task<ApplicationResult> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> GetEstudianteByIdAsync(int estudianteId, CancellationToken cancellationToken = default)
     {
-        var estudiante = await estudiantesDomain.GetDetalleAsync(id, cancellationToken);
+        var estudiante = await estudiantesDomain.GetDetalleAsync(estudianteId, cancellationToken);
         return estudiante is null ? ApplicationResult.NotFound("El estudiante no existe.") : ApplicationResult.Ok(estudiante);
     }
 
-    public async Task<ApplicationResult> CreateAsync(CreateEstudianteRequestDto dto, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> CreateEstudianteAsync(CreateEstudianteRequestDto createEstudianteRequestDto, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(dto.Nombre))
+        if (string.IsNullOrWhiteSpace(createEstudianteRequestDto.Nombre))
             return ApplicationResult.BadRequest("El nombre del estudiante es obligatorio.");
-        if (string.IsNullOrWhiteSpace(dto.Correo))
+        if (string.IsNullOrWhiteSpace(createEstudianteRequestDto.Correo))
             return ApplicationResult.BadRequest("El correo del estudiante es obligatorio.");
-        if (string.IsNullOrWhiteSpace(dto.Contrasena))
+        if (string.IsNullOrWhiteSpace(createEstudianteRequestDto.Contrasena))
             return ApplicationResult.BadRequest("La contrasena del estudiante es obligatoria.");
-        if (dto.CursoId <= 0)
+        if (createEstudianteRequestDto.CursoId <= 0)
             return ApplicationResult.BadRequest("El curso del estudiante es obligatorio.");
 
-        var correo = dto.Correo.Trim().ToLowerInvariant();
+        var correo = createEstudianteRequestDto.Correo.Trim().ToLowerInvariant();
         if (await estudiantesDomain.CorreoDuplicadoAsync(correo, cancellationToken))
             return ApplicationResult.BadRequest("Ya existe un estudiante con ese correo.");
-        if (!await estudiantesDomain.CursoExisteAsync(dto.CursoId, cancellationToken))
+        if (!await estudiantesDomain.CursoExisteAsync(createEstudianteRequestDto.CursoId, cancellationToken))
             return ApplicationResult.BadRequest("El curso indicado no existe.");
 
-        var result = await estudiantesDomain.CreateAsync(dto.Nombre.Trim(), correo, dto.CursoId, passwordService.Hash(dto.Contrasena.Trim()), dto.Apellidos.Trim(), dto.DNI.Trim(), dto.Telefono.Trim(), dto.FechaNacimiento, cancellationToken);
-        return ApplicationResult.Created($"/api/estudiantes/{result.Id}", result);
+        var createdEstudiante = await estudiantesDomain.CreateEstudianteAsync(createEstudianteRequestDto.Nombre.Trim(), correo, createEstudianteRequestDto.CursoId, passwordService.Hash(createEstudianteRequestDto.Contrasena.Trim()), createEstudianteRequestDto.Apellidos.Trim(), createEstudianteRequestDto.DNI.Trim(), createEstudianteRequestDto.Telefono.Trim(), createEstudianteRequestDto.FechaNacimiento, cancellationToken);
+        return ApplicationResult.Created($"/api/estudiantes/{createdEstudiante.Id}", createdEstudiante);
     }
 
-    public async Task<ApplicationResult> MatricularAsync(int id, int asignaturaId, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> MatricularAsync(int estudianteId, int asignaturaId, CancellationToken cancellationToken = default)
     {
-        if (!await estudiantesDomain.ExisteAsync(id, cancellationToken))
+        if (!await estudiantesDomain.ExisteAsync(estudianteId, cancellationToken))
             return ApplicationResult.NotFound("El estudiante no existe.");
         if (!await estudiantesDomain.AsignaturaExisteAsync(asignaturaId, cancellationToken))
             return ApplicationResult.NotFound("La asignatura no existe.");
 
-        var estudianteDetalle = await estudiantesDomain.GetDetalleAsync(id, cancellationToken);
+        var estudianteDetalle = await estudiantesDomain.GetDetalleAsync(estudianteId, cancellationToken);
         if (estudianteDetalle is null)
             return ApplicationResult.NotFound("El estudiante no existe.");
 
         if (!await estudiantesDomain.AsignaturaEsDelCursoAsync(asignaturaId, estudianteDetalle.CursoId, cancellationToken))
             return ApplicationResult.BadRequest("El estudiante solo puede matricularse en asignaturas de su curso.");
 
-        if (await estudiantesDomain.YaMatriculadoAsync(id, asignaturaId, cancellationToken))
+        if (await estudiantesDomain.YaMatriculadoAsync(estudianteId, asignaturaId, cancellationToken))
             return ApplicationResult.BadRequest("El estudiante ya esta matriculado en esta asignatura.");
 
-        await estudiantesDomain.MatricularAsync(id, asignaturaId, cancellationToken);
+        await estudiantesDomain.MatricularAsync(estudianteId, asignaturaId, cancellationToken);
         return ApplicationResult.Ok();
     }
 
-    public async Task<ApplicationResult> DesmatricularAsync(int id, int asignaturaId, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> DesmatricularAsync(int estudianteId, int asignaturaId, CancellationToken cancellationToken = default)
     {
-        if (!await estudiantesDomain.ExisteAsync(id, cancellationToken))
+        if (!await estudiantesDomain.ExisteAsync(estudianteId, cancellationToken))
             return ApplicationResult.NotFound("El estudiante no existe.");
         if (!await estudiantesDomain.AsignaturaExisteAsync(asignaturaId, cancellationToken))
             return ApplicationResult.NotFound("La asignatura no existe.");
-        if (!await estudiantesDomain.YaMatriculadoAsync(id, asignaturaId, cancellationToken))
+        if (!await estudiantesDomain.YaMatriculadoAsync(estudianteId, asignaturaId, cancellationToken))
             return ApplicationResult.BadRequest("El estudiante no esta matriculado en esa asignatura.");
 
-        await estudiantesDomain.DesmatricularAsync(id, asignaturaId, cancellationToken);
+        await estudiantesDomain.DesmatricularAsync(estudianteId, asignaturaId, cancellationToken);
         return ApplicationResult.NoContent();
     }
 
-    public async Task<ApplicationResult> GetPanelAlumnoAsync(int id, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> GetPanelAlumnoAsync(int estudianteId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
-        if (!UsuarioCoincideConEstudiante(id, user))
+        if (!UsuarioCoincideConEstudiante(estudianteId, user))
             return ApplicationResult.Forbidden();
 
-        var panel = await estudiantesDomain.GetPanelAlumnoAsync(id, cancellationToken);
+        var panel = await estudiantesDomain.GetPanelAlumnoAsync(estudianteId, cancellationToken);
         return panel is null
             ? ApplicationResult.NotFound("El estudiante no existe.")
             : ApplicationResult.Ok(panel);
     }
 
-    public async Task<ApplicationResult> GetPanelResumenAsync(int id, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> GetPanelResumenAsync(int estudianteId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
-        if (!UsuarioCoincideConEstudiante(id, user))
+        if (!UsuarioCoincideConEstudiante(estudianteId, user))
             return ApplicationResult.Forbidden();
 
-        var panel = await estudiantesDomain.GetPanelResumenAsync(id, cancellationToken);
+        var panel = await estudiantesDomain.GetPanelResumenAsync(estudianteId, cancellationToken);
         return panel is null
             ? ApplicationResult.NotFound("El estudiante no existe.")
             : ApplicationResult.Ok(panel);
     }
 
-    public async Task<ApplicationResult> GetMateriaDetalleAsync(int id, int asignaturaId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> GetMateriaDetalleAsync(int estudianteId, int asignaturaId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
-        if (!UsuarioCoincideConEstudiante(id, user))
+        if (!UsuarioCoincideConEstudiante(estudianteId, user))
             return ApplicationResult.Forbidden();
 
-        var detalle = await estudiantesDomain.GetMateriaDetalleAsync(id, asignaturaId, cancellationToken);
+        var detalle = await estudiantesDomain.GetMateriaDetalleAsync(estudianteId, asignaturaId, cancellationToken);
         return detalle is null
             ? ApplicationResult.NotFound("La asignatura o el estudiante no existe.")
             : ApplicationResult.Ok(detalle);
     }
 
-    public async Task<ApplicationResult> UpdateAsync(int id, UpdateEstudianteRequestDto dto, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> UpdateEstudianteAsync(int estudianteId, UpdateEstudianteRequestDto updateEstudianteRequestDto, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(dto.Nombre))
+        if (string.IsNullOrWhiteSpace(updateEstudianteRequestDto.Nombre))
             return ApplicationResult.BadRequest("El nombre del estudiante es obligatorio.");
-        if (string.IsNullOrWhiteSpace(dto.Correo))
+        if (string.IsNullOrWhiteSpace(updateEstudianteRequestDto.Correo))
             return ApplicationResult.BadRequest("El correo del estudiante es obligatorio.");
-        if (dto.CursoId <= 0)
+        if (updateEstudianteRequestDto.CursoId <= 0)
             return ApplicationResult.BadRequest("El curso del estudiante es obligatorio.");
-        if (!await estudiantesDomain.ExisteAsync(id, cancellationToken))
+        if (!await estudiantesDomain.ExisteAsync(estudianteId, cancellationToken))
             return ApplicationResult.NotFound("El estudiante no existe.");
 
-        var correo = dto.Correo.Trim().ToLowerInvariant();
-        if (await estudiantesDomain.CorreoDuplicadoExceptAsync(correo, id, cancellationToken))
+        var correo = updateEstudianteRequestDto.Correo.Trim().ToLowerInvariant();
+        if (await estudiantesDomain.CorreoDuplicadoExceptAsync(correo, estudianteId, cancellationToken))
             return ApplicationResult.BadRequest("Ya existe otro estudiante con ese correo.");
-        if (!await estudiantesDomain.CursoExisteAsync(dto.CursoId, cancellationToken))
+        if (!await estudiantesDomain.CursoExisteAsync(updateEstudianteRequestDto.CursoId, cancellationToken))
             return ApplicationResult.BadRequest("El curso indicado no existe.");
 
-        string? hash = string.IsNullOrWhiteSpace(dto.NuevaContrasena)
+        string? contrasenaHash = string.IsNullOrWhiteSpace(updateEstudianteRequestDto.NuevaContrasena)
             ? null
-            : passwordService.Hash(dto.NuevaContrasena.Trim());
+            : passwordService.Hash(updateEstudianteRequestDto.NuevaContrasena.Trim());
 
-        var result = await estudiantesDomain.UpdateAsync(id, dto.Nombre.Trim(), correo, dto.CursoId, hash, dto.Apellidos.Trim(), dto.DNI.Trim(), dto.Telefono.Trim(), dto.FechaNacimiento, cancellationToken);
-        return result is null
+        var updatedEstudiante = await estudiantesDomain.UpdateEstudianteAsync(estudianteId, updateEstudianteRequestDto.Nombre.Trim(), correo, updateEstudianteRequestDto.CursoId, contrasenaHash, updateEstudianteRequestDto.Apellidos.Trim(), updateEstudianteRequestDto.DNI.Trim(), updateEstudianteRequestDto.Telefono.Trim(), updateEstudianteRequestDto.FechaNacimiento, cancellationToken);
+        return updatedEstudiante is null
             ? ApplicationResult.NotFound("El estudiante no existe.")
-            : ApplicationResult.Ok(result);
+            : ApplicationResult.Ok(updatedEstudiante);
     }
 
-    public async Task<ApplicationResult> DeleteAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> DeleteEstudianteAsync(int estudianteId, CancellationToken cancellationToken = default)
     {
-        if (!await estudiantesDomain.ExisteAsync(id, cancellationToken))
+        if (!await estudiantesDomain.ExisteAsync(estudianteId, cancellationToken))
             return ApplicationResult.NotFound("El estudiante no existe.");
 
-        await estudiantesDomain.DeleteAsync(id, cancellationToken);
+        await estudiantesDomain.DeleteEstudianteAsync(estudianteId, cancellationToken);
         return ApplicationResult.NoContent();
     }
 

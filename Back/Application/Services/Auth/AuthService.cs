@@ -13,13 +13,13 @@ namespace Back.Api.Application.Services;
 
 public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> jwtOptions, IPasswordService passwordService) : IAuthService
 {
-    public async Task<ApplicationResult> LoginAsync(LoginRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> LoginAsync(LoginRequestDto loginRequestDto, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(request.Correo) || string.IsNullOrWhiteSpace(request.Contrasena))
+        if (string.IsNullOrWhiteSpace(loginRequestDto.Correo) || string.IsNullOrWhiteSpace(loginRequestDto.Contrasena))
             return ApplicationResult.BadRequest("Correo y contrasena son obligatorios.");
 
-        var correo = request.Correo.Trim().ToLowerInvariant();
-        var contrasena = request.Contrasena.Trim();
+        var correo = loginRequestDto.Correo.Trim().ToLowerInvariant();
+        var contrasena = loginRequestDto.Contrasena.Trim();
 
         var admin = await authDomain.FindAdminByCorreoAsync(correo, cancellationToken);
         if (admin?.Cuenta is not null && passwordService.Verify(admin.Cuenta.Contrasena, contrasena))

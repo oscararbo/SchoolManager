@@ -50,6 +50,10 @@ export function mapProfesorListItem(api: ApiProfesorListItem): ProfesorListItem 
   return {
     id: api.id,
     nombre: safeText(api.nombre),
+    apellidos: safeText(api.apellidos),
+    dni: safeText(api.dni),
+    telefono: safeText(api.telefono),
+    especialidad: safeText(api.especialidad),
     correo: safeText(api.correo).toLowerCase(),
     imparticiones: api.imparticiones.map(i => ({
       asignaturaId: i.asignaturaId,
@@ -64,6 +68,10 @@ export function mapEstudianteItem(api: ApiEstudianteItem): EstudianteItem {
   return {
     id: api.id,
     nombre: safeText(api.nombre),
+    apellidos: safeText(api.apellidos),
+    dni: safeText(api.dni),
+    telefono: safeText(api.telefono),
+    fechaNacimiento: safeText(api.fechaNacimiento),
     correo: safeText(api.correo).toLowerCase(),
     cursoId: api.cursoId,
     curso: api.curso ? safeText(api.curso) : null

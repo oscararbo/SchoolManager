@@ -5,19 +5,19 @@ namespace Back.Api.Presentation.Http;
 
 public static class ApplicationResultExtensions
 {
-    public static IActionResult ToActionResult(this ControllerBase controller, ApplicationResult result)
+    public static IActionResult ToActionResult(this ControllerBase controller, ApplicationResult applicationResult)
     {
-        return result.Type switch
+        return applicationResult.Type switch
         {
-            ApplicationResultType.Ok => result.Value is null ? controller.Ok() : controller.Ok(result.Value),
-            ApplicationResultType.Created => controller.Created(result.Location ?? string.Empty, result.Value),
+            ApplicationResultType.Ok => applicationResult.Value is null ? controller.Ok() : controller.Ok(applicationResult.Value),
+            ApplicationResultType.Created => controller.Created(applicationResult.Location ?? string.Empty, applicationResult.Value),
             ApplicationResultType.NoContent => controller.NoContent(),
-            ApplicationResultType.BadRequest => result.Value is null ? controller.BadRequest() : controller.BadRequest(result.Value),
-            ApplicationResultType.Unauthorized => result.Value is null ? controller.Unauthorized() : controller.Unauthorized(result.Value),
-            ApplicationResultType.Forbidden => result.Value is null
+            ApplicationResultType.BadRequest => applicationResult.Value is null ? controller.BadRequest() : controller.BadRequest(applicationResult.Value),
+            ApplicationResultType.Unauthorized => applicationResult.Value is null ? controller.Unauthorized() : controller.Unauthorized(applicationResult.Value),
+            ApplicationResultType.Forbidden => applicationResult.Value is null
                 ? controller.Forbid()
-                : controller.StatusCode(StatusCodes.Status403Forbidden, result.Value),
-            ApplicationResultType.NotFound => result.Value is null ? controller.NotFound() : controller.NotFound(result.Value),
+                : controller.StatusCode(StatusCodes.Status403Forbidden, applicationResult.Value),
+            ApplicationResultType.NotFound => applicationResult.Value is null ? controller.NotFound() : controller.NotFound(applicationResult.Value),
             _ => controller.StatusCode(StatusCodes.Status500InternalServerError)
         };
     }

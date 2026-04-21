@@ -13,6 +13,7 @@ import { AdminTabsNavComponent } from '../admin-tabs-nav/admin-tabs-nav.componen
 import { CsvImportCardComponent } from '../csv-import-card/csv-import-card.component';
 import { Subject, debounceTime } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { dniValidator, isoDateValidator, phoneValidator } from '../../../../../core/validators/profile.validators';
 
 type AdminTab = 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matriculas' | 'imparticiones' | 'importar';
 
@@ -32,6 +33,7 @@ type CsvErrorGroup = {
 };
 
 const CSV_ERROR_PREVIEW_COUNT = 5;
+const MAX_CSV_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
 @Component({
     selector: 'app-admin-management-view',
@@ -274,18 +276,30 @@ export class AdminManagementViewComponent implements OnInit {
 
     readonly profesorForm = this.fb.group({
         nombre: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
+        apellidos: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
+        dni: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), dniValidator()]),
+        telefono: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), phoneValidator()]),
+        especialidad: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(100)]),
         correo: this.fb.nonNullable.control('', [Validators.required, Validators.email]),
         contrasena: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(6)])
     });
 
     readonly editProfesorForm = this.fb.group({
         nombre: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
+        apellidos: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
+        dni: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), dniValidator()]),
+        telefono: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), phoneValidator()]),
+        especialidad: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(100)]),
         correo: this.fb.nonNullable.control('', [Validators.required, Validators.email]),
         nuevaContrasena: this.fb.nonNullable.control('')
     });
 
     readonly estudianteForm = this.fb.group({
         nombre: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
+        apellidos: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
+        dni: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), dniValidator()]),
+        telefono: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), phoneValidator()]),
+        fechaNacimiento: this.fb.nonNullable.control('', [Validators.required, isoDateValidator()]),
         correo: this.fb.nonNullable.control('', [Validators.required, Validators.email]),
         contrasena: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(6)]),
         cursoId: this.fb.control<number | null>(null, [Validators.required])
@@ -293,6 +307,10 @@ export class AdminManagementViewComponent implements OnInit {
 
     readonly editEstudianteForm = this.fb.group({
         nombre: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
+        apellidos: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
+        dni: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), dniValidator()]),
+        telefono: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), phoneValidator()]),
+        fechaNacimiento: this.fb.nonNullable.control('', [Validators.required, isoDateValidator()]),
         correo: this.fb.nonNullable.control('', [Validators.required, Validators.email]),
         nuevaContrasena: this.fb.nonNullable.control(''),
         cursoId: this.fb.control<number | null>(null, [Validators.required])
@@ -627,8 +645,8 @@ export class AdminManagementViewComponent implements OnInit {
         this.editandoEstudianteId = null;
         this.editCursoForm.reset({ nombre: '' });
         this.editAsignaturaForm.reset({ nombre: '', cursoId: null });
-        this.editProfesorForm.reset({ nombre: '', correo: '', nuevaContrasena: '' });
-        this.editEstudianteForm.reset({ nombre: '', correo: '', nuevaContrasena: '', cursoId: null });
+        this.editProfesorForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', especialidad: '', correo: '', nuevaContrasena: '' });
+        this.editEstudianteForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', fechaNacimiento: '', correo: '', nuevaContrasena: '', cursoId: null });
     }
 
     // CRUD: Cursos
@@ -775,7 +793,7 @@ export class AdminManagementViewComponent implements OnInit {
     // CRUD: Profesores
     async crearProfesor(): Promise<void> {
         if (this.profesorForm.invalid) {
-            this.toast.show('Nombre, correo y contrasena son obligatorios.', 'warning');
+            this.toast.show('Completa todos los campos del profesor y revisa DNI/telefono.', 'warning');
             return;
         }
 
@@ -783,11 +801,15 @@ export class AdminManagementViewComponent implements OnInit {
             try {
                 const p = await this.api.createProfesor({
                     nombre: (this.profesorForm.value.nombre ?? '').trim(),
+                    apellidos: (this.profesorForm.value.apellidos ?? '').trim(),
+                    dni: (this.profesorForm.value.dni ?? '').trim().toUpperCase(),
+                    telefono: (this.profesorForm.value.telefono ?? '').trim(),
+                    especialidad: (this.profesorForm.value.especialidad ?? '').trim(),
                     correo: (this.profesorForm.value.correo ?? '').trim(),
                     contrasena: this.profesorForm.value.contrasena ?? ''
                 });
                 this.profesores.set([...this.profesores(), p]);
-                this.profesorForm.reset({ nombre: '', correo: '', contrasena: '' });
+                this.profesorForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', especialidad: '', correo: '', contrasena: '' });
                 this.toast.show(`Profesor "${p.nombre}" creado.`, 'success');
                 this.dataChanged.emit();
             } catch (e) {
@@ -800,6 +822,10 @@ export class AdminManagementViewComponent implements OnInit {
         this.editandoProfesorId = p.id;
         this.editProfesorForm.setValue({
             nombre: p.nombre,
+            apellidos: p.apellidos,
+            dni: p.dni,
+            telefono: p.telefono,
+            especialidad: p.especialidad,
             correo: p.correo,
             nuevaContrasena: ''
         });
@@ -810,6 +836,10 @@ export class AdminManagementViewComponent implements OnInit {
 
         const data: UpdateProfesorData = {
             nombre: (this.editProfesorForm.value.nombre ?? '').trim(),
+            apellidos: (this.editProfesorForm.value.apellidos ?? '').trim(),
+            dni: (this.editProfesorForm.value.dni ?? '').trim().toUpperCase(),
+            telefono: (this.editProfesorForm.value.telefono ?? '').trim(),
+            especialidad: (this.editProfesorForm.value.especialidad ?? '').trim(),
             correo: (this.editProfesorForm.value.correo ?? '').trim(),
             nuevaContrasena: this.editProfesorForm.value.nuevaContrasena || undefined
         };
@@ -852,7 +882,7 @@ export class AdminManagementViewComponent implements OnInit {
     // CRUD: Estudiantes
     async crearEstudiante(): Promise<void> {
         if (this.estudianteForm.invalid) {
-            this.toast.show('Todos los campos del estudiante son obligatorios.', 'warning');
+            this.toast.show('Completa todos los campos del estudiante y revisa DNI/telefono/fecha.', 'warning');
             return;
         }
 
@@ -860,12 +890,16 @@ export class AdminManagementViewComponent implements OnInit {
             try {
                 const e = await this.api.createEstudiante({
                     nombre: (this.estudianteForm.value.nombre ?? '').trim(),
+                    apellidos: (this.estudianteForm.value.apellidos ?? '').trim(),
+                    dni: (this.estudianteForm.value.dni ?? '').trim().toUpperCase(),
+                    telefono: (this.estudianteForm.value.telefono ?? '').trim(),
+                    fechaNacimiento: (this.estudianteForm.value.fechaNacimiento ?? '').trim(),
                     correo: (this.estudianteForm.value.correo ?? '').trim(),
                     contrasena: this.estudianteForm.value.contrasena ?? '',
                     cursoId: Number(this.estudianteForm.value.cursoId)
                 });
                 this.estudiantes.set([...this.estudiantes(), e]);
-                this.estudianteForm.reset({ nombre: '', correo: '', contrasena: '', cursoId: null });
+                this.estudianteForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', fechaNacimiento: '', correo: '', contrasena: '', cursoId: null });
                 this.toast.show(`Estudiante "${e.nombre}" creado.`, 'success');
                 this.dataChanged.emit();
             } catch (e) {
@@ -878,6 +912,10 @@ export class AdminManagementViewComponent implements OnInit {
         this.editandoEstudianteId = e.id;
         this.editEstudianteForm.setValue({
             nombre: e.nombre,
+            apellidos: e.apellidos,
+            dni: e.dni,
+            telefono: e.telefono,
+            fechaNacimiento: e.fechaNacimiento,
             correo: e.correo,
             cursoId: e.cursoId,
             nuevaContrasena: ''
@@ -889,6 +927,10 @@ export class AdminManagementViewComponent implements OnInit {
 
         const data: UpdateEstudianteData = {
             nombre: (this.editEstudianteForm.value.nombre ?? '').trim(),
+            apellidos: (this.editEstudianteForm.value.apellidos ?? '').trim(),
+            dni: (this.editEstudianteForm.value.dni ?? '').trim().toUpperCase(),
+            telefono: (this.editEstudianteForm.value.telefono ?? '').trim(),
+            fechaNacimiento: (this.editEstudianteForm.value.fechaNacimiento ?? '').trim(),
             correo: (this.editEstudianteForm.value.correo ?? '').trim(),
             cursoId: Number(this.editEstudianteForm.value.cursoId),
             nuevaContrasena: this.editEstudianteForm.value.nuevaContrasena || undefined
@@ -1077,6 +1119,14 @@ export class AdminManagementViewComponent implements OnInit {
     onCsvFileChange(event: Event, entidad: CsvImportEntity): void {
         const input = event.target as HTMLInputElement;
         const file = input.files?.[0] ?? null;
+
+        if (file && file.size > MAX_CSV_FILE_SIZE_BYTES) {
+            this.setCsvFile(entidad, null);
+            input.value = '';
+            this.toast.show('El archivo CSV no puede superar 10 MB.', 'warning');
+            return;
+        }
+
         this.setCsvFile(entidad, file);
 
         if (file) {

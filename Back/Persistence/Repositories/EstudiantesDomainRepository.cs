@@ -9,14 +9,14 @@ namespace Back.Api.Persistence.Repositories;
 
 public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDomainRepository
 {
-    public Task<bool> ExisteAsync(int id, CancellationToken cancellationToken = default) =>
-        context.Estudiantes.AnyAsync(e => e.Id == id);
+    public Task<bool> ExisteAsync(int estudianteId, CancellationToken cancellationToken = default) =>
+        context.Estudiantes.AnyAsync(e => e.Id == estudianteId);
 
     public Task<bool> CorreoDuplicadoAsync(string correo, CancellationToken cancellationToken = default) =>
         context.Cuentas.AnyAsync(c => c.Correo == correo);
 
-    public Task<bool> CorreoDuplicadoExceptAsync(string correo, int exceptId, CancellationToken cancellationToken = default) =>
-        context.Cuentas.AnyAsync(c => c.Correo == correo && (c.Estudiante == null || c.Estudiante.Id != exceptId));
+    public Task<bool> CorreoDuplicadoExceptAsync(string correo, int exceptEstudianteId, CancellationToken cancellationToken = default) =>
+        context.Cuentas.AnyAsync(c => c.Correo == correo && (c.Estudiante == null || c.Estudiante.Id != exceptEstudianteId));
 
     public Task<bool> CursoExisteAsync(int cursoId, CancellationToken cancellationToken = default) =>
         context.Cursos.AnyAsync(c => c.Id == cursoId);
@@ -38,11 +38,11 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
         return cursoDeLaAsignatura == cursoId;
     }
 
-    public async Task<AlumnoPanelResumenDto?> GetPanelResumenAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<AlumnoPanelResumenDto?> GetPanelResumenAsync(int estudianteId, CancellationToken cancellationToken = default)
     {
         var estudiante = await context.Estudiantes
             .AsNoTracking()
-            .Where(e => e.Id == id)
+            .Where(e => e.Id == estudianteId)
             .Select(e => new { e.Id, e.Nombre, e.CursoId, Curso = e.Curso!.Nombre })
             .FirstOrDefaultAsync();
 
@@ -50,7 +50,7 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
 
         var materias = await context.EstudianteAsignaturas
             .AsNoTracking()
-            .Where(ea => ea.EstudianteId == id)
+            .Where(ea => ea.EstudianteId == estudianteId)
             .Select(ea => new AlumnoMateriaResumenDto
             {
                 AsignaturaId = ea.AsignaturaId,
@@ -158,7 +158,7 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
             .Select(c => (string?)c.Nombre)
             .FirstOrDefaultAsync();
 
-    public async Task<IEnumerable<EstudianteListItemDto>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<EstudianteListItemDto>> GetAllEstudiantesAsync(CancellationToken cancellationToken = default)
         => await context.Estudiantes
             .AsNoTracking()
             .Select(e => new EstudianteListItemDto
@@ -175,7 +175,7 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
             })
             .ToListAsync(cancellationToken);
 
-    public async Task<IEnumerable<EstudianteLookupDto>> GetSimpleAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<EstudianteLookupDto>> GetSimpleEstudiantesAsync(CancellationToken cancellationToken = default)
         => await context.Estudiantes
             .AsNoTracking()
             .OrderBy(e => e.Nombre)
@@ -188,10 +188,10 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
             })
             .ToListAsync(cancellationToken);
 
-    public async Task<EstudianteDetalleDto?> GetDetalleAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<EstudianteDetalleDto?> GetDetalleAsync(int estudianteId, CancellationToken cancellationToken = default)
         => await context.Estudiantes
             .AsNoTracking()
-            .Where(e => e.Id == id)
+            .Where(e => e.Id == estudianteId)
             .Select(e => new EstudianteDetalleDto
             {
                 Id = e.Id,
@@ -203,45 +203,45 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
                 Correo = e.Cuenta!.Correo,
                 CursoId = e.CursoId,
                 Curso = e.Curso != null ? e.Curso.Nombre : null,
-                Asignaturas = e.EstudianteAsignaturas.Select(x => new EstudianteAsignaturaDetalleDto
+                Asignaturas = e.EstudianteAsignaturas.Select(estudianteAsignatura => new EstudianteAsignaturaDetalleDto
                 {
-                    AsignaturaId = x.AsignaturaId,
-                    Nombre = x.Asignatura!.Nombre,
-                    ProfesorId = x.Asignatura.ProfesorAsignaturaCursos
+                    AsignaturaId = estudianteAsignatura.AsignaturaId,
+                    Nombre = estudianteAsignatura.Asignatura!.Nombre,
+                    ProfesorId = estudianteAsignatura.Asignatura.ProfesorAsignaturaCursos
                         .Where(pac => pac.CursoId == e.CursoId)
                         .Select(pac => (int?)pac.ProfesorId)
                         .FirstOrDefault(),
-                    Profesor = x.Asignatura.ProfesorAsignaturaCursos
+                    Profesor = estudianteAsignatura.Asignatura.ProfesorAsignaturaCursos
                         .Where(pac => pac.CursoId == e.CursoId)
                         .Select(pac => pac.Profesor!.Nombre)
                         .FirstOrDefault()
                 }).ToList(),
-                Notas = e.Notas.Select(n => new EstudianteNotaDetalleDto
+                Notas = e.Notas.Select(nota => new EstudianteNotaDetalleDto
                 {
-                    TareaId = n.TareaId,
-                    Tarea = n.Tarea!.Nombre,
-                    AsignaturaId = n.Tarea.AsignaturaId,
-                    Asignatura = n.Tarea.Asignatura!.Nombre,
-                    Trimestre = n.Tarea.Trimestre,
-                    Valor = n.Valor,
-                    ProfesorId = n.Tarea.ProfesorId,
-                    Profesor = n.Tarea.Profesor!.Nombre
+                    TareaId = nota.TareaId,
+                    Tarea = nota.Tarea!.Nombre,
+                    AsignaturaId = nota.Tarea.AsignaturaId,
+                    Asignatura = nota.Tarea.Asignatura!.Nombre,
+                    Trimestre = nota.Tarea.Trimestre,
+                    Valor = nota.Valor,
+                    ProfesorId = nota.Tarea.ProfesorId,
+                    Profesor = nota.Tarea.Profesor!.Nombre
                 }).ToList()
             })
             .FirstOrDefaultAsync();
 
-    public async Task<AlumnoPanelDto?> GetPanelAlumnoAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<AlumnoPanelDto?> GetPanelAlumnoAsync(int estudianteId, CancellationToken cancellationToken = default)
     {
         var estudiante = await context.Estudiantes
             .AsNoTracking()
-            .Where(e => e.Id == id)
+            .Where(e => e.Id == estudianteId)
             .Select(e => new { e.Id, e.Nombre, e.CursoId, Curso = e.Curso!.Nombre })
             .FirstOrDefaultAsync();
 
         if (estudiante is null) return null;
 
         var asignaturaIds = await context.EstudianteAsignaturas
-            .Where(ea => ea.EstudianteId == id)
+            .Where(ea => ea.EstudianteId == estudianteId)
             .Select(ea => ea.AsignaturaId)
             .ToListAsync();
 
@@ -272,7 +272,7 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
             var tareaIds = tareas.Select(t => t.Id).ToList();
             var notasAlumno = await context.Notas
                 .AsNoTracking()
-                .Where(n => n.EstudianteId == id && tareaIds.Contains(n.TareaId))
+                .Where(n => n.EstudianteId == estudianteId && tareaIds.Contains(n.TareaId))
                 .ToListAsync();
 
             var notasList = tareas.Select(t =>
@@ -315,7 +315,7 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
 
     #region Mutations
 
-    public async Task<EstudianteListItemDto> CreateAsync(string nombre, string correo, int cursoId, string hash, string apellidos, string dni, string telefono, DateOnly fechaNacimiento, CancellationToken cancellationToken = default)
+    public async Task<EstudianteListItemDto> CreateEstudianteAsync(string nombre, string correo, int cursoId, string contrasenaHash, string apellidos, string dni, string telefono, DateOnly fechaNacimiento, CancellationToken cancellationToken = default)
     {
         var estudiante = await context.Estudiantes
             .IgnoreQueryFilters()
@@ -335,7 +335,7 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
                 Cuenta = new Cuenta
                 {
                     Correo = correo,
-                    Contrasena = hash,
+                    Contrasena = contrasenaHash,
                     Rol = Roles.Alumno
                 }
             };
@@ -353,7 +353,7 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
             if (estudiante.Cuenta is not null)
             {
                 estudiante.Cuenta.Correo = correo;
-                estudiante.Cuenta.Contrasena = hash;
+                estudiante.Cuenta.Contrasena = contrasenaHash;
                 estudiante.Cuenta.Rol = Roles.Alumno;
                 estudiante.Cuenta.IsDeleted = false;
             }
@@ -393,11 +393,11 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
         }
     }
 
-    public async Task<EstudianteListItemDto?> UpdateAsync(int id, string nombre, string correo, int cursoId, string? hash, string apellidos, string dni, string telefono, DateOnly fechaNacimiento, CancellationToken cancellationToken = default)
+    public async Task<EstudianteListItemDto?> UpdateEstudianteAsync(int estudianteId, string nombre, string correo, int cursoId, string? contrasenaHash, string apellidos, string dni, string telefono, DateOnly fechaNacimiento, CancellationToken cancellationToken = default)
     {
         var estudiante = await context.Estudiantes
             .Include(e => e.Cuenta)
-            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(e => e.Id == estudianteId, cancellationToken);
         if (estudiante is null) return null;
 
         estudiante.Nombre = nombre;
@@ -409,7 +409,7 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
         if (estudiante.Cuenta is not null)
         {
             estudiante.Cuenta.Correo = correo;
-            if (hash is not null) estudiante.Cuenta.Contrasena = hash;
+            if (contrasenaHash is not null) estudiante.Cuenta.Contrasena = contrasenaHash;
         }
 
         await context.SaveChangesAsync(cancellationToken);
@@ -417,22 +417,22 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
         return new EstudianteListItemDto { Id = estudiante.Id, Nombre = estudiante.Nombre, Apellidos = estudiante.Apellidos, DNI = estudiante.DNI, Telefono = estudiante.Telefono, FechaNacimiento = estudiante.FechaNacimiento, Correo = estudiante.Cuenta!.Correo, CursoId = estudiante.CursoId, Curso = cursoNombre };
     }
 
-    public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
+    public async Task DeleteEstudianteAsync(int estudianteId, CancellationToken cancellationToken = default)
     {
-        var matriculas = await context.EstudianteAsignaturas.Where(ea => ea.EstudianteId == id).ToListAsync(cancellationToken);
+        var matriculas = await context.EstudianteAsignaturas.Where(ea => ea.EstudianteId == estudianteId).ToListAsync(cancellationToken);
         foreach (var matricula in matriculas) matricula.IsDeleted = true;
 
-        var notas = await context.Notas.Where(n => n.EstudianteId == id).ToListAsync(cancellationToken);
+        var notas = await context.Notas.Where(n => n.EstudianteId == estudianteId).ToListAsync(cancellationToken);
         foreach (var nota in notas) nota.IsDeleted = true;
 
         var tokens = await context.RefreshTokens
-            .Where(t => t.UserId == id && t.Rol == Roles.Alumno)
+            .Where(t => t.UserId == estudianteId && t.Rol == Roles.Alumno)
             .ToListAsync(cancellationToken);
         foreach (var token in tokens) token.IsDeleted = true;
 
         var estudiante = await context.Estudiantes
             .Include(e => e.Cuenta)
-            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(e => e.Id == estudianteId, cancellationToken);
         if (estudiante is not null)
         {
             estudiante.IsDeleted = true;

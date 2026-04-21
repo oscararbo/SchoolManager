@@ -18,7 +18,7 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
         public int TotalTareas { get; set; }
     }
 
-    public async Task<IEnumerable<AdminListItemDto>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<AdminListItemDto>> GetAllAdminsAsync(CancellationToken cancellationToken = default)
         => await context.Admins
             .AsNoTracking()
             .Select(a => new AdminListItemDto { Id = a.Id, Nombre = a.Nombre, Correo = a.Cuenta!.Correo })
@@ -30,12 +30,12 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
             .SqlQueryRaw<AdminTotalsSnapshot>(
                 """
                 SELECT
-                    (SELECT COUNT(*) FROM \"Cursos\" c WHERE c.\"IsDeleted\" = FALSE) AS \"TotalCursos\",
-                    (SELECT COUNT(*) FROM \"Asignaturas\" a WHERE a.\"IsDeleted\" = FALSE) AS \"TotalAsignaturas\",
-                    (SELECT COUNT(*) FROM \"Profesores\" p WHERE p.\"IsDeleted\" = FALSE) AS \"TotalProfesores\",
-                    (SELECT COUNT(*) FROM \"Estudiantes\" e WHERE e.\"IsDeleted\" = FALSE) AS \"TotalEstudiantes\",
-                    (SELECT COUNT(*) FROM \"EstudianteAsignaturas\" ea WHERE ea.\"IsDeleted\" = FALSE) AS \"TotalMatriculas\",
-                    (SELECT COUNT(*) FROM \"Tareas\" t WHERE t.\"IsDeleted\" = FALSE) AS \"TotalTareas\"
+                    (SELECT COUNT(*) FROM "Cursos" c WHERE c."IsDeleted" = FALSE) AS "TotalCursos",
+                    (SELECT COUNT(*) FROM "Asignaturas" a WHERE a."IsDeleted" = FALSE) AS "TotalAsignaturas",
+                    (SELECT COUNT(*) FROM "Profesores" p WHERE p."IsDeleted" = FALSE) AS "TotalProfesores",
+                    (SELECT COUNT(*) FROM "Estudiantes" e WHERE e."IsDeleted" = FALSE) AS "TotalEstudiantes",
+                    (SELECT COUNT(*) FROM "EstudianteAsignaturas" ea WHERE ea."IsDeleted" = FALSE) AS "TotalMatriculas",
+                    (SELECT COUNT(*) FROM "Tareas" t WHERE t."IsDeleted" = FALSE) AS "TotalTareas"
                 """)
             .SingleAsync(cancellationToken);
 
@@ -60,11 +60,11 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
             .Select(c => new { c.Id, c.Nombre })
             .ToListAsync(cancellationToken);
 
-        var porCurso = cursos.Select(c => new CursoStatsItemDto
+        var porCurso = cursos.Select(curso => new CursoStatsItemDto
         {
-            Curso = c.Nombre,
-            Estudiantes = estudiantesMap.GetValueOrDefault(c.Id),
-            Asignaturas = asignaturasMap.GetValueOrDefault(c.Id)
+            Curso = curso.Nombre,
+            Estudiantes = estudiantesMap.GetValueOrDefault(curso.Id),
+            Asignaturas = asignaturasMap.GetValueOrDefault(curso.Id)
         }).ToList();
 
         return new AdminStatsDto
@@ -139,7 +139,7 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
     public Task<bool> CorreoDuplicadoAsync(string correo, CancellationToken cancellationToken = default)
         => context.Cuentas.AnyAsync(c => c.Correo == correo, cancellationToken);
 
-    public async Task<AdminListItemDto> CreateAsync(string nombre, string correo, string hash, CancellationToken cancellationToken = default)
+    public async Task<AdminListItemDto> CreateAdminAsync(string nombre, string correo, string contrasenaHash, CancellationToken cancellationToken = default)
     {
         var admin = new Admin
         {
@@ -147,7 +147,7 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
             Cuenta = new Cuenta
             {
                 Correo = correo,
-                Contrasena = hash,
+                Contrasena = contrasenaHash,
                 Rol = "admin"
             }
         };
@@ -184,16 +184,16 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
     public async Task<IEnumerable<AdminImparticionListReadModelDto>> GetImparticionesAsync(CancellationToken cancellationToken = default)
         => await context.ProfesorAsignaturaCursos
             .AsNoTracking()
-            .OrderBy(x => x.Curso!.Nombre)
-            .ThenBy(x => x.Asignatura!.Nombre)
-            .Select(x => new AdminImparticionListReadModelDto
+            .OrderBy(imparticion => imparticion.Curso!.Nombre)
+            .ThenBy(imparticion => imparticion.Asignatura!.Nombre)
+            .Select(imparticion => new AdminImparticionListReadModelDto
             {
-                ProfesorId = x.ProfesorId,
-                Profesor = x.Profesor != null ? x.Profesor.Nombre : string.Empty,
-                AsignaturaId = x.AsignaturaId,
-                Asignatura = x.Asignatura != null ? x.Asignatura.Nombre : string.Empty,
-                CursoId = x.CursoId,
-                Curso = x.Curso != null ? x.Curso.Nombre : string.Empty
+                ProfesorId = imparticion.ProfesorId,
+                Profesor = imparticion.Profesor != null ? imparticion.Profesor.Nombre : string.Empty,
+                AsignaturaId = imparticion.AsignaturaId,
+                Asignatura = imparticion.Asignatura != null ? imparticion.Asignatura.Nombre : string.Empty,
+                CursoId = imparticion.CursoId,
+                Curso = imparticion.Curso != null ? imparticion.Curso.Nombre : string.Empty
             })
             .ToListAsync(cancellationToken);
 
@@ -219,19 +219,19 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
 
         var asignaturas = await dbContext.Asignaturas
             .AsNoTracking()
-            .Where(a => a.CursoId == cursoId)
-            .OrderBy(a => a.Nombre)
-            .Select(a => new { a.Id, a.Nombre })
+            .Where(asignatura => asignatura.CursoId == cursoId)
+            .OrderBy(asignatura => asignatura.Nombre)
+            .Select(asignatura => new { asignatura.Id, asignatura.Nombre })
             .ToListAsync(cancellationToken);
 
-        var asignaturaIds = asignaturas.Select(a => a.Id).ToList();
+        var asignaturaIds = asignaturas.Select(asignatura => asignatura.Id).ToList();
         var tareas = await dbContext.Tareas
             .AsNoTracking()
-            .Where(t => asignaturaIds.Contains(t.AsignaturaId))
-            .Select(t => new { t.Id, t.AsignaturaId, t.Trimestre })
+            .Where(tarea => asignaturaIds.Contains(tarea.AsignaturaId))
+            .Select(tarea => new { tarea.Id, tarea.AsignaturaId, tarea.Trimestre })
             .ToListAsync(cancellationToken);
 
-        var tareaIds = tareas.Select(t => t.Id).ToList();
+        var tareaIds = tareas.Select(tarea => tarea.Id).ToList();
         var matriculas = await dbContext.EstudianteAsignaturas
             .AsNoTracking()
             .Where(ea => asignaturaIds.Contains(ea.AsignaturaId))
@@ -240,11 +240,11 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
 
         var notas = await dbContext.Notas
             .AsNoTracking()
-            .Where(n => tareaIds.Contains(n.TareaId))
-            .Select(n => new { n.EstudianteId, n.TareaId, Valor = (double)n.Valor })
+            .Where(nota => tareaIds.Contains(nota.TareaId))
+            .Select(nota => new { nota.EstudianteId, nota.TareaId, Valor = (double)nota.Valor })
             .ToListAsync(cancellationToken);
 
-        var notaMap = notas.ToDictionary(n => (n.EstudianteId, n.TareaId), n => (double?)n.Valor);
+        var notaMap = notas.ToDictionary(nota => (nota.EstudianteId, nota.TareaId), nota => (double?)nota.Valor);
         var asignaturasStats = new List<AsignaturaNotasStatsDto>();
         var acumuladoFinales = new List<double>();
         var totalAlumnos = 0;
@@ -254,10 +254,10 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
 
         foreach (var asignatura in asignaturas)
         {
-            var tareasAsignatura = tareas.Where(t => t.AsignaturaId == asignatura.Id).ToList();
+            var tareasAsignatura = tareas.Where(tarea => tarea.AsignaturaId == asignatura.Id).ToList();
             var estudianteIds = matriculas
-                .Where(m => m.AsignaturaId == asignatura.Id)
-                .Select(m => m.EstudianteId)
+                .Where(matricula => matricula.AsignaturaId == asignatura.Id)
+                .Select(matricula => matricula.EstudianteId)
                 .Distinct()
                 .ToList();
 
@@ -265,9 +265,9 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
                 .Select(estudianteId => CalcularNotaFinal(tareasAsignatura, estudianteId, notaMap))
                 .ToList();
 
-            var finalesValidas = finales.Where(f => f.HasValue).Select(f => f!.Value).ToList();
-            var aprobadosAsignatura = finalesValidas.Count(f => f >= 5);
-            var suspensosAsignatura = finalesValidas.Count(f => f < 5);
+            var finalesValidas = finales.Where(notaFinal => notaFinal.HasValue).Select(notaFinal => notaFinal!.Value).ToList();
+            var aprobadosAsignatura = finalesValidas.Count(notaFinal => notaFinal >= 5);
+            var suspensosAsignatura = finalesValidas.Count(notaFinal => notaFinal < 5);
             var sinNotaAsignatura = finales.Count - finalesValidas.Count;
 
             totalAlumnos += finales.Count;
@@ -309,14 +309,14 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
         double? MediaTrimestre(int trimestre)
         {
             var tareaIds = tareasAsignatura
-                .Where(t => t.Trimestre == trimestre)
-                .Select(t => (int)t.Id)
+                .Where(tarea => tarea.Trimestre == trimestre)
+                .Select(tarea => (int)tarea.Id)
                 .ToList();
 
             var valores = tareaIds
                 .Select(tareaId => notaMap.TryGetValue((estudianteId, tareaId), out var valor) ? valor : null)
-                .Where(v => v.HasValue)
-                .Select(v => v!.Value)
+                .Where(valor => valor.HasValue)
+                .Select(valor => valor!.Value)
                 .ToList();
 
             return valores.Count > 0 ? valores.Average() : null;

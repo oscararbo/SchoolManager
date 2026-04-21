@@ -4,9 +4,9 @@ namespace Back.Api.Application.Abstractions.Repositories;
 
 public interface IAdminDomainRepository
 {
-    Task<IEnumerable<AdminListItemDto>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<IEnumerable<AdminListItemDto>> GetAllAdminsAsync(CancellationToken cancellationToken = default);
     Task<bool> CorreoDuplicadoAsync(string correo, CancellationToken cancellationToken = default);
-    Task<AdminListItemDto> CreateAsync(string nombre, string correo, string hash, CancellationToken cancellationToken = default);
+    Task<AdminListItemDto> CreateAdminAsync(string nombre, string correo, string contrasenaHash, CancellationToken cancellationToken = default);
     Task<AdminStatsDto> GetStatsAsync(CancellationToken cancellationToken = default);
     Task<IEnumerable<CursoStatsSelectorDto>> GetCursosStatsSelectorAsync(CancellationToken cancellationToken = default);
     Task<CursoNotasStatsResponseDto?> GetStatsByCursoAsync(int cursoId, CancellationToken cancellationToken = default);

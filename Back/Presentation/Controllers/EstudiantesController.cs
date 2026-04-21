@@ -18,42 +18,42 @@ public class EstudiantesController(IEstudiantesService estudiantesService) : Con
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
     public async Task<IActionResult> GetAll()
     {
-        return this.ToActionResult(await estudiantesService.GetAllAsync(HttpContext.RequestAborted));
+        return this.ToActionResult(await estudiantesService.GetAllEstudiantesAsync(HttpContext.RequestAborted));
     }
 
     [HttpGet("simple")]
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
     public async Task<IActionResult> GetSimple()
     {
-        return this.ToActionResult(await estudiantesService.GetSimpleAsync(HttpContext.RequestAborted));
+        return this.ToActionResult(await estudiantesService.GetSimpleEstudiantesAsync(HttpContext.RequestAborted));
     }
 
     [HttpGet("{id:int}")]
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
     public async Task<IActionResult> GetById(int id)
     {
-        return this.ToActionResult(await estudiantesService.GetByIdAsync(id, HttpContext.RequestAborted));
+        return this.ToActionResult(await estudiantesService.GetEstudianteByIdAsync(id, HttpContext.RequestAborted));
     }
 
     [HttpPost]
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
-    public async Task<IActionResult> Create(CreateEstudianteRequestDto dto)
+    public async Task<IActionResult> Create(CreateEstudianteRequestDto createEstudianteRequestDto)
     {
-        return this.ToActionResult(await estudiantesService.CreateAsync(dto, HttpContext.RequestAborted));
+        return this.ToActionResult(await estudiantesService.CreateEstudianteAsync(createEstudianteRequestDto, HttpContext.RequestAborted));
     }
 
     [HttpPut("{id:int}")]
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
-    public async Task<IActionResult> Update(int id, UpdateEstudianteRequestDto dto)
+    public async Task<IActionResult> Update(int id, UpdateEstudianteRequestDto updateEstudianteRequestDto)
     {
-        return this.ToActionResult(await estudiantesService.UpdateAsync(id, dto, HttpContext.RequestAborted));
+        return this.ToActionResult(await estudiantesService.UpdateEstudianteAsync(id, updateEstudianteRequestDto, HttpContext.RequestAborted));
     }
 
     [HttpDelete("{id:int}")]
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
     public async Task<IActionResult> Delete(int id)
     {
-        return this.ToActionResult(await estudiantesService.DeleteAsync(id, HttpContext.RequestAborted));
+        return this.ToActionResult(await estudiantesService.DeleteEstudianteAsync(id, HttpContext.RequestAborted));
     }
 
     [HttpPost("{id:int}/asignaturas/{asignaturaId:int}")]

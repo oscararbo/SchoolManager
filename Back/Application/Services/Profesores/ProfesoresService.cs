@@ -9,43 +9,43 @@ namespace Back.Api.Application.Services;
 
 public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPasswordService passwordService) : IProfesoresService
 {
-    public async Task<ApplicationResult> GetAllAsync(CancellationToken cancellationToken = default)
-        => ApplicationResult.Ok(await profesoresDomain.GetAllAsync(cancellationToken));
+    public async Task<ApplicationResult> GetAllProfesoresAsync(CancellationToken cancellationToken = default)
+        => ApplicationResult.Ok(await profesoresDomain.GetAllProfesoresAsync(cancellationToken));
 
-    public async Task<ApplicationResult> GetSimpleAsync(CancellationToken cancellationToken = default)
-        => ApplicationResult.Ok(await profesoresDomain.GetSimpleAsync(cancellationToken));
+    public async Task<ApplicationResult> GetSimpleProfesoresAsync(CancellationToken cancellationToken = default)
+        => ApplicationResult.Ok(await profesoresDomain.GetSimpleProfesoresAsync(cancellationToken));
 
-    public async Task<ApplicationResult> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> GetProfesorByIdAsync(int profesorId, CancellationToken cancellationToken = default)
     {
-        var profesor = await profesoresDomain.GetDetalleAsync(id, cancellationToken);
+        var profesor = await profesoresDomain.GetDetalleAsync(profesorId, cancellationToken);
         return profesor is null
             ? ApplicationResult.NotFound("El profesor no existe.")
             : ApplicationResult.Ok(profesor);
     }
 
-    public async Task<ApplicationResult> CreateAsync(CreateProfesorRequestDto dto, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> CreateProfesorAsync(CreateProfesorRequestDto createProfesorRequestDto, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(dto.Nombre))
+        if (string.IsNullOrWhiteSpace(createProfesorRequestDto.Nombre))
             return ApplicationResult.BadRequest("El nombre del profesor es obligatorio.");
-        if (string.IsNullOrWhiteSpace(dto.Correo))
+        if (string.IsNullOrWhiteSpace(createProfesorRequestDto.Correo))
             return ApplicationResult.BadRequest("El correo del profesor es obligatorio.");
-        if (string.IsNullOrWhiteSpace(dto.Contrasena))
+        if (string.IsNullOrWhiteSpace(createProfesorRequestDto.Contrasena))
             return ApplicationResult.BadRequest("La contrasena del profesor es obligatoria.");
 
-        var correo = dto.Correo.Trim().ToLowerInvariant();
+        var correo = createProfesorRequestDto.Correo.Trim().ToLowerInvariant();
         if (await profesoresDomain.CorreoDuplicadoAsync(correo, cancellationToken))
             return ApplicationResult.BadRequest("Ya existe un profesor con ese correo.");
 
-        var result = await profesoresDomain.CreateAsync(dto.Nombre.Trim(), correo, passwordService.Hash(dto.Contrasena.Trim()), dto.Apellidos.Trim(), dto.DNI.Trim(), dto.Telefono.Trim(), dto.Especialidad.Trim(), cancellationToken);
-        return ApplicationResult.Created($"/api/profesores/{result.Id}", result);
+        var createdProfesor = await profesoresDomain.CreateProfesorAsync(createProfesorRequestDto.Nombre.Trim(), correo, passwordService.Hash(createProfesorRequestDto.Contrasena.Trim()), createProfesorRequestDto.Apellidos.Trim(), createProfesorRequestDto.DNI.Trim(), createProfesorRequestDto.Telefono.Trim(), createProfesorRequestDto.Especialidad.Trim(), cancellationToken);
+        return ApplicationResult.Created($"/api/profesores/{createdProfesor.Id}", createdProfesor);
     }
 
-    public async Task<ApplicationResult> GetPanelProfesorAsync(int id, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> GetPanelProfesorAsync(int profesorId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
-        if (!UsuarioCoincideConProfesor(id, user))
+        if (!UsuarioCoincideConProfesor(profesorId, user))
             return ApplicationResult.Forbidden();
 
-        var panel = await profesoresDomain.GetPanelAsync(id, cancellationToken);
+        var panel = await profesoresDomain.GetPanelAsync(profesorId, cancellationToken);
         return panel is null
             ? ApplicationResult.NotFound("El profesor no existe.")
             : ApplicationResult.Ok(panel);
@@ -60,10 +60,10 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         if (!await profesoresDomain.ProfesorImparteAsignaturaAsync(profesorId, asignaturaId, cancellationToken))
             return ApplicationResult.BadRequest("El profesor no imparte esta asignatura.");
 
-        var result = await profesoresDomain.GetAlumnosCompletoAsync(asignaturaId, cancellationToken);
-        return result is null
+        var alumnosAsignatura = await profesoresDomain.GetAlumnosCompletoAsync(asignaturaId, cancellationToken);
+        return alumnosAsignatura is null
             ? ApplicationResult.NotFound("La asignatura no existe.")
-            : ApplicationResult.Ok(result);
+            : ApplicationResult.Ok(alumnosAsignatura);
     }
 
     public async Task<ApplicationResult> GetAlumnosResumenDeAsignaturaAsync(int profesorId, int asignaturaId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
@@ -75,10 +75,10 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         if (!await profesoresDomain.ProfesorImparteAsignaturaAsync(profesorId, asignaturaId, cancellationToken))
             return ApplicationResult.BadRequest("El profesor no imparte esta asignatura.");
 
-        var result = await profesoresDomain.GetAlumnosResumenResponseAsync(asignaturaId, cancellationToken);
-        return result is null
+        var alumnosResumen = await profesoresDomain.GetAlumnosResumenResponseAsync(asignaturaId, cancellationToken);
+        return alumnosResumen is null
             ? ApplicationResult.NotFound("La asignatura no existe.")
-            : ApplicationResult.Ok(result);
+            : ApplicationResult.Ok(alumnosResumen);
     }
 
     public async Task<ApplicationResult> GetAlumnoDetalleDeAsignaturaAsync(int profesorId, int asignaturaId, int estudianteId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
@@ -107,32 +107,32 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         if (!await profesoresDomain.ProfesorImparteTareaAsync(profesorId, tareaId, cancellationToken))
             return ApplicationResult.BadRequest("El profesor no tiene acceso a esa tarea.");
 
-        var result = await profesoresDomain.GetCalificacionesTareaResponseAsync(asignaturaId, tareaId, cancellationToken);
-        return result is null
+        var calificacionesTarea = await profesoresDomain.GetCalificacionesTareaResponseAsync(asignaturaId, tareaId, cancellationToken);
+        return calificacionesTarea is null
             ? ApplicationResult.NotFound("La tarea no existe.")
-            : ApplicationResult.Ok(result);
+            : ApplicationResult.Ok(calificacionesTarea);
     }
 
-    public async Task<ApplicationResult> AsignarImparticionAsync(int profesorId, AsignarImparticionRequestDto dto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> AsignarImparticionAsync(int profesorId, AsignarImparticionRequestDto asignarImparticionRequestDto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
         if (!UsuarioCoincideConProfesor(profesorId, user))
             return ApplicationResult.Forbidden();
         if (!await profesoresDomain.ProfesorExisteAsync(profesorId, cancellationToken))
             return ApplicationResult.NotFound("El profesor no existe.");
 
-        var asignatura = await profesoresDomain.GetAsignaturaBasicaAsync(dto.AsignaturaId, cancellationToken);
+        var asignatura = await profesoresDomain.GetAsignaturaBasicaAsync(asignarImparticionRequestDto.AsignaturaId, cancellationToken);
         if (asignatura is null)
             return ApplicationResult.NotFound("La asignatura no existe.");
-        if (!await profesoresDomain.CursoExisteAsync(dto.CursoId, cancellationToken))
+        if (!await profesoresDomain.CursoExisteAsync(asignarImparticionRequestDto.CursoId, cancellationToken))
             return ApplicationResult.NotFound("El curso no existe.");
-        if (asignatura.Value.CursoId != dto.CursoId)
+        if (asignatura.Value.CursoId != asignarImparticionRequestDto.CursoId)
             return ApplicationResult.BadRequest("La asignatura no pertenece a ese curso.");
-        if (await profesoresDomain.AsignaturaYaTieneOtroProfesorAsync(dto.AsignaturaId, profesorId, cancellationToken))
+        if (await profesoresDomain.AsignaturaYaTieneOtroProfesorAsync(asignarImparticionRequestDto.AsignaturaId, profesorId, cancellationToken))
             return ApplicationResult.BadRequest("La asignatura ya tiene un profesor asignado.");
-        if (await profesoresDomain.ImparticionExisteAsync(profesorId, dto.AsignaturaId, dto.CursoId, cancellationToken))
+        if (await profesoresDomain.ImparticionExisteAsync(profesorId, asignarImparticionRequestDto.AsignaturaId, asignarImparticionRequestDto.CursoId, cancellationToken))
             return ApplicationResult.BadRequest("La imparticion ya existe para ese profesor, asignatura y curso.");
 
-        await profesoresDomain.AsignarImparticionAsync(profesorId, dto.AsignaturaId, dto.CursoId, cancellationToken);
+        await profesoresDomain.AsignarImparticionAsync(profesorId, asignarImparticionRequestDto.AsignaturaId, asignarImparticionRequestDto.CursoId, cancellationToken);
         return ApplicationResult.Ok();
     }
 
@@ -149,53 +149,53 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         return ApplicationResult.NoContent();
     }
 
-    public async Task<ApplicationResult> PonerNotaAsync(int profesorId, PonerNotaRequestDto dto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> PonerNotaAsync(int profesorId, PonerNotaRequestDto ponerNotaRequestDto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
         if (!UsuarioCoincideConProfesor(profesorId, user))
             return ApplicationResult.Forbidden();
-        if (dto.Valor < 0 || dto.Valor > 10)
+        if (ponerNotaRequestDto.Valor < 0 || ponerNotaRequestDto.Valor > 10)
             return ApplicationResult.BadRequest("La nota debe estar entre 0 y 10.");
 
-        var tareaInfo = await profesoresDomain.GetTareaInfoAsync(dto.TareaId, cancellationToken);
+        var tareaInfo = await profesoresDomain.GetTareaInfoAsync(ponerNotaRequestDto.TareaId, cancellationToken);
         if (tareaInfo is null)
             return ApplicationResult.NotFound("La tarea no existe.");
         if (tareaInfo.Value.ProfesorId != profesorId && !user.IsInRole(Roles.Admin))
             return ApplicationResult.Forbidden();
 
-        var estudianteCursoId = await profesoresDomain.GetEstudianteCursoAsync(dto.EstudianteId, cancellationToken);
+        var estudianteCursoId = await profesoresDomain.GetEstudianteCursoAsync(ponerNotaRequestDto.EstudianteId, cancellationToken);
         if (estudianteCursoId is null)
             return ApplicationResult.NotFound("El estudiante no existe.");
-        if (!await profesoresDomain.EstudianteMatriculadoAsync(dto.EstudianteId, tareaInfo.Value.AsignaturaId, cancellationToken))
+        if (!await profesoresDomain.EstudianteMatriculadoAsync(ponerNotaRequestDto.EstudianteId, tareaInfo.Value.AsignaturaId, cancellationToken))
             return ApplicationResult.BadRequest("El estudiante no esta matriculado en esa asignatura.");
         if (!await profesoresDomain.ProfesorImparteAlCursoAsync(tareaInfo.Value.ProfesorId, tareaInfo.Value.AsignaturaId, estudianteCursoId.Value, cancellationToken))
             return ApplicationResult.BadRequest("El profesor no imparte esa asignatura al curso del estudiante.");
 
-        await profesoresDomain.SetNotaAsync(dto.EstudianteId, dto.TareaId, dto.Valor, cancellationToken);
+        await profesoresDomain.SetNotaAsync(ponerNotaRequestDto.EstudianteId, ponerNotaRequestDto.TareaId, ponerNotaRequestDto.Valor, cancellationToken);
         return ApplicationResult.Ok();
     }
 
-    public async Task<ApplicationResult> CrearTareaAsync(int profesorId, CreateTareaRequestDto dto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> CrearTareaAsync(int profesorId, CreateTareaRequestDto createTareaRequestDto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
         if (!UsuarioCoincideConProfesor(profesorId, user))
             return ApplicationResult.Forbidden();
-        if (string.IsNullOrWhiteSpace(dto.Nombre))
+        if (string.IsNullOrWhiteSpace(createTareaRequestDto.Nombre))
             return ApplicationResult.BadRequest("El nombre de la tarea es obligatorio.");
-        if (dto.Trimestre < 1 || dto.Trimestre > 3)
+        if (createTareaRequestDto.Trimestre < 1 || createTareaRequestDto.Trimestre > 3)
             return ApplicationResult.BadRequest("El trimestre debe ser 1, 2 o 3.");
         if (!await profesoresDomain.ProfesorExisteAsync(profesorId, cancellationToken))
             return ApplicationResult.NotFound("El profesor no existe.");
-        if (!await profesoresDomain.ProfesorImparteAsignaturaAsync(profesorId, dto.AsignaturaId, cancellationToken))
+        if (!await profesoresDomain.ProfesorImparteAsignaturaAsync(profesorId, createTareaRequestDto.AsignaturaId, cancellationToken))
             return ApplicationResult.BadRequest("El profesor no imparte esa asignatura.");
 
-        var asignaturaInfo = await profesoresDomain.GetAsignaturaInfoAsync(dto.AsignaturaId, cancellationToken);
+        var asignaturaInfo = await profesoresDomain.GetAsignaturaInfoAsync(createTareaRequestDto.AsignaturaId, cancellationToken);
         if (asignaturaInfo is null)
             return ApplicationResult.NotFound("La asignatura no existe.");
 
-        var nombreNorm = dto.Nombre.Trim();
-        if (await profesoresDomain.TareaDuplicadaAsync(dto.AsignaturaId, dto.Trimestre, nombreNorm, cancellationToken))
+        var nombreNorm = createTareaRequestDto.Nombre.Trim();
+        if (await profesoresDomain.TareaDuplicadaAsync(createTareaRequestDto.AsignaturaId, createTareaRequestDto.Trimestre, nombreNorm, cancellationToken))
             return ApplicationResult.BadRequest($"Ya existe una tarea con el nombre '{nombreNorm}' en este trimestre para esta asignatura.");
 
-        var tarea = await profesoresDomain.CrearTareaAsync(nombreNorm, dto.Trimestre, dto.AsignaturaId, profesorId, cancellationToken);
+        var tarea = await profesoresDomain.CrearTareaAsync(nombreNorm, createTareaRequestDto.Trimestre, createTareaRequestDto.AsignaturaId, profesorId, cancellationToken);
         return ApplicationResult.Created($"/api/profesores/{profesorId}/tareas/{tarea.Id}", tarea);
     }
 
@@ -208,35 +208,35 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         return ApplicationResult.Ok(tareas);
     }
 
-    public async Task<ApplicationResult> UpdateAsync(int id, UpdateProfesorRequestDto dto, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> UpdateProfesorAsync(int profesorId, UpdateProfesorRequestDto updateProfesorRequestDto, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(dto.Nombre))
+        if (string.IsNullOrWhiteSpace(updateProfesorRequestDto.Nombre))
             return ApplicationResult.BadRequest("El nombre del profesor es obligatorio.");
-        if (string.IsNullOrWhiteSpace(dto.Correo))
+        if (string.IsNullOrWhiteSpace(updateProfesorRequestDto.Correo))
             return ApplicationResult.BadRequest("El correo del profesor es obligatorio.");
-        if (!await profesoresDomain.ProfesorExisteAsync(id, cancellationToken))
+        if (!await profesoresDomain.ProfesorExisteAsync(profesorId, cancellationToken))
             return ApplicationResult.NotFound("El profesor no existe.");
 
-        var correo = dto.Correo.Trim().ToLowerInvariant();
-        if (await profesoresDomain.CorreoDuplicadoExceptAsync(correo, id, cancellationToken))
+        var correo = updateProfesorRequestDto.Correo.Trim().ToLowerInvariant();
+        if (await profesoresDomain.CorreoDuplicadoExceptAsync(correo, profesorId, cancellationToken))
             return ApplicationResult.BadRequest("Ya existe otro profesor con ese correo.");
 
-        string? hash = string.IsNullOrWhiteSpace(dto.NuevaContrasena)
+        string? contrasenaHash = string.IsNullOrWhiteSpace(updateProfesorRequestDto.NuevaContrasena)
             ? null
-            : passwordService.Hash(dto.NuevaContrasena.Trim());
+            : passwordService.Hash(updateProfesorRequestDto.NuevaContrasena.Trim());
 
-        var result = await profesoresDomain.UpdateAsync(id, dto.Nombre.Trim(), correo, hash, dto.Apellidos.Trim(), dto.DNI.Trim(), dto.Telefono.Trim(), dto.Especialidad.Trim(), cancellationToken);
-        return result is null
+        var updatedProfesor = await profesoresDomain.UpdateProfesorAsync(profesorId, updateProfesorRequestDto.Nombre.Trim(), correo, contrasenaHash, updateProfesorRequestDto.Apellidos.Trim(), updateProfesorRequestDto.DNI.Trim(), updateProfesorRequestDto.Telefono.Trim(), updateProfesorRequestDto.Especialidad.Trim(), cancellationToken);
+        return updatedProfesor is null
             ? ApplicationResult.NotFound("El profesor no existe.")
-            : ApplicationResult.Ok(result);
+            : ApplicationResult.Ok(updatedProfesor);
     }
 
-    public async Task<ApplicationResult> DeleteAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> DeleteProfesorAsync(int profesorId, CancellationToken cancellationToken = default)
     {
-        if (!await profesoresDomain.ProfesorExisteAsync(id, cancellationToken))
+        if (!await profesoresDomain.ProfesorExisteAsync(profesorId, cancellationToken))
             return ApplicationResult.NotFound("El profesor no existe.");
 
-        await profesoresDomain.DeleteAsync(id, cancellationToken);
+        await profesoresDomain.DeleteProfesorAsync(profesorId, cancellationToken);
         return ApplicationResult.NoContent();
     }
 
@@ -249,8 +249,8 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         if (asignatura is null)
             return ApplicationResult.NotFound("La asignatura no existe.");
 
-        var result = await profesoresDomain.GetTareasConNotasAsync(asignaturaId, cancellationToken);
-        return ApplicationResult.Ok(result);
+        var tareasConNotas = await profesoresDomain.GetTareasConNotasAsync(asignaturaId, cancellationToken);
+        return ApplicationResult.Ok(tareasConNotas);
     }
 
     public async Task<ApplicationResult> GetStatsAsync(int profesorId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
@@ -258,11 +258,11 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         if (!UsuarioCoincideConProfesor(profesorId, user))
             return ApplicationResult.Forbidden();
 
-        var result = await profesoresDomain.GetStatsAsync(profesorId, cancellationToken);
-        if (result is null)
+        var profesorStats = await profesoresDomain.GetStatsAsync(profesorId, cancellationToken);
+        if (profesorStats is null)
             return ApplicationResult.NotFound("El profesor no existe.");
 
-        return ApplicationResult.Ok(result);
+        return ApplicationResult.Ok(profesorStats);
     }
 
     private static bool UsuarioCoincideConProfesor(int profesorId, ClaimsPrincipal user)

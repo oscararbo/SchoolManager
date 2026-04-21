@@ -17,37 +17,37 @@ public class CursosController(ICursosService cursosService) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        return this.ToActionResult(await cursosService.GetAllAsync(HttpContext.RequestAborted));
+        return this.ToActionResult(await cursosService.GetAllCursosAsync(HttpContext.RequestAborted));
     }
 
     [HttpGet("simple")]
     public async Task<IActionResult> GetSimple()
     {
-        return this.ToActionResult(await cursosService.GetSimpleAsync(HttpContext.RequestAborted));
+        return this.ToActionResult(await cursosService.GetSimpleCursosAsync(HttpContext.RequestAborted));
     }
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
-        return this.ToActionResult(await cursosService.GetByIdAsync(id, HttpContext.RequestAborted));
+        return this.ToActionResult(await cursosService.GetCursoByIdAsync(id, HttpContext.RequestAborted));
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(CreateCursoRequestDto dto)
+    public async Task<IActionResult> Create(CreateCursoRequestDto createCursoRequestDto)
     {
-        return this.ToActionResult(await cursosService.CreateAsync(dto, HttpContext.RequestAborted));
+        return this.ToActionResult(await cursosService.CreateCursoAsync(createCursoRequestDto, HttpContext.RequestAborted));
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, CreateCursoRequestDto dto)
+    public async Task<IActionResult> Update(int id, CreateCursoRequestDto updateCursoRequestDto)
     {
-        return this.ToActionResult(await cursosService.UpdateAsync(id, dto, HttpContext.RequestAborted));
+        return this.ToActionResult(await cursosService.UpdateCursoAsync(id, updateCursoRequestDto, HttpContext.RequestAborted));
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
-        return this.ToActionResult(await cursosService.DeleteAsync(id, HttpContext.RequestAborted));
+        return this.ToActionResult(await cursosService.DeleteCursoAsync(id, HttpContext.RequestAborted));
     }
 }
 

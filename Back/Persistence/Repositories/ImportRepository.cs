@@ -29,12 +29,12 @@ public class ImportDomainRepository(AppDbContext context) : IImportDomainReposit
 
     public Task<List<(int EstudianteId, int AsignaturaId)>> GetMatriculasAsync(CancellationToken cancellationToken = default) => context.EstudianteAsignaturas
         .AsNoTracking()
-        .Select(x => new ValueTuple<int, int>(x.EstudianteId, x.AsignaturaId))
+        .Select(matricula => new ValueTuple<int, int>(matricula.EstudianteId, matricula.AsignaturaId))
         .ToListAsync(cancellationToken);
 
     public Task<List<ImportImparticionLookup>> GetImparticionesAsync(CancellationToken cancellationToken = default) => context.ProfesorAsignaturaCursos
         .AsNoTracking()
-        .Select(x => new ImportImparticionLookup(x.ProfesorId, x.AsignaturaId, x.CursoId))
+        .Select(imparticion => new ImportImparticionLookup(imparticion.ProfesorId, imparticion.AsignaturaId, imparticion.CursoId))
         .ToListAsync(cancellationToken);
 
     public Task<List<ImportTareaLookup>> GetTareasAsync(CancellationToken cancellationToken = default) => context.Tareas
@@ -183,7 +183,7 @@ public class ImportDomainRepository(AppDbContext context) : IImportDomainReposit
         {
             var existente = await context.EstudianteAsignaturas
                 .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(x => x.EstudianteId == item.EstudianteId && x.AsignaturaId == item.AsignaturaId, cancellationToken);
+                .FirstOrDefaultAsync(matricula => matricula.EstudianteId == item.EstudianteId && matricula.AsignaturaId == item.AsignaturaId, cancellationToken);
 
             if (existente is null)
             {
@@ -208,7 +208,7 @@ public class ImportDomainRepository(AppDbContext context) : IImportDomainReposit
         {
             var existente = await context.ProfesorAsignaturaCursos
                 .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(x => x.ProfesorId == item.ProfesorId && x.AsignaturaId == item.AsignaturaId && x.CursoId == item.CursoId, cancellationToken);
+                .FirstOrDefaultAsync(imparticion => imparticion.ProfesorId == item.ProfesorId && imparticion.AsignaturaId == item.AsignaturaId && imparticion.CursoId == item.CursoId, cancellationToken);
 
             if (existente is null)
             {
@@ -230,12 +230,12 @@ public class ImportDomainRepository(AppDbContext context) : IImportDomainReposit
 
     public async Task AddTareasAsync(IEnumerable<(string Nombre, int Trimestre, int AsignaturaId, int ProfesorId)> tareas, CancellationToken cancellationToken = default)
     {
-        context.Tareas.AddRange(tareas.Select(x => new Tarea
+        context.Tareas.AddRange(tareas.Select(tarea => new Tarea
         {
-            Nombre = x.Nombre,
-            Trimestre = x.Trimestre,
-            AsignaturaId = x.AsignaturaId,
-            ProfesorId = x.ProfesorId
+            Nombre = tarea.Nombre,
+            Trimestre = tarea.Trimestre,
+            AsignaturaId = tarea.AsignaturaId,
+            ProfesorId = tarea.ProfesorId
         }));
         await context.SaveChangesAsync(cancellationToken);
     }

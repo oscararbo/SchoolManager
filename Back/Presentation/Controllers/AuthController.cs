@@ -19,20 +19,20 @@ public class AuthController(IAuthService authService, IOptions<JwtOptions> jwtOp
 
     [AllowAnonymous]
     [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginRequestDto request)
+    public async Task<IActionResult> Login(LoginRequestDto loginRequestDto)
     {
-        var result = await authService.LoginAsync(request, HttpContext.RequestAborted);
-        if (result.Type == ApplicationResultType.Ok && result.Value is LoginResponseDto dto)
+        var loginResult = await authService.LoginAsync(loginRequestDto, HttpContext.RequestAborted);
+        if (loginResult.Type == ApplicationResultType.Ok && loginResult.Value is LoginResponseDto loginResponseDto)
         {
-            SetRefreshTokenCookie(dto.RefreshToken);
+            SetRefreshTokenCookie(loginResponseDto.RefreshToken);
             return Ok(new LoginClientResponseDto
             {
-                Rol = dto.Rol, Id = dto.Id, Nombre = dto.Nombre,
-                Correo = dto.Correo, Token = dto.Token,
-                CursoId = dto.CursoId, Curso = dto.Curso
+                Rol = loginResponseDto.Rol, Id = loginResponseDto.Id, Nombre = loginResponseDto.Nombre,
+                Correo = loginResponseDto.Correo, Token = loginResponseDto.Token,
+                CursoId = loginResponseDto.CursoId, Curso = loginResponseDto.Curso
             });
         }
-        return this.ToActionResult(result);
+        return this.ToActionResult(loginResult);
     }
 
     [AllowAnonymous]
@@ -43,14 +43,14 @@ public class AuthController(IAuthService authService, IOptions<JwtOptions> jwtOp
         if (string.IsNullOrEmpty(refreshToken))
             return Unauthorized(new ProblemDetails { Status = 401, Title = "Refresh token no encontrado." });
 
-        var result = await authService.RefreshAsync(refreshToken, HttpContext.RequestAborted);
-        if (result.Type == ApplicationResultType.Ok && result.Value is RefreshResponseDto dto)
+        var refreshResult = await authService.RefreshAsync(refreshToken, HttpContext.RequestAborted);
+        if (refreshResult.Type == ApplicationResultType.Ok && refreshResult.Value is RefreshResponseDto refreshResponseDto)
         {
-            SetRefreshTokenCookie(dto.RefreshToken);
-            return Ok(new { token = dto.Token });
+            SetRefreshTokenCookie(refreshResponseDto.RefreshToken);
+            return Ok(new { token = refreshResponseDto.Token });
         }
         ClearRefreshTokenCookie();
-        return this.ToActionResult(result);
+        return this.ToActionResult(refreshResult);
     }
 
     [Authorize]

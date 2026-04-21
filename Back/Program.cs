@@ -148,21 +148,24 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(connectionString), ServiceLifetime.Scoped);
 
 var app = builder.Build();
 
 app.UseExceptionHandler();
 
-var seeder = app.Services.GetRequiredService<DatabaseSeeder>();
-if (!await seeder.SeedAsync())
+using (var scope = app.Services.CreateScope())
 {
-    Console.ForegroundColor = ConsoleColor.Yellow;
-    Console.WriteLine("No se pudo conectar con PostgreSQL.");
-    Console.WriteLine("Levanta la BD antes de ejecutar el backend.");
-    Console.WriteLine("Sugerencia: docker compose up -d postgres");
-    Console.ResetColor();
-    return;
+    var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
+    if (!await seeder.SeedAsync())
+    {
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine("No se pudo conectar con PostgreSQL.");
+        Console.WriteLine("Levanta la BD antes de ejecutar el backend.");
+        Console.WriteLine("Sugerencia: docker compose up -d postgres");
+        Console.ResetColor();
+        return;
+    }
 }
 
 if (app.Environment.IsDevelopment())

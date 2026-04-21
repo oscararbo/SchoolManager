@@ -17,37 +17,37 @@ public class AsignaturasController(IAsignaturasService asignaturasService) : Con
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        return this.ToActionResult(await asignaturasService.GetAllAsync(HttpContext.RequestAborted));
+        return this.ToActionResult(await asignaturasService.GetAllAsignaturasAsync(HttpContext.RequestAborted));
     }
 
     [HttpGet("simple")]
     public async Task<IActionResult> GetSimple()
     {
-        return this.ToActionResult(await asignaturasService.GetSimpleAsync(HttpContext.RequestAborted));
+        return this.ToActionResult(await asignaturasService.GetSimpleAsignaturasAsync(HttpContext.RequestAborted));
     }
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
-        return this.ToActionResult(await asignaturasService.GetByIdAsync(id, HttpContext.RequestAborted));
+        return this.ToActionResult(await asignaturasService.GetAsignaturaByIdAsync(id, HttpContext.RequestAborted));
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(CreateAsignaturaRequestDto dto)
+    public async Task<IActionResult> Create(CreateAsignaturaRequestDto createAsignaturaRequestDto)
     {
-        return this.ToActionResult(await asignaturasService.CreateAsync(dto, HttpContext.RequestAborted));
+        return this.ToActionResult(await asignaturasService.CreateAsignaturaAsync(createAsignaturaRequestDto, HttpContext.RequestAborted));
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, CreateAsignaturaRequestDto dto)
+    public async Task<IActionResult> Update(int id, CreateAsignaturaRequestDto updateAsignaturaRequestDto)
     {
-        return this.ToActionResult(await asignaturasService.UpdateAsync(id, dto, HttpContext.RequestAborted));
+        return this.ToActionResult(await asignaturasService.UpdateAsignaturaAsync(id, updateAsignaturaRequestDto, HttpContext.RequestAborted));
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
-        return this.ToActionResult(await asignaturasService.DeleteAsync(id, HttpContext.RequestAborted));
+        return this.ToActionResult(await asignaturasService.DeleteAsignaturaAsync(id, HttpContext.RequestAborted));
     }
 }
 

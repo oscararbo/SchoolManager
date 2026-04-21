@@ -6,53 +6,53 @@ namespace Back.Api.Application.Services;
 
 public class CursosService(ICursosDomainRepository cursosDomain) : ICursosService
 {
-    public async Task<ApplicationResult> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> GetAllCursosAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await cursosDomain.GetAllResumenAsync(cancellationToken));
 
-    public async Task<ApplicationResult> GetSimpleAsync(CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> GetSimpleCursosAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok((await cursosDomain.GetAllResumenAsync(cancellationToken))
             .Select(c => new CursoLookupDto { Id = c.Id, Nombre = c.Nombre }));
 
-    public async Task<ApplicationResult> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> GetCursoByIdAsync(int cursoId, CancellationToken cancellationToken = default)
     {
-        var curso = await cursosDomain.GetDetalleAsync(id, cancellationToken);
-        return curso is null
+        var cursoDetalle = await cursosDomain.GetDetalleAsync(cursoId, cancellationToken);
+        return cursoDetalle is null
             ? ApplicationResult.NotFound("El curso no existe.")
-            : ApplicationResult.Ok(curso);
+            : ApplicationResult.Ok(cursoDetalle);
     }
 
-    public async Task<ApplicationResult> CreateAsync(CreateCursoRequestDto dto, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> CreateCursoAsync(CreateCursoRequestDto createCursoRequestDto, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(dto.Nombre))
+        if (string.IsNullOrWhiteSpace(createCursoRequestDto.Nombre))
             return ApplicationResult.BadRequest("El nombre del curso es obligatorio.");
 
-        var result = await cursosDomain.CreateAsync(dto.Nombre.Trim(), cancellationToken);
-        return ApplicationResult.Created($"/api/cursos/{result.Id}", result);
+        var createdCurso = await cursosDomain.CreateCursoAsync(createCursoRequestDto.Nombre.Trim(), cancellationToken);
+        return ApplicationResult.Created($"/api/cursos/{createdCurso.Id}", createdCurso);
     }
 
-    public async Task<ApplicationResult> UpdateAsync(int id, CreateCursoRequestDto dto, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> UpdateCursoAsync(int cursoId, CreateCursoRequestDto updateCursoRequestDto, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(dto.Nombre))
+        if (string.IsNullOrWhiteSpace(updateCursoRequestDto.Nombre))
             return ApplicationResult.BadRequest("El nombre del curso es obligatorio.");
-        if (!await cursosDomain.ExisteAsync(id, cancellationToken))
+        if (!await cursosDomain.ExisteAsync(cursoId, cancellationToken))
             return ApplicationResult.NotFound("El curso no existe.");
 
-        var result = await cursosDomain.UpdateAsync(id, dto.Nombre.Trim(), cancellationToken);
-        return result is null
+        var updatedCurso = await cursosDomain.UpdateCursoAsync(cursoId, updateCursoRequestDto.Nombre.Trim(), cancellationToken);
+        return updatedCurso is null
             ? ApplicationResult.NotFound("El curso no existe.")
-            : ApplicationResult.Ok(result);
+            : ApplicationResult.Ok(updatedCurso);
     }
 
-    public async Task<ApplicationResult> DeleteAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> DeleteCursoAsync(int cursoId, CancellationToken cancellationToken = default)
     {
-        if (!await cursosDomain.ExisteAsync(id, cancellationToken))
+        if (!await cursosDomain.ExisteAsync(cursoId, cancellationToken))
             return ApplicationResult.NotFound("El curso no existe.");
-        if (await cursosDomain.TieneEstudiantesAsync(id, cancellationToken))
+        if (await cursosDomain.TieneEstudiantesAsync(cursoId, cancellationToken))
             return ApplicationResult.BadRequest("No se puede eliminar el curso porque tiene alumnos asignados.");
-        if (await cursosDomain.TieneAsignaturasAsync(id, cancellationToken))
+        if (await cursosDomain.TieneAsignaturasAsync(cursoId, cancellationToken))
             return ApplicationResult.BadRequest("No se puede eliminar el curso porque tiene asignaturas. Eliminalas primero.");
 
-        await cursosDomain.DeleteAsync(id, cancellationToken);
+        await cursosDomain.DeleteCursoAsync(cursoId, cancellationToken);
         return ApplicationResult.NoContent();
     }
 }

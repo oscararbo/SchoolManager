@@ -187,6 +187,10 @@ export interface ProfesorImparticion {
 export interface ProfesorListItem {
     id: number;
     nombre: string;
+    apellidos: string;
+    dni: string;
+    telefono: string;
+    especialidad: string;
     correo: string;
     imparticiones: ProfesorImparticion[];
 }
@@ -194,6 +198,10 @@ export interface ProfesorListItem {
 export interface EstudianteItem {
     id: number;
     nombre: string;
+    apellidos: string;
+    dni: string;
+    telefono: string;
+    fechaNacimiento: string;
     correo: string;
     cursoId: number;
     curso: string | null;
@@ -201,18 +209,30 @@ export interface EstudianteItem {
 
 export interface CreateProfesorData {
     nombre: string;
+    apellidos: string;
+    dni: string;
+    telefono: string;
+    especialidad: string;
     correo: string;
     contrasena: string;
 }
 
 export interface UpdateProfesorData {
     nombre: string;
+    apellidos: string;
+    dni: string;
+    telefono: string;
+    especialidad: string;
     correo: string;
     nuevaContrasena?: string;
 }
 
 export interface CreateEstudianteData {
     nombre: string;
+    apellidos: string;
+    dni: string;
+    telefono: string;
+    fechaNacimiento: string;
     correo: string;
     contrasena: string;
     cursoId: number;
@@ -220,6 +240,10 @@ export interface CreateEstudianteData {
 
 export interface UpdateEstudianteData {
     nombre: string;
+    apellidos: string;
+    dni: string;
+    telefono: string;
+    fechaNacimiento: string;
     correo: string;
     cursoId: number;
     nuevaContrasena?: string;

@@ -17,7 +17,7 @@ public class AdminController(IAdminService adminService) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        return this.ToActionResult(await adminService.GetAllAsync(HttpContext.RequestAborted));
+        return this.ToActionResult(await adminService.GetAllAdminsAsync(HttpContext.RequestAborted));
     }
 
     [HttpGet("stats")]
@@ -39,9 +39,9 @@ public class AdminController(IAdminService adminService) : ControllerBase
     }
 
     [HttpPost("stats/cursos/comparar")]
-    public async Task<IActionResult> CompareCursos(CompararCursosRequestDto dto)
+    public async Task<IActionResult> CompareCursos(CompararCursosRequestDto compararCursosRequestDto)
     {
-        return this.ToActionResult(await adminService.CompareCursosAsync(dto.CursoIds, HttpContext.RequestAborted));
+        return this.ToActionResult(await adminService.CompareCursosAsync(compararCursosRequestDto.CursoIds, HttpContext.RequestAborted));
     }
 
     [HttpGet("matriculas")]
@@ -57,9 +57,9 @@ public class AdminController(IAdminService adminService) : ControllerBase
     }
 
     [HttpPost("create-admin")]
-    public async Task<IActionResult> CreateAdmin(CreateAdminRequestDto dto)
+    public async Task<IActionResult> CreateAdmin(CreateAdminRequestDto createAdminRequestDto)
     {
-        return this.ToActionResult(await adminService.CreateAsync(dto, User, HttpContext.RequestAborted));
+        return this.ToActionResult(await adminService.CreateAdminAsync(createAdminRequestDto, User, HttpContext.RequestAborted));
     }
 }
 

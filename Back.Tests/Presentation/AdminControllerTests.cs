@@ -156,10 +156,10 @@ public class AdminControllerTests
         public int LastCursoId { get; private set; }
         public IReadOnlyList<int> LastComparedCursoIds { get; private set; } = [];
 
-        public Task<ApplicationResult> GetAllAsync(CancellationToken cancellationToken = default)
+        public Task<ApplicationResult> GetAllAdminsAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(GetAllResult);
 
-        public Task<ApplicationResult> CreateAsync(CreateAdminRequestDto dto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+        public Task<ApplicationResult> CreateAdminAsync(CreateAdminRequestDto createAdminRequestDto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
             => Task.FromResult(CreateResult);
 
         public Task<ApplicationResult> GetStatsAsync(CancellationToken cancellationToken = default)

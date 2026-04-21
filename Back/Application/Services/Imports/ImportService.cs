@@ -485,10 +485,10 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
         var asignaturas = await importRepository.GetAsignaturasAsync(cancellationToken);
         var imparticiones = await importRepository.GetImparticionesAsync(cancellationToken);
         var asignaturaProfesor = imparticiones
-            .GroupBy(x => x.AsignaturaId)
-            .ToDictionary(g => g.Key, g => g.First().ProfesorId);
+            .GroupBy(imparticion => imparticion.AsignaturaId)
+            .ToDictionary(grupo => grupo.Key, grupo => grupo.First().ProfesorId);
         var combinaciones = imparticiones
-            .Select(x => (x.ProfesorId, x.AsignaturaId, x.CursoId))
+            .Select(imparticion => (imparticion.ProfesorId, imparticion.AsignaturaId, imparticion.CursoId))
             .ToHashSet();
 
         foreach (var row in ParseCsv(csvText))
@@ -749,7 +749,7 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
     private static IEnumerable<CsvRow> ParseCsv(string text)
     {
         var lines = text.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n');
-        var first = true;
+        var isFirstDataRow = true;
         var lineNumber = 0;
 
         foreach (var raw in lines)
@@ -761,9 +761,9 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
                 continue;
             }
 
-            if (first)
+            if (isFirstDataRow)
             {
-                first = false;
+                isFirstDataRow = false;
                 continue;
             }
 

@@ -19,7 +19,7 @@ public class PasswordService : IPasswordService
             return false;
         }
 
-        var result = hasher.VerifyHashedPassword(string.Empty, storedPassword, plainTextPassword);
-        return result != PasswordVerificationResult.Failed;
+        var verificationStatus = hasher.VerifyHashedPassword(string.Empty, storedPassword, plainTextPassword);
+        return verificationStatus != PasswordVerificationResult.Failed;
     }
 }
