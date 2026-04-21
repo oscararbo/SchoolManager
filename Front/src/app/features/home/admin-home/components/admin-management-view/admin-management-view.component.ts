@@ -280,8 +280,8 @@ export class AdminManagementViewComponent implements OnInit {
         dni: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), dniValidator()]),
         telefono: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), phoneValidator()]),
         especialidad: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(100)]),
-        correo: this.fb.nonNullable.control('', [Validators.required, Validators.email]),
-        contrasena: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(6)])
+        correo: this.fb.nonNullable.control('', [Validators.required, Validators.email, Validators.maxLength(200)]),
+        contrasena: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(6), Validators.maxLength(200)])
     });
 
     readonly editProfesorForm = this.fb.group({
@@ -290,8 +290,8 @@ export class AdminManagementViewComponent implements OnInit {
         dni: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), dniValidator()]),
         telefono: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), phoneValidator()]),
         especialidad: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(100)]),
-        correo: this.fb.nonNullable.control('', [Validators.required, Validators.email]),
-        nuevaContrasena: this.fb.nonNullable.control('')
+        correo: this.fb.nonNullable.control('', [Validators.required, Validators.email, Validators.maxLength(200)]),
+        nuevaContrasena: this.fb.nonNullable.control('', [Validators.minLength(6), Validators.maxLength(200)])
     });
 
     readonly estudianteForm = this.fb.group({
@@ -300,8 +300,8 @@ export class AdminManagementViewComponent implements OnInit {
         dni: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), dniValidator()]),
         telefono: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), phoneValidator()]),
         fechaNacimiento: this.fb.nonNullable.control('', [Validators.required, isoDateValidator()]),
-        correo: this.fb.nonNullable.control('', [Validators.required, Validators.email]),
-        contrasena: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(6)]),
+        correo: this.fb.nonNullable.control('', [Validators.required, Validators.email, Validators.maxLength(200)]),
+        contrasena: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(6), Validators.maxLength(200)]),
         cursoId: this.fb.control<number | null>(null, [Validators.required])
     });
 
@@ -311,8 +311,8 @@ export class AdminManagementViewComponent implements OnInit {
         dni: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), dniValidator()]),
         telefono: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), phoneValidator()]),
         fechaNacimiento: this.fb.nonNullable.control('', [Validators.required, isoDateValidator()]),
-        correo: this.fb.nonNullable.control('', [Validators.required, Validators.email]),
-        nuevaContrasena: this.fb.nonNullable.control(''),
+        correo: this.fb.nonNullable.control('', [Validators.required, Validators.email, Validators.maxLength(200)]),
+        nuevaContrasena: this.fb.nonNullable.control('', [Validators.minLength(6), Validators.maxLength(200)]),
         cursoId: this.fb.control<number | null>(null, [Validators.required])
     });
 

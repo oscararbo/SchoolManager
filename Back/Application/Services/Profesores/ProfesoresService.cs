@@ -36,7 +36,7 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         if (await profesoresDomain.CorreoDuplicadoAsync(correo, cancellationToken))
             return ApplicationResult.BadRequest("Ya existe un profesor con ese correo.");
 
-        var createdProfesor = await profesoresDomain.CreateProfesorAsync(createProfesorRequestDto.Nombre.Trim(), correo, passwordService.Hash(createProfesorRequestDto.Contrasena.Trim()), createProfesorRequestDto.Apellidos.Trim(), createProfesorRequestDto.DNI.Trim(), createProfesorRequestDto.Telefono.Trim(), createProfesorRequestDto.Especialidad.Trim(), cancellationToken);
+        var createdProfesor = await profesoresDomain.CreateProfesorAsync(createProfesorRequestDto.Nombre.Trim(), correo, passwordService.Hash(createProfesorRequestDto.Contrasena.Trim()), createProfesorRequestDto.Apellidos.Trim(), createProfesorRequestDto.DNI.Trim().ToUpperInvariant(), createProfesorRequestDto.Telefono.Trim(), createProfesorRequestDto.Especialidad.Trim(), cancellationToken);
         return ApplicationResult.Created($"/api/profesores/{createdProfesor.Id}", createdProfesor);
     }
 
@@ -225,7 +225,7 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
             ? null
             : passwordService.Hash(updateProfesorRequestDto.NuevaContrasena.Trim());
 
-        var updatedProfesor = await profesoresDomain.UpdateProfesorAsync(profesorId, updateProfesorRequestDto.Nombre.Trim(), correo, contrasenaHash, updateProfesorRequestDto.Apellidos.Trim(), updateProfesorRequestDto.DNI.Trim(), updateProfesorRequestDto.Telefono.Trim(), updateProfesorRequestDto.Especialidad.Trim(), cancellationToken);
+        var updatedProfesor = await profesoresDomain.UpdateProfesorAsync(profesorId, updateProfesorRequestDto.Nombre.Trim(), correo, contrasenaHash, updateProfesorRequestDto.Apellidos.Trim(), updateProfesorRequestDto.DNI.Trim().ToUpperInvariant(), updateProfesorRequestDto.Telefono.Trim(), updateProfesorRequestDto.Especialidad.Trim(), cancellationToken);
         return updatedProfesor is null
             ? ApplicationResult.NotFound("El profesor no existe.")
             : ApplicationResult.Ok(updatedProfesor);

@@ -22,29 +22,3 @@ export function emailValidator(): ValidatorFn {
     };
 }
 
-/**
- * Validador de seguridad de contrasena.
- * Requiere al menos una mayuscula, una minuscula y un digito.
- *
- * @returns Funcion validadora que retorna `null` si es valida, o `{ invalidPassword: true }` si no.
- */
-export function passwordValidator(): ValidatorFn {
-    return (control: AbstractControl): ValidationErrors | null => {
-        if (!control.value) {
-            return null;
-        }
-
-        const value = control.value;
-        const hasUpperCase = /[A-Z]/.test(value);
-        const hasLowerCase = /[a-z]/.test(value);
-        const hasNumber = /[0-9]/.test(value);
-
-        const isValid = hasUpperCase && hasLowerCase && hasNumber;
-
-        if (!isValid) {
-            return { invalidPassword: true };
-        }
-
-        return null;
-    };
-}

@@ -46,7 +46,7 @@
                 {
                   "type": "bundle",
                   "name": "home-layout",
-                  "maximumWarning": "320kB",
+                  "maximumWarning": "330kB",
                   "maximumError": "380kB"
                 },
                 {
@@ -67,7 +67,7 @@
                 {
                   "type": "bundle",
                   "name": "home-layout",
-                  "maximumWarning": "320kB",
+                  "maximumWarning": "330kB",
                   "maximumError": "380kB"
                 },
                 {

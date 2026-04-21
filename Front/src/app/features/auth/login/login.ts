@@ -30,8 +30,8 @@ export class Login implements OnInit {
 
     constructor() {
         this.formLogin = this.formBuilder.group({
-            email: ['', [Validators.required, emailValidator()]],
-            password: ['', [Validators.required]],
+            email: ['', [Validators.required, emailValidator(), Validators.maxLength(200)]],
+            password: ['', [Validators.required, Validators.maxLength(200)]],
         });
     }
 

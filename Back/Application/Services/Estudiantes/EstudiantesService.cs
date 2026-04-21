@@ -38,7 +38,7 @@ public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, 
         if (!await estudiantesDomain.CursoExisteAsync(createEstudianteRequestDto.CursoId, cancellationToken))
             return ApplicationResult.BadRequest("El curso indicado no existe.");
 
-        var createdEstudiante = await estudiantesDomain.CreateEstudianteAsync(createEstudianteRequestDto.Nombre.Trim(), correo, createEstudianteRequestDto.CursoId, passwordService.Hash(createEstudianteRequestDto.Contrasena.Trim()), createEstudianteRequestDto.Apellidos.Trim(), createEstudianteRequestDto.DNI.Trim(), createEstudianteRequestDto.Telefono.Trim(), createEstudianteRequestDto.FechaNacimiento, cancellationToken);
+        var createdEstudiante = await estudiantesDomain.CreateEstudianteAsync(createEstudianteRequestDto.Nombre.Trim(), correo, createEstudianteRequestDto.CursoId, passwordService.Hash(createEstudianteRequestDto.Contrasena.Trim()), createEstudianteRequestDto.Apellidos.Trim(), createEstudianteRequestDto.DNI.Trim().ToUpperInvariant(), createEstudianteRequestDto.Telefono.Trim(), createEstudianteRequestDto.FechaNacimiento!.Value, cancellationToken);
         return ApplicationResult.Created($"/api/estudiantes/{createdEstudiante.Id}", createdEstudiante);
     }
 
@@ -130,7 +130,7 @@ public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, 
             ? null
             : passwordService.Hash(updateEstudianteRequestDto.NuevaContrasena.Trim());
 
-        var updatedEstudiante = await estudiantesDomain.UpdateEstudianteAsync(estudianteId, updateEstudianteRequestDto.Nombre.Trim(), correo, updateEstudianteRequestDto.CursoId, contrasenaHash, updateEstudianteRequestDto.Apellidos.Trim(), updateEstudianteRequestDto.DNI.Trim(), updateEstudianteRequestDto.Telefono.Trim(), updateEstudianteRequestDto.FechaNacimiento, cancellationToken);
+        var updatedEstudiante = await estudiantesDomain.UpdateEstudianteAsync(estudianteId, updateEstudianteRequestDto.Nombre.Trim(), correo, updateEstudianteRequestDto.CursoId, contrasenaHash, updateEstudianteRequestDto.Apellidos.Trim(), updateEstudianteRequestDto.DNI.Trim().ToUpperInvariant(), updateEstudianteRequestDto.Telefono.Trim(), updateEstudianteRequestDto.FechaNacimiento!.Value, cancellationToken);
         return updatedEstudiante is null
             ? ApplicationResult.NotFound("El estudiante no existe.")
             : ApplicationResult.Ok(updatedEstudiante);

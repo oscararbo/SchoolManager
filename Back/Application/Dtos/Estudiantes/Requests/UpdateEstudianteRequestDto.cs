@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Back.Api.Application.Common.Validation;
 
 namespace Back.Api.Application.Dtos;
 
@@ -18,6 +19,7 @@ public class UpdateEstudianteRequestDto
     public int CursoId { get; set; }
 
     [MinLength(6)]
+    [TrimmedMinLength(6)]
     [MaxLength(200)]
     public string? NuevaContrasena { get; set; }
 
@@ -27,7 +29,7 @@ public class UpdateEstudianteRequestDto
 
     [Required]
     [MaxLength(20)]
-    [RegularExpression(@"^\d{8}[TRWAGMYFPDXBNJZSQVHLCKE]$", ErrorMessage = "El DNI debe tener 8 dígitos seguidos de una letra válida.")]
+    [RegularExpression(@"^\d{8}[TRWAGMYFPDXBNJZSQVHLCKEtrwagmyfpdxbnjzsqvhlcke]$", ErrorMessage = "El DNI debe tener 8 dígitos seguidos de una letra válida.")]
     public string DNI { get; set; } = string.Empty;
 
     [Required]
@@ -36,5 +38,6 @@ public class UpdateEstudianteRequestDto
     public string Telefono { get; set; } = string.Empty;
 
     [Required]
-    public DateOnly FechaNacimiento { get; set; }
+    [BirthDate]
+    public DateOnly? FechaNacimiento { get; set; }
 }

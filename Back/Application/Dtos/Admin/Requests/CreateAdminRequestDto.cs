@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Back.Api.Application.Common.Validation;
 
 namespace Back.Api.Application.Dtos;
 
@@ -16,6 +17,7 @@ public class CreateAdminRequestDto
 
     [Required]
     [MinLength(6)]
+    [TrimmedMinLength(6)]
     [MaxLength(200)]
     public string Contrasena { get; set; } = string.Empty;
 }

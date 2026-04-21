@@ -172,8 +172,34 @@
                                 <div class="mb-2"><label class="form-label">DNI</label><input class="form-control" type="text" formControlName="dni" placeholder="12345678Z"></div>
                                 <div class="mb-2"><label class="form-label">Telefono</label><input class="form-control" type="tel" formControlName="telefono" placeholder="612345678"></div>
                                 <div class="mb-2"><label class="form-label">Especialidad</label><input class="form-control" type="text" formControlName="especialidad"></div>
-                                <div class="mb-2"><label class="form-label">Correo</label><input class="form-control" type="email" formControlName="correo"></div>
-                                <div class="mb-2"><label class="form-label">Nueva contraseña (opcional)</label><input class="form-control" type="password" formControlName="nuevaContrasena" placeholder="Dejar en blanco para no cambiar"></div>
+                                <div class="mb-2">
+                                    <label class="form-label">Correo</label>
+                                    <input class="form-control" type="email" formControlName="correo" maxlength="200">
+                                    @if (editProfesorForm.get('correo')?.touched && editProfesorForm.get('correo')?.errors) {
+                                        <small class="text-danger d-block mt-1">
+                                            @if (editProfesorForm.get('correo')?.hasError('required')) {
+                                                Campo obligatorio.
+                                            } @else if (editProfesorForm.get('correo')?.hasError('email')) {
+                                                Correo no valido.
+                                            } @else if (editProfesorForm.get('correo')?.hasError('maxlength')) {
+                                                Maximo 200 caracteres.
+                                            }
+                                        </small>
+                                    }
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Nueva contraseña (opcional)</label>
+                                    <input class="form-control" type="password" formControlName="nuevaContrasena" placeholder="Dejar en blanco para no cambiar" maxlength="200">
+                                    @if (editProfesorForm.get('nuevaContrasena')?.touched && editProfesorForm.get('nuevaContrasena')?.errors) {
+                                        <small class="text-danger d-block mt-1">
+                                            @if (editProfesorForm.get('nuevaContrasena')?.hasError('minlength')) {
+                                                Minimo 6 caracteres.
+                                            } @else if (editProfesorForm.get('nuevaContrasena')?.hasError('maxlength')) {
+                                                Maximo 200 caracteres.
+                                            }
+                                        </small>
+                                    }
+                                </div>
 
                                 <div class="d-flex gap-2">
                                     <button class="btn btn-success" (click)="guardarProfesor()" [disabled]="estaCargando('guardarProfesor') || editProfesorForm.invalid">
@@ -190,8 +216,36 @@
                                 <div class="mb-2"><label class="form-label">DNI</label><input class="form-control" type="text" formControlName="dni" placeholder="12345678Z"></div>
                                 <div class="mb-2"><label class="form-label">Telefono</label><input class="form-control" type="tel" formControlName="telefono" placeholder="612345678"></div>
                                 <div class="mb-2"><label class="form-label">Especialidad</label><input class="form-control" type="text" formControlName="especialidad"></div>
-                                <div class="mb-2"><label class="form-label">Correo</label><input class="form-control" type="email" formControlName="correo"></div>
-                                <div class="mb-2"><label class="form-label">Contrasena</label><input class="form-control" type="password" formControlName="contrasena"></div>
+                                <div class="mb-2">
+                                    <label class="form-label">Correo</label>
+                                    <input class="form-control" type="email" formControlName="correo" maxlength="200">
+                                    @if (profesorForm.get('correo')?.touched && profesorForm.get('correo')?.errors) {
+                                        <small class="text-danger d-block mt-1">
+                                            @if (profesorForm.get('correo')?.hasError('required')) {
+                                                Campo obligatorio.
+                                            } @else if (profesorForm.get('correo')?.hasError('email')) {
+                                                Correo no valido.
+                                            } @else if (profesorForm.get('correo')?.hasError('maxlength')) {
+                                                Maximo 200 caracteres.
+                                            }
+                                        </small>
+                                    }
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Contrasena</label>
+                                    <input class="form-control" type="password" formControlName="contrasena" maxlength="200">
+                                    @if (profesorForm.get('contrasena')?.touched && profesorForm.get('contrasena')?.errors) {
+                                        <small class="text-danger d-block mt-1">
+                                            @if (profesorForm.get('contrasena')?.hasError('required')) {
+                                                Campo obligatorio.
+                                            } @else if (profesorForm.get('contrasena')?.hasError('minlength')) {
+                                                Minimo 6 caracteres.
+                                            } @else if (profesorForm.get('contrasena')?.hasError('maxlength')) {
+                                                Maximo 200 caracteres.
+                                            }
+                                        </small>
+                                    }
+                                </div>
 
                                 <button class="btn btn-primary" type="submit" [disabled]="estaCargando('crearProfesor') || profesorForm.invalid">
                                     {{ estaCargando('crearProfesor') ? 'Creando...' : 'Crear profesor' }}
@@ -256,8 +310,34 @@
                                 <div class="mb-2"><label class="form-label">DNI</label><input class="form-control" type="text" formControlName="dni" placeholder="12345678Z"></div>
                                 <div class="mb-2"><label class="form-label">Telefono</label><input class="form-control" type="tel" formControlName="telefono" placeholder="612345678"></div>
                                 <div class="mb-2"><label class="form-label">Fecha nacimiento</label><input class="form-control" type="date" formControlName="fechaNacimiento"></div>
-                                <div class="mb-2"><label class="form-label">Correo</label><input class="form-control" type="email" formControlName="correo"></div>
-                                <div class="mb-2"><label class="form-label">Nueva contraseña (opcional)</label><input class="form-control" type="password" formControlName="nuevaContrasena" placeholder="Dejar en blanco para no cambiar"></div>
+                                <div class="mb-2">
+                                    <label class="form-label">Correo</label>
+                                    <input class="form-control" type="email" formControlName="correo" maxlength="200">
+                                    @if (editEstudianteForm.get('correo')?.touched && editEstudianteForm.get('correo')?.errors) {
+                                        <small class="text-danger d-block mt-1">
+                                            @if (editEstudianteForm.get('correo')?.hasError('required')) {
+                                                Campo obligatorio.
+                                            } @else if (editEstudianteForm.get('correo')?.hasError('email')) {
+                                                Correo no valido.
+                                            } @else if (editEstudianteForm.get('correo')?.hasError('maxlength')) {
+                                                Maximo 200 caracteres.
+                                            }
+                                        </small>
+                                    }
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Nueva contraseña (opcional)</label>
+                                    <input class="form-control" type="password" formControlName="nuevaContrasena" placeholder="Dejar en blanco para no cambiar" maxlength="200">
+                                    @if (editEstudianteForm.get('nuevaContrasena')?.touched && editEstudianteForm.get('nuevaContrasena')?.errors) {
+                                        <small class="text-danger d-block mt-1">
+                                            @if (editEstudianteForm.get('nuevaContrasena')?.hasError('minlength')) {
+                                                Minimo 6 caracteres.
+                                            } @else if (editEstudianteForm.get('nuevaContrasena')?.hasError('maxlength')) {
+                                                Maximo 200 caracteres.
+                                            }
+                                        </small>
+                                    }
+                                </div>
                                 <div class="mb-3">
                                     <label class="form-label">Curso</label>
                                     <select class="form-select" formControlName="cursoId">
@@ -279,8 +359,36 @@
                                 <div class="mb-2"><label class="form-label">DNI</label><input class="form-control" type="text" formControlName="dni" placeholder="12345678Z"></div>
                                 <div class="mb-2"><label class="form-label">Telefono</label><input class="form-control" type="tel" formControlName="telefono" placeholder="612345678"></div>
                                 <div class="mb-2"><label class="form-label">Fecha nacimiento</label><input class="form-control" type="date" formControlName="fechaNacimiento"></div>
-                                <div class="mb-2"><label class="form-label">Correo</label><input class="form-control" type="email" formControlName="correo"></div>
-                                <div class="mb-2"><label class="form-label">Contrasena</label><input class="form-control" type="password" formControlName="contrasena"></div>
+                                <div class="mb-2">
+                                    <label class="form-label">Correo</label>
+                                    <input class="form-control" type="email" formControlName="correo" maxlength="200">
+                                    @if (estudianteForm.get('correo')?.touched && estudianteForm.get('correo')?.errors) {
+                                        <small class="text-danger d-block mt-1">
+                                            @if (estudianteForm.get('correo')?.hasError('required')) {
+                                                Campo obligatorio.
+                                            } @else if (estudianteForm.get('correo')?.hasError('email')) {
+                                                Correo no valido.
+                                            } @else if (estudianteForm.get('correo')?.hasError('maxlength')) {
+                                                Maximo 200 caracteres.
+                                            }
+                                        </small>
+                                    }
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Contrasena</label>
+                                    <input class="form-control" type="password" formControlName="contrasena" maxlength="200">
+                                    @if (estudianteForm.get('contrasena')?.touched && estudianteForm.get('contrasena')?.errors) {
+                                        <small class="text-danger d-block mt-1">
+                                            @if (estudianteForm.get('contrasena')?.hasError('required')) {
+                                                Campo obligatorio.
+                                            } @else if (estudianteForm.get('contrasena')?.hasError('minlength')) {
+                                                Minimo 6 caracteres.
+                                            } @else if (estudianteForm.get('contrasena')?.hasError('maxlength')) {
+                                                Maximo 200 caracteres.
+                                            }
+                                        </small>
+                                    }
+                                </div>
                                 <div class="mb-3">
                                     <label class="form-label">Curso</label>
                                     <select class="form-select" formControlName="cursoId">
