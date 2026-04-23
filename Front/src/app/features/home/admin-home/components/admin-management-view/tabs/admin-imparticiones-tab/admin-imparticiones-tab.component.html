@@ -1,0 +1,100 @@
+<div class="row g-3">
+    <div class="col-12 col-lg-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                @if (cargandoFormularioImparticiones) {
+                    <div class="placeholder-glow skeleton-panel" aria-hidden="true">
+                        <span class="placeholder col-7 mb-3"></span>
+                        @for (_ of [1, 2, 3]; track $index) {
+                            <div class="skeleton-field">
+                                <span class="skeleton-field-label"></span>
+                                <span class="skeleton-input-box"></span>
+                            </div>
+                        }
+                        <span class="skeleton-btn-box"></span>
+                    </div>
+                } @else {
+                    <h5 class="card-title">Asignar profesor a asignatura</h5>
+                    <div class="mb-3">
+                        <label class="form-label">Profesor</label>
+                        <select class="form-select" [ngModel]="imparticionProfesorId" (ngModelChange)="imparticionProfesorIdChange.emit($event)">
+                            <option [ngValue]="null" disabled>Selecciona un profesor</option>
+                            @for (p of profesores; track p.id) { <option [value]="p.id">{{ p.nombre }}</option> }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Curso</label>
+                        <select class="form-select" [ngModel]="imparticionCursoId" (ngModelChange)="imparticionCursoIdChange.emit($event)">
+                            <option [ngValue]="null" disabled>Selecciona un curso</option>
+                            @for (c of cursos; track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Asignatura</label>
+                        <select class="form-select" [ngModel]="imparticionAsignaturaId" (ngModelChange)="imparticionAsignaturaIdChange.emit($event)">
+                            <option [ngValue]="null" disabled>Selecciona una asignatura</option>
+                            @for (a of asignaturasDeImparticion; track a.id) { <option [value]="a.id">{{ a.nombre }}</option> }
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" type="button" (click)="asignarImparticion.emit()" [disabled]="cargandoAsignarImparticion">
+                        {{ cargandoAsignarImparticion ? 'Asignando...' : 'Asignar' }}
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <h5 class="card-title mb-0">Listado de imparticiones</h5>
+                    <select class="form-select form-select-sm" style="max-width:220px" [ngModel]="filtroImparticionesCursoId" (ngModelChange)="filtroImparticionesCursoIdChange.emit($event)">
+                        <option [ngValue]="null">Todos los cursos</option>
+                        @for (c of cursos; track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
+                    </select>
+                </div>
+                <div class="table-responsive list-scroll-body">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead><tr><th>Profesor</th><th>Curso</th><th>Asignatura</th><th></th></tr></thead>
+                        <tbody>
+                            @if (cargandoListaImparticiones) {
+                                <tr>
+                                    <td colspan="4" class="p-0 border-0">
+                                        <div class="skeleton-table-wrap" aria-hidden="true">
+                                            <div class="skeleton-tablelike-wrap">
+                                                @for (_ of [1, 2, 3, 4, 5]; track $index) {
+                                                    <div class="skeleton-tablelike-row">
+                                                        <span class="skeleton-line skeleton-w-70"></span>
+                                                        <span class="skeleton-line skeleton-w-45"></span>
+                                                        <span class="skeleton-line skeleton-w-55"></span>
+                                                        <span class="skeleton-list-action"></span>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            } @else {
+                                @for (i of imparticionesVista; track i.profesorId + '-' + i.cursoId + '-' + i.asignatura) {
+                                    <tr>
+                                        <td>{{ i.profesor }}</td>
+                                        <td>{{ i.curso }}</td>
+                                        <td>{{ i.asignatura }}</td>
+                                        <td class="text-end pe-2">
+                                            <button class="btn btn-xs btn-outline-danger" type="button"
+                                                (click)="eliminarImparticion.emit({ profesorId: i.profesorId, asignaturaId: i.asignaturaId, cursoId: i.cursoId, asignaturaNombre: i.asignatura })"
+                                                [disabled]="cargandoEliminarImparticion">
+                                                Eliminar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (imparticionesVista.length === 0) { <tr><td colspan="4" class="text-secondary">Sin imparticiones.</td></tr> }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

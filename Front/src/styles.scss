@@ -1,1 +1,179 @@
 /* You can add global styles to this file, and also import other style files */
+
+.skeleton-panel {
+	border: 1px solid #e2e8f0;
+	border-radius: 12px;
+	background: #fff;
+	padding: 12px;
+}
+
+.skeleton-field {
+	margin-bottom: 0.65rem;
+}
+
+.skeleton-field-label {
+	display: block;
+	height: 12px;
+	width: 38%;
+	border-radius: 999px;
+	margin-bottom: 0.45rem;
+	background: #e9edf3;
+}
+
+.skeleton-input-box {
+	display: block;
+	width: 100%;
+	min-height: 42px;
+	border-radius: 12px;
+	border: 1px solid #dbe3ef;
+	background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+}
+
+.skeleton-btn-box {
+	display: inline-block;
+	width: 120px;
+	min-height: 38px;
+	border-radius: 10px;
+	border: 1px solid #dbe3ef;
+	background: #eef2f7;
+}
+
+.skeleton-table-wrap {
+	border: 1px solid #e2e8f0;
+	border-radius: 12px;
+	background: #fff;
+	padding: 10px;
+}
+
+.skeleton-table-row {
+	display: grid;
+	gap: 10px;
+	margin-bottom: 8px;
+}
+
+.skeleton-table-row:last-child {
+	margin-bottom: 0;
+}
+
+.skeleton-table-row-4 {
+	grid-template-columns: 2fr 2fr 1fr 1.3fr;
+}
+
+.skeleton-table-row-3 {
+	grid-template-columns: 2fr 1.3fr 1.3fr;
+}
+
+.skeleton-cell {
+	display: block;
+	height: 12px;
+	border-radius: 999px;
+	background: #e9edf3;
+}
+
+.skeleton-list-wrap {
+	display: grid;
+	gap: 10px;
+}
+
+.skeleton-list-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 10px 12px;
+	border: 1px solid #dbe3ef;
+	border-radius: 10px;
+	background: #f8fafc;
+}
+
+.skeleton-list-main {
+	min-width: 0;
+	flex: 1;
+}
+
+.skeleton-line {
+	display: block;
+	height: 12px;
+	border-radius: 999px;
+	background: #9ea4ab;
+}
+
+.skeleton-line + .skeleton-line {
+	margin-top: 8px;
+}
+
+.skeleton-line-title {
+	width: 62%;
+}
+
+.skeleton-line-subtitle {
+	width: 40%;
+}
+
+.skeleton-list-action {
+	width: 88px;
+	height: 28px;
+	border-radius: 999px;
+	background: #9ea4ab;
+	flex-shrink: 0;
+}
+
+.skeleton-w-25 { width: 25%; }
+.skeleton-w-35 { width: 35%; }
+.skeleton-w-45 { width: 45%; }
+.skeleton-w-55 { width: 55%; }
+.skeleton-w-70 { width: 70%; }
+
+.skeleton-tablelike-wrap {
+	display: grid;
+	gap: 8px;
+}
+
+.skeleton-tablelike-row {
+	display: grid;
+	grid-template-columns: 2.2fr 1.8fr 0.9fr 1fr;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 12px;
+	border: 1px solid #dbe3ef;
+	border-radius: 10px;
+	background: #f8fafc;
+}
+
+.skeleton-cardlike-wrap {
+	display: grid;
+	gap: 10px;
+}
+
+.skeleton-cardlike-item {
+	border: 1px solid #dbe3ef;
+	border-radius: 10px;
+	background: #f8fafc;
+	padding: 12px;
+}
+
+.skeleton-badge-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 10px;
+}
+
+.skeleton-badge {
+	width: 92px;
+	height: 24px;
+	border-radius: 999px;
+	background: #9ea4ab;
+}
+
+.skeleton-card-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 12px;
+}
+
+@media (max-width: 768px) {
+	.skeleton-card-grid {
+		grid-template-columns: 1fr;
+	}
+}

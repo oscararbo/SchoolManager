@@ -1,0 +1,18 @@
+<div class="form-field-modern mb-2">
+    @if (label) {
+        <label class="form-label" [attr.for]="forId || null">
+            {{ label }}
+            @if (required) {
+                <span class="text-danger"> *</span>
+            }
+        </label>
+    }
+
+    <ng-content></ng-content>
+
+    @if (errorMessage) {
+        <small class="text-danger d-block mt-1">{{ errorMessage }}</small>
+    } @else if (hint) {
+        <small class="text-secondary d-block mt-1">{{ hint }}</small>
+    }
+</div>

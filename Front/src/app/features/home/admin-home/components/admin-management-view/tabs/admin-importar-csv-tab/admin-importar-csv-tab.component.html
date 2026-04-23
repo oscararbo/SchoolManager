@@ -1,0 +1,83 @@
+<div class="row g-3">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h5 class="card-title mb-1">Importar datos desde CSV</h5>
+                <p class="text-secondary small mb-3">Importa cursos, asignaturas, profesores, estudiantes, imparticiones, tareas, matriculas y notas desde archivos CSV. Sigue el orden sugerido para evitar referencias incompletas.</p>
+            </div>
+        </div>
+    </div>
+
+    @if (csvCargando && !csvResultado) {
+        <div class="col-12">
+            <div class="placeholder-glow skeleton-card-grid" aria-hidden="true">
+                @for (_ of [1, 2, 3, 4]; track $index) {
+                    <div class="skeleton-panel">
+                        <span class="placeholder col-7 mb-2"></span>
+                        <span class="placeholder col-10 mb-3"></span>
+                        <div class="skeleton-field">
+                            <span class="skeleton-input-box"></span>
+                        </div>
+                        <div class="d-flex justify-content-between mt-2">
+                            <span class="placeholder col-5"></span>
+                            <span class="skeleton-btn-box"></span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @for (item of csvImportItems; track item.entidad) {
+        <app-csv-import-card
+            class="col-12 col-md-6"
+            [entidad]="item.entidad"
+            [titulo]="item.orden + '. ' + item.titulo"
+            [descripcion]="item.descripcion"
+            [cargando]="csvCargando && csvEntidadActual === item.entidad"
+            [archivo]="csvArchivo(item.entidad)"
+            (fileSelected)="fileSelected.emit({ event: $event.event, entidad: $event.entidad })"
+            (importar)="importar.emit($event)"
+            (descargarPlantilla)="descargarPlantilla.emit($event)">
+        </app-csv-import-card>
+    }
+
+    @if (csvResultado) {
+        <div class="col-12">
+            <div class="alert" [class.alert-success]="csvResultado.errores.length === 0" [class.alert-warning]="csvResultado.errores.length > 0">
+                <strong>Resultado ({{ csvEntidadActual }}):</strong>
+                {{ csvResultado.creados }} registros creados.
+                @if (csvResultado.omitidos) { {{ csvResultado.omitidos }} omitidos (ya existian). }
+                @if (csvResultado.errores.length > 0) {
+                    <div class="mt-2">
+                        <p class="mb-2 fw-semibold">Errores detectados:</p>
+                        <div class="vstack gap-2">
+                            @for (grupo of csvErroresAgrupados; track grupo.key) {
+                                <div class="border rounded-3 bg-light p-2">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="fw-semibold">{{ grupo.label }}</span>
+                                        <span class="badge text-bg-danger">{{ grupo.errors.length }}</span>
+                                    </div>
+                                    <ul class="mb-0 small">
+                                        @for (err of erroresVisiblesGrupo(grupo); track err) {
+                                            <li>{{ err }}</li>
+                                        }
+                                    </ul>
+                                    @if (csvPuedeExpandirGrupo(grupo)) {
+                                        <button class="btn btn-link btn-sm px-0 mt-1"
+                                            type="button"
+                                            (click)="toggleGrupoErrores.emit(grupo.key)">
+                                            {{ grupoErroresExpandido(grupo.key)
+                                                ? 'Ver menos'
+                                                : 'Ver mas (' + erroresOcultosGrupo(grupo) + ' ocultos)' }}
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

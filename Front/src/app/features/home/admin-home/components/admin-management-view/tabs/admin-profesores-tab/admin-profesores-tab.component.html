@@ -1,0 +1,138 @@
+<div class="row g-3">
+    <div class="col-12 col-lg-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                @if (cargandoListaProfesores && profesoresVista.length === 0) {
+                    <div class="placeholder-glow skeleton-panel" aria-hidden="true">
+                        <span class="placeholder col-5 mb-3"></span>
+                        @for (_ of [1, 2, 3, 4, 5, 6]; track $index) {
+                            <div class="skeleton-field">
+                                <span class="skeleton-field-label"></span>
+                                <span class="skeleton-input-box"></span>
+                            </div>
+                        }
+                        <span class="skeleton-btn-box"></span>
+                    </div>
+                } @else if (editandoProfesorId !== null) {
+                    <h5 class="card-title">Editar profesor</h5>
+                    <form [formGroup]="editProfesorForm">
+                        <app-text-input id="editProfesorNombre" label="Nombre" formControlName="nombre"></app-text-input>
+                        <app-text-input id="editProfesorApellidos" label="Apellidos" formControlName="apellidos"></app-text-input>
+                        <app-text-input id="editProfesorDni" label="DNI" formControlName="dni" placeholder="12345678Z"></app-text-input>
+                        <app-text-input id="editProfesorTelefono" label="Telefono" type="tel" formControlName="telefono" placeholder="612345678"></app-text-input>
+                        <app-text-input id="editProfesorEspecialidad" label="Especialidad" formControlName="especialidad"></app-text-input>
+                        <app-text-input
+                            id="editProfesorCorreo"
+                            type="email"
+                            label="Correo"
+                            formControlName="correo"
+                            [maxLength]="200"
+                            [errorMessage]="controlErrorMessage(editProfesorForm.get('correo'))">
+                        </app-text-input>
+                        <app-text-input
+                            id="editProfesorPass"
+                            type="password"
+                            label="Nueva contraseña (opcional)"
+                            formControlName="nuevaContrasena"
+                            placeholder="Dejar en blanco para no cambiar"
+                            [maxLength]="200"
+                            [errorMessage]="controlErrorMessage(editProfesorForm.get('nuevaContrasena'))">
+                        </app-text-input>
+
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success" type="button" (click)="guardarProfesor.emit()" [disabled]="cargandoGuardarProfesor || editProfesorForm.invalid">
+                                {{ cargandoGuardarProfesor ? 'Guardando...' : 'Guardar' }}
+                            </button>
+                            <button class="btn btn-outline-secondary" type="button" (click)="cancelarEditarProfesor.emit()">Cancelar</button>
+                        </div>
+                    </form>
+                } @else {
+                    <h5 class="card-title">Nuevo profesor</h5>
+                    <form [formGroup]="profesorForm" (ngSubmit)="crearProfesor.emit()">
+                        <app-text-input id="createProfesorNombre" label="Nombre" formControlName="nombre"></app-text-input>
+                        <app-text-input id="createProfesorApellidos" label="Apellidos" formControlName="apellidos"></app-text-input>
+                        <app-text-input id="createProfesorDni" label="DNI" formControlName="dni" placeholder="12345678Z"></app-text-input>
+                        <app-text-input id="createProfesorTelefono" label="Telefono" type="tel" formControlName="telefono" placeholder="612345678"></app-text-input>
+                        <app-text-input id="createProfesorEspecialidad" label="Especialidad" formControlName="especialidad"></app-text-input>
+                        <app-text-input
+                            id="createProfesorCorreo"
+                            type="email"
+                            label="Correo"
+                            formControlName="correo"
+                            [maxLength]="200"
+                            [errorMessage]="controlErrorMessage(profesorForm.get('correo'))">
+                        </app-text-input>
+                        <app-text-input
+                            id="createProfesorContrasena"
+                            type="password"
+                            label="Contrasena"
+                            formControlName="contrasena"
+                            [maxLength]="200"
+                            [errorMessage]="controlErrorMessage(profesorForm.get('contrasena'))">
+                        </app-text-input>
+
+                        <button class="btn btn-primary" type="submit" [disabled]="cargandoCrearProfesor || profesorForm.invalid">
+                            {{ cargandoCrearProfesor ? 'Creando...' : 'Crear profesor' }}
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <h5 class="card-title mb-0">Profesores ({{ profesoresVista.length }})</h5>
+                    <div class="d-flex gap-2">
+                        <input class="form-control form-control-sm" style="max-width:150px" type="text" placeholder="Buscar..." [ngModel]="busquedaProfesores" (ngModelChange)="busquedaProfesoresChange.emit($event)">
+                        <select class="form-select form-select-sm" style="max-width:160px" [ngModel]="filtroProfesoresCursoId" (ngModelChange)="filtroProfesoresCursoIdChange.emit($event)">
+                            <option [ngValue]="null">Todos los cursos</option>
+                            @for (c of cursos; track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
+                        </select>
+                    </div>
+                </div>
+                <div class="table-responsive list-scroll-body">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead><tr><th>Nombre</th><th>Correo</th><th>Asig.</th><th></th></tr></thead>
+                        <tbody>
+                            @if (cargandoListaProfesores) {
+                                <tr>
+                                    <td colspan="4" class="p-0 border-0">
+                                        <div class="skeleton-table-wrap" aria-hidden="true">
+                                            <div class="skeleton-tablelike-wrap">
+                                                @for (_ of [1, 2, 3, 4, 5]; track $index) {
+                                                    <div class="skeleton-tablelike-row">
+                                                        <span class="skeleton-line skeleton-w-70"></span>
+                                                        <span class="skeleton-line skeleton-w-55"></span>
+                                                        <span class="skeleton-line skeleton-w-35"></span>
+                                                        <span class="skeleton-list-action"></span>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            } @else {
+                                @for (p of profesoresVista; track p.id) {
+                                    <tr>
+                                        <td>{{ p.nombre }}</td>
+                                        <td class="text-secondary small">{{ p.correo }}</td>
+                                        <td>{{ p.imparticiones.length }}</td>
+                                        <td class="text-end pe-2">
+                                            <button class="btn btn-xs btn-outline-primary me-1" type="button" (click)="iniciarEditarProfesor.emit(p)">Editar</button>
+                                            <button class="btn btn-xs btn-outline-danger" type="button" (click)="eliminarProfesor.emit({ id: p.id, nombre: p.nombre })" [disabled]="cargandoEliminarProfesor">
+                                                {{ cargandoEliminarProfesor ? 'Eliminando...' : 'Eliminar' }}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (profesoresVista.length === 0) { <tr><td colspan="4" class="text-secondary">Sin profesores.</td></tr> }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

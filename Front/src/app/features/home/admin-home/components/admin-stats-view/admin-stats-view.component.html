@@ -1,5 +1,51 @@
 @if (statsEstado() === 'loading') {
-    <div class="alert alert-secondary mb-0">Cargando estadisticas...</div>
+    <section class="vstack gap-3 placeholder-glow" aria-hidden="true">
+        <div class="row g-3">
+            @for (_ of [1, 2, 3, 4]; track $index) {
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <span class="placeholder col-8 mb-2"></span>
+                            <span class="placeholder col-5"></span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        <div class="row g-3">
+            <div class="col-12 col-xl-8">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <span class="placeholder col-4 mb-3"></span>
+                        <div class="chart-skeleton-box chart-skeleton-box-lg"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-xl-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <span class="placeholder col-5 mb-3"></span>
+                        <div class="chart-skeleton-box chart-skeleton-box-md"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm">
+            <div class="card-body vstack gap-3">
+                <span class="placeholder col-4"></span>
+                <div class="table-skeleton-wrap">
+                    @for (_ of [1, 2, 3, 4, 5, 6]; track $index) {
+                        <div class="table-skeleton-row">
+                            <span class="placeholder col-4"></span>
+                            <span class="placeholder col-2"></span>
+                            <span class="placeholder col-2"></span>
+                            <span class="placeholder col-2"></span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </section>
 } @else if (statsEstado() === 'error') {
     <div class="alert alert-warning mb-0">No se pudieron cargar las estadisticas. Intenta de nuevo.</div>
 } @else if (statsDisponibles() && stats()) {
@@ -125,7 +171,35 @@
                 </div>
 
                 @if (tabStatsActiva() === 'curso') {
-                    @if (cursoNotasSeleccionado()) {
+                    @if (cursoDetalleCargando()) {
+                        <div class="placeholder-glow" aria-hidden="true">
+                            <span class="placeholder col-4 mb-2"></span>
+                            <span class="placeholder col-8 mb-3"></span>
+                            <div class="row g-3">
+                                @for (_ of [1, 2, 3, 4]; track $index) {
+                                    <div class="col-12 col-md-6 col-xl-3">
+                                        <div class="card border-0 shadow-sm">
+                                            <div class="card-body">
+                                                <span class="placeholder col-8 mb-2"></span>
+                                                <span class="placeholder col-5"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <div class="chart-skeleton-box chart-skeleton-box-xl mt-3"></div>
+                            <div class="table-skeleton-wrap mt-3">
+                                @for (_ of [1, 2, 3, 4, 5]; track $index) {
+                                    <div class="table-skeleton-row">
+                                        <span class="placeholder col-4"></span>
+                                        <span class="placeholder col-2"></span>
+                                        <span class="placeholder col-2"></span>
+                                        <span class="placeholder col-2"></span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    } @else if (cursoNotasSeleccionado()) {
                         <div class="curso-heading-sticky border rounded-3 bg-light-subtle p-3 mt-2">
                             <div class="fw-semibold">Viendo: {{ cursoActivoNombre() }}</div>
                             <small class="text-secondary">Aprobados {{ cursoNotasSeleccionado()!.aprobados }} · Suspensos {{ cursoNotasSeleccionado()!.suspensos }} · Sin nota {{ cursoNotasSeleccionado()!.sinNota }}</small>
@@ -177,7 +251,27 @@
                         <div class="alert alert-secondary mb-0">Selecciona un curso para ver su rendimiento.</div>
                     }
                 } @else {
-                    @if (comparacionTieneDatos()) {
+                    @if (comparacionCargando()) {
+                        <div class="placeholder-glow" aria-hidden="true">
+                            <span class="placeholder col-4 mb-3"></span>
+                            <div class="row g-3">
+                                <div class="col-12 col-xl-8">
+                                    <div class="chart-skeleton-box chart-skeleton-box-xl"></div>
+                                </div>
+                                <div class="col-12 col-xl-4">
+                                    <div class="table-skeleton-wrap table-skeleton-wrap-compact">
+                                        @for (_ of [1, 2, 3, 4]; track $index) {
+                                            <div class="table-skeleton-row">
+                                                <span class="placeholder col-5"></span>
+                                                <span class="placeholder col-3"></span>
+                                                <span class="placeholder col-3"></span>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    } @else if (comparacionTieneDatos()) {
                         <div class="row g-3">
                             <div class="col-12 col-xl-8">
                                 <div class="chart-shell chart-shell-large">

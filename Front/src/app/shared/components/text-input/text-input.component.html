@@ -1,0 +1,21 @@
+<app-form-field
+    [label]="label"
+    [forId]="id"
+    [required]="required"
+    [errorMessage]="errorMessage">
+    <input
+        class="form-control"
+        [class.is-invalid]="!!errorMessage"
+        [class.is-valid]="showValidState && touched && !errorMessage"
+        [id]="id || null"
+        [type]="type"
+        [value]="value"
+        [placeholder]="placeholder"
+        [autocomplete]="autocomplete"
+        [required]="required"
+        [attr.maxlength]="maxLength ?? null"
+        [attr.minlength]="minLength ?? null"
+        [disabled]="disabled"
+        (input)="onInput($event)"
+        (blur)="onBlur()" />
+</app-form-field>

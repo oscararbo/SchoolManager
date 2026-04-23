@@ -22,6 +22,18 @@ export class CsvImportCardComponent implements OnChanges {
     @Output() importar = new EventEmitter<CsvImportEntity>();
     @Output() descargarPlantilla = new EventEmitter<CsvImportEntity>();
 
+    archivoNombre(): string {
+        return this.archivo?.name ?? 'Ningun archivo seleccionado';
+    }
+
+    botonImportarDeshabilitado(): boolean {
+        return this.cargando || !this.archivo;
+    }
+
+    textoBotonImportar(): string {
+        return this.cargando ? 'Importando...' : 'Importar';
+    }
+
     ngOnChanges(changes: SimpleChanges): void {
         if ('archivo' in changes && this.archivo === null && this.fileInputRef?.nativeElement) {
             this.fileInputRef.nativeElement.value = '';

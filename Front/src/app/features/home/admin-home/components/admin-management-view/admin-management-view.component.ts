@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal, ViewChild, DestroyRef, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
     SchoolApiService,
     CursoItem, AsignaturaItem, ProfesorListItem, EstudianteItem,
@@ -10,30 +10,25 @@ import {
 import { ToastService } from '../../../../../core/services/toast.service';
 import { ConfirmDialogComponent } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { AdminTabsNavComponent } from '../admin-tabs-nav/admin-tabs-nav.component';
-import { CsvImportCardComponent } from '../csv-import-card/csv-import-card.component';
+import { SelectInputComponent, SelectOption } from '../../../../../shared/components/select-input/select-input.component';
+import { AdminProfesoresTabComponent } from './tabs/admin-profesores-tab/admin-profesores-tab.component';
+import { AdminEstudiantesTabComponent } from './tabs/admin-estudiantes-tab/admin-estudiantes-tab.component';
+import { AdminMatriculasTabComponent } from './tabs/admin-matriculas-tab/admin-matriculas-tab.component';
+import { AdminImparticionesTabComponent } from './tabs/admin-imparticiones-tab/admin-imparticiones-tab.component';
+import { AdminImportarCsvTabComponent } from './tabs/admin-importar-csv-tab/admin-importar-csv-tab.component';
 import { Subject, debounceTime } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { dniValidator, isoDateValidator, phoneValidator } from '../../../../../core/validators/profile.validators';
+import { AdminManagementForms, createAdminManagementForms, getAdminControlErrorMessage } from './admin-management-view.forms';
+import {
+    agruparErroresCsv,
+    CSV_ERROR_PREVIEW_COUNT,
+    CSV_IMPORT_ITEMS,
+    CSV_PLANTILLAS,
+    MAX_CSV_FILE_SIZE_BYTES,
+    type CsvErrorGroup
+} from './admin-management-view.csv';
 
 type AdminTab = 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matriculas' | 'imparticiones' | 'importar';
-
-type CsvErrorGroupKey =
-    | 'curso'
-    | 'asignatura'
-    | 'profesor'
-    | 'estudiante'
-    | 'duplicado'
-    | 'formato'
-    | 'otros';
-
-type CsvErrorGroup = {
-    key: CsvErrorGroupKey;
-    label: string;
-    errors: string[];
-};
-
-const CSV_ERROR_PREVIEW_COUNT = 5;
-const MAX_CSV_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
 @Component({
     selector: 'app-admin-management-view',
@@ -44,7 +39,12 @@ const MAX_CSV_FILE_SIZE_BYTES = 10 * 1024 * 1024;
         ReactiveFormsModule,
         AdminTabsNavComponent,
         ConfirmDialogComponent,
-        CsvImportCardComponent
+        SelectInputComponent,
+        AdminProfesoresTabComponent,
+        AdminEstudiantesTabComponent,
+        AdminMatriculasTabComponent,
+        AdminImparticionesTabComponent,
+        AdminImportarCsvTabComponent
     ],
     templateUrl: './admin-management-view.html',
     styleUrls: ['./admin-management-view.scss']
@@ -59,6 +59,7 @@ export class AdminManagementViewComponent implements OnInit {
     private destroyRef = inject(DestroyRef);
 
     tabActiva = signal<AdminTab>('cursos');
+    private readonly tabBootstrapping = signal(false);
     private readonly resourcesLoaded = signal<{
         cursos: boolean;
         asignaturas: boolean;
@@ -90,42 +91,22 @@ export class AdminManagementViewComponent implements OnInit {
     readonly opCargando = signal<Record<string, boolean>>({});
 
     // Curso Management
-    nuevoCursoNombre = '';
     editandoCursoId: number | null = null;
-    editCursoNombre = '';
     busquedaCursos = signal('');
 
     // Asignatura Management
-    nuevaAsignaturaNombre = '';
-    nuevaAsignaturaCursoId: number | null = null;
     filtroAsignaturasCursoId = signal<number | null>(null);
     editandoAsignaturaId: number | null = null;
-    editAsignaturaNombre = '';
-    editAsignaturaCursoId: number | null = null;
     busquedaAsignaturas = signal('');
 
     // Profesor Management
-    nuevoProfesorNombre = '';
-    nuevoProfesorCorreo = '';
-    nuevoProfesorContrasena = '';
     filtroProfesoresCursoId = signal<number | null>(null);
     editandoProfesorId: number | null = null;
-    editProfesorNombre = '';
-    editProfesorCorreo = '';
-    editProfesorContrasena = '';
     busquedaProfesores = signal('');
 
     // Estudiante Management
-    nuevoEstudianteNombre = '';
-    nuevoEstudianteCorreo = '';
-    nuevoEstudianteContrasena = '';
-    nuevoEstudianteCursoId: number | null = null;
     filtroEstudiantesCursoId = signal<number | null>(null);
     editandoEstudianteId: number | null = null;
-    editEstudianteNombre = '';
-    editEstudianteCorreo = '';
-    editEstudianteCursoId: number | null = null;
-    editEstudianteContrasena = '';
     busquedaEstudiantes = signal('');
 
     // Matricula Management
@@ -158,16 +139,7 @@ export class AdminManagementViewComponent implements OnInit {
     csvEntidadActual = signal<CsvImportEntity | null>(null);
     csvCargando = signal(false);
     csvErroresExpandidos = signal<Record<string, boolean>>({});
-    readonly csvImportItems: Array<{ entidad: CsvImportEntity; titulo: string; descripcion: string; orden: string }> = [
-        { entidad: 'cursos', titulo: 'Cursos', descripcion: 'Alta masiva de cursos.', orden: '1' },
-        { entidad: 'asignaturas', titulo: 'Asignaturas', descripcion: 'Alta masiva de asignaturas ligadas a curso.', orden: '2' },
-        { entidad: 'profesores', titulo: 'Profesores', descripcion: 'Alta masiva de profesores.', orden: '3' },
-        { entidad: 'estudiantes', titulo: 'Estudiantes', descripcion: 'Alta masiva de estudiantes con su curso.', orden: '4' },
-        { entidad: 'imparticiones', titulo: 'Imparticiones', descripcion: 'Relaciona profesor, asignatura y curso.', orden: '5' },
-        { entidad: 'tareas', titulo: 'Tareas', descripcion: 'Crea tareas por profesor, asignatura, curso y trimestre.', orden: '6' },
-        { entidad: 'matriculas', titulo: 'Matriculas', descripcion: 'Relaciona estudiante con asignaturas de su curso.', orden: '7' },
-        { entidad: 'notas', titulo: 'Notas', descripcion: 'Carga masiva de calificaciones sobre tareas ya existentes.', orden: '8' }
-    ];
+    readonly csvImportItems = CSV_IMPORT_ITEMS;
 
     csvErroresAgrupados = computed<CsvErrorGroup[]>(() => {
         const errores = this.csvResultado()?.errores ?? [];
@@ -175,32 +147,7 @@ export class AdminManagementViewComponent implements OnInit {
             return [];
         }
 
-        const labels: Record<CsvErrorGroupKey, string> = {
-            curso: 'Curso no valido o no encontrado',
-            asignatura: 'Asignatura no valida o no encontrada',
-            profesor: 'Profesor no valido o no encontrado',
-            estudiante: 'Estudiante no valido o no encontrado',
-            duplicado: 'Registros duplicados o ya existentes',
-            formato: 'Formato o datos incompletos',
-            otros: 'Otros errores'
-        };
-
-        const grouped = new Map<CsvErrorGroupKey, string[]>();
-        for (const err of errores) {
-            const key = this.clasificarCsvError(err);
-            const current = grouped.get(key) ?? [];
-            current.push(err);
-            grouped.set(key, current);
-        }
-
-        const order: CsvErrorGroupKey[] = ['curso', 'asignatura', 'profesor', 'estudiante', 'duplicado', 'formato', 'otros'];
-        return order
-            .filter(key => grouped.has(key))
-            .map(key => ({
-                key,
-                label: labels[key],
-                errors: grouped.get(key) ?? []
-            }));
+        return agruparErroresCsv(errores);
     });
 
     grupoErroresExpandido(key: string): boolean {
@@ -225,96 +172,77 @@ export class AdminManagementViewComponent implements OnInit {
         return Math.max(grupo.errors.length - CSV_ERROR_PREVIEW_COUNT, 0);
     }
 
-    private clasificarCsvError(error: string): CsvErrorGroupKey {
-        const text = error.toLowerCase();
+    csvArchivo(entidad: CsvImportEntity): File | null {
+        return this.getCsvFile(entidad);
+    }
 
-        if (text.includes('curso no encontrado') || text.includes('su curso')) {
-            return 'curso';
-        }
+    csvPuedeExpandirGrupo(grupo: CsvErrorGroup): boolean {
+        return grupo.errors.length > CSV_ERROR_PREVIEW_COUNT;
+    }
 
-        if (text.includes('asignatura no encontrada') || text.includes('asignatura')) {
-            return 'asignatura';
-        }
+    getControlErrorMessage(control: AbstractControl | null): string | null {
+        return getAdminControlErrorMessage(control);
+    }
 
-        if (text.includes('profesor no encontrado') || text.includes('profesor')) {
-            return 'profesor';
-        }
+    cursoOptions = computed<SelectOption[]>(() => this.cursos().map(c => ({ value: c.id, label: c.nombre })));
 
-        if (text.includes('estudiante no encontrado') || text.includes('estudiante')) {
-            return 'estudiante';
-        }
+    cargandoFormularioAsignaturas(): boolean {
+        return this.cargandoListaCursos();
+    }
 
-        if (text.includes('duplicado') || text.includes('ya existe') || text.includes('ya esta matriculado') || text.includes('ya tiene un profesor asignado')) {
-            return 'duplicado';
-        }
+    cargandoFormularioEstudiantes(): boolean {
+        return this.cargandoListaCursos();
+    }
 
-        if (text.includes('se esperaban') || text.includes('obligatori') || text.includes('datos incompletos') || text.includes('columnas')) {
-            return 'formato';
-        }
+    cargandoFormularioMatriculas(): boolean {
+        const loaded = this.resourcesLoaded();
+        return this.estaCargando('cargarEstudiantes')
+            || this.estaCargando('cargarAsignaturas')
+            || (this.tabBootstrapping() && (!loaded.estudiantes || !loaded.asignaturas));
+    }
 
-        return 'otros';
+    cargandoFormularioImparticiones(): boolean {
+        const loaded = this.resourcesLoaded();
+        return this.estaCargando('cargarProfesores')
+            || this.estaCargando('cargarCursos')
+            || this.estaCargando('cargarAsignaturas')
+            || (this.tabBootstrapping() && (!loaded.profesores || !loaded.cursos || !loaded.asignaturas));
+    }
+
+    cargandoListaCursos(): boolean {
+        return this.estaCargando('cargarCursos') || (this.tabBootstrapping() && !this.resourcesLoaded().cursos);
+    }
+
+    cargandoListaAsignaturas(): boolean {
+        return this.estaCargando('cargarAsignaturas') || (this.tabBootstrapping() && !this.resourcesLoaded().asignaturas);
+    }
+
+    cargandoListaProfesores(): boolean {
+        return this.estaCargando('cargarProfesores') || (this.tabBootstrapping() && !this.resourcesLoaded().profesores);
+    }
+
+    cargandoListaEstudiantes(): boolean {
+        return this.estaCargando('cargarEstudiantes') || (this.tabBootstrapping() && !this.resourcesLoaded().estudiantes);
+    }
+
+    cargandoListaMatriculas(): boolean {
+        return this.estaCargando('cargarMatriculas') || (this.tabBootstrapping() && !this.resourcesLoaded().matriculas);
+    }
+
+    cargandoListaImparticiones(): boolean {
+        return this.estaCargando('cargarImparticiones') || (this.tabBootstrapping() && !this.resourcesLoaded().imparticiones);
     }
 
     // Forms
-    readonly cursoForm = this.fb.group({
-        nombre: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)])
-    });
-
-    readonly editCursoForm = this.fb.group({
-        nombre: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)])
-    });
-
-    readonly asignaturaForm = this.fb.group({
-        nombre: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
-        cursoId: this.fb.control<number | null>(null, [Validators.required])
-    });
-
-    readonly editAsignaturaForm = this.fb.group({
-        nombre: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
-        cursoId: this.fb.control<number | null>(null, [Validators.required])
-    });
-
-    readonly profesorForm = this.fb.group({
-        nombre: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
-        apellidos: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
-        dni: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), dniValidator()]),
-        telefono: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), phoneValidator()]),
-        especialidad: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(100)]),
-        correo: this.fb.nonNullable.control('', [Validators.required, Validators.email, Validators.maxLength(200)]),
-        contrasena: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(6), Validators.maxLength(200)])
-    });
-
-    readonly editProfesorForm = this.fb.group({
-        nombre: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
-        apellidos: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
-        dni: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), dniValidator()]),
-        telefono: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), phoneValidator()]),
-        especialidad: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(100)]),
-        correo: this.fb.nonNullable.control('', [Validators.required, Validators.email, Validators.maxLength(200)]),
-        nuevaContrasena: this.fb.nonNullable.control('', [Validators.minLength(6), Validators.maxLength(200)])
-    });
-
-    readonly estudianteForm = this.fb.group({
-        nombre: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
-        apellidos: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
-        dni: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), dniValidator()]),
-        telefono: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), phoneValidator()]),
-        fechaNacimiento: this.fb.nonNullable.control('', [Validators.required, isoDateValidator()]),
-        correo: this.fb.nonNullable.control('', [Validators.required, Validators.email, Validators.maxLength(200)]),
-        contrasena: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(6), Validators.maxLength(200)]),
-        cursoId: this.fb.control<number | null>(null, [Validators.required])
-    });
-
-    readonly editEstudianteForm = this.fb.group({
-        nombre: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
-        apellidos: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
-        dni: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), dniValidator()]),
-        telefono: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), phoneValidator()]),
-        fechaNacimiento: this.fb.nonNullable.control('', [Validators.required, isoDateValidator()]),
-        correo: this.fb.nonNullable.control('', [Validators.required, Validators.email, Validators.maxLength(200)]),
-        nuevaContrasena: this.fb.nonNullable.control('', [Validators.minLength(6), Validators.maxLength(200)]),
-        cursoId: this.fb.control<number | null>(null, [Validators.required])
-    });
+    private readonly forms: AdminManagementForms = createAdminManagementForms(this.fb);
+    readonly cursoForm = this.forms.cursoForm;
+    readonly editCursoForm = this.forms.editCursoForm;
+    readonly asignaturaForm = this.forms.asignaturaForm;
+    readonly editAsignaturaForm = this.forms.editAsignaturaForm;
+    readonly profesorForm = this.forms.profesorForm;
+    readonly editProfesorForm = this.forms.editProfesorForm;
+    readonly estudianteForm = this.forms.estudianteForm;
+    readonly editEstudianteForm = this.forms.editEstudianteForm;
 
     // Computed
     cursosVista = computed<CursoItem[]>(() => {
@@ -452,38 +380,43 @@ export class AdminManagementViewComponent implements OnInit {
     }
 
     private async cargarTab(tab: AdminTab, force = false): Promise<void> {
-        switch (tab) {
-            case 'cursos':
-                await this.cargarCursos(force);
-                break;
-            case 'asignaturas':
-                await Promise.all([this.cargarCursos(force), this.cargarAsignaturas(force)]);
-                break;
-            case 'profesores':
-                await Promise.all([this.cargarCursos(force), this.cargarProfesores(force)]);
-                break;
-            case 'estudiantes':
-                await Promise.all([this.cargarCursos(force), this.cargarEstudiantes(force)]);
-                break;
-            case 'matriculas':
-                await Promise.all([
-                    this.cargarCursos(force),
-                    this.cargarAsignaturas(force),
-                    this.cargarEstudiantes(force),
-                    this.cargarMatriculas(force)
-                ]);
-                break;
-            case 'imparticiones':
-                await Promise.all([
-                    this.cargarCursos(force),
-                    this.cargarAsignaturas(force),
-                    this.cargarProfesores(force),
-                    this.cargarImparticiones(force)
-                ]);
-                break;
-            case 'importar':
-                // No carga listas hasta que se necesiten en otras pestañas.
-                break;
+        this.tabBootstrapping.set(true);
+        try {
+            switch (tab) {
+                case 'cursos':
+                    await this.cargarCursos(force);
+                    break;
+                case 'asignaturas':
+                    await Promise.all([this.cargarCursos(force), this.cargarAsignaturas(force)]);
+                    break;
+                case 'profesores':
+                    await Promise.all([this.cargarCursos(force), this.cargarProfesores(force)]);
+                    break;
+                case 'estudiantes':
+                    await Promise.all([this.cargarCursos(force), this.cargarEstudiantes(force)]);
+                    break;
+                case 'matriculas':
+                    await Promise.all([
+                        this.cargarCursos(force),
+                        this.cargarAsignaturas(force),
+                        this.cargarEstudiantes(force),
+                        this.cargarMatriculas(force)
+                    ]);
+                    break;
+                case 'imparticiones':
+                    await Promise.all([
+                        this.cargarCursos(force),
+                        this.cargarAsignaturas(force),
+                        this.cargarProfesores(force),
+                        this.cargarImparticiones(force)
+                    ]);
+                    break;
+                case 'importar':
+                    // No carga listas hasta que se necesiten en otras pestañas.
+                    break;
+            }
+        } finally {
+            this.tabBootstrapping.set(false);
         }
     }
 
@@ -1208,17 +1141,7 @@ export class AdminManagementViewComponent implements OnInit {
     }
 
     descargarPlantilla(entidad: CsvImportEntity): void {
-        const plantillas: Record<CsvImportEntity, string> = {
-            cursos: 'nombre\n1°A\n1°B\n2°A',
-            asignaturas: 'nombre,cursoNombre\nMatematicas,1°A\nLengua,1°A\nCiencias,1°B',
-            profesores: 'nombre,correo,contrasena\nJuan Garcia,juan@colegio.es,Pass123',
-            estudiantes: 'nombre,correo,contrasena,cursoNombre\nLucia Perez,lucia@colegio.es,Pass123,1°A',
-            tareas: 'profesorCorreo,asignaturaNombre,cursoNombre,trimestre,tareaNombre\njuan@colegio.es,Matematicas,1°A,1,Examen T1',
-            matriculas: 'estudianteCorreo,asignaturaNombre,cursoNombre\nlucia@colegio.es,Matematicas,1°A',
-            imparticiones: 'profesorCorreo,asignaturaNombre,cursoNombre\njuan@colegio.es,Matematicas,1°A',
-            notas: 'profesorCorreo,estudianteCorreo,asignaturaNombre,cursoNombre,trimestre,tareaNombre,valor\njuan@colegio.es,lucia@colegio.es,Matematicas,1°A,1,Examen T1,7.50'
-        };
-        const csv = plantillas[entidad];
+        const csv = CSV_PLANTILLAS[entidad];
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');

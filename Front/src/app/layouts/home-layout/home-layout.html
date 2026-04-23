@@ -5,18 +5,86 @@
 	</header>
 
 	@if (session()) {
-        @if (session()!.rol === 'admin') {
-            <app-admin-home></app-admin-home>
-        } @else if (session()!.rol === 'profesor') {
-            <app-profesor-home
-                [profesorId]="session()!.id"
-                [profesorNombre]="session()!.nombre">
-            </app-profesor-home>
-        } @else {
-            <app-alumno-home
-                [estudianteId]="session()!.id"
-                [nombre]="session()!.nombre">
-            </app-alumno-home>
+        @switch (session()!.rol) {
+            @case ('admin') {
+                @defer (when session()!.rol === 'admin') {
+                    <app-admin-home></app-admin-home>
+                } @placeholder {
+                    <section class="placeholder-glow" aria-hidden="true">
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-body">
+                                <span class="placeholder col-4 mb-2"></span>
+                                <span class="placeholder col-8"></span>
+                            </div>
+                        </div>
+                        <div class="row g-3">
+                            @for (_ of [1, 2, 3, 4]; track $index) {
+                                <div class="col-12 col-md-6 col-xl-3">
+                                    <div class="card border-0 shadow-sm">
+                                        <div class="card-body">
+                                            <span class="placeholder col-7 mb-2"></span>
+                                            <span class="placeholder col-5"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </section>
+                }
+            }
+            @case ('profesor') {
+                @defer (when session()!.rol === 'profesor') {
+                    <app-profesor-home
+                        [profesorId]="session()!.id"
+                        [profesorNombre]="session()!.nombre">
+                    </app-profesor-home>
+                } @placeholder {
+                    <section class="placeholder-glow" aria-hidden="true">
+                        <span class="placeholder col-5 mb-3"></span>
+                        <div class="row g-3">
+                            <div class="col-12 col-lg-3">
+                                <div class="card border-0 shadow-sm">
+                                    <div class="card-body">
+                                        <span class="placeholder col-8 mb-2"></span>
+                                        <span class="placeholder col-10 mb-2"></span>
+                                        <span class="placeholder col-7"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-lg-9">
+                                <div class="card border-0 shadow-sm">
+                                    <div class="card-body">
+                                        <span class="placeholder col-4 mb-2"></span>
+                                        <span class="placeholder col-12 mb-2"></span>
+                                        <span class="placeholder col-12 mb-2"></span>
+                                        <span class="placeholder col-9"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                }
+            }
+            @default {
+                @defer (when session()!.rol !== 'admin' && session()!.rol !== 'profesor') {
+                    <app-alumno-home
+                        [estudianteId]="session()!.id"
+                        [nombre]="session()!.nombre">
+                    </app-alumno-home>
+                } @placeholder {
+                    <section class="placeholder-glow" aria-hidden="true">
+                        <span class="placeholder col-4 mb-3"></span>
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <span class="placeholder col-6 mb-2"></span>
+                                <span class="placeholder col-12 mb-2"></span>
+                                <span class="placeholder col-12 mb-2"></span>
+                                <span class="placeholder col-10"></span>
+                            </div>
+                        </div>
+                    </section>
+                }
+            }
         }
     }
 </main>

@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { SessionExpiredDialogComponent, ToastsComponent } from './shared/components';
+import { SessionExpiredDialogComponent } from './shared/components/session-expired-dialog/session-expired-dialog.component';
+import { ToastsComponent } from './shared/components/toasts/toasts.component';
 
 @Component({
   selector: 'app-root',

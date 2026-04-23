@@ -1,0 +1,24 @@
+<div class="date-input-modern">
+    <div class="date-input-head d-flex align-items-center justify-content-between mb-1">
+        <label class="form-label mb-0" [for]="id || null">{{ label }}</label>
+    </div>
+
+    <div class="date-input-shell position-relative">
+        <input
+            class="form-control"
+            [class.is-invalid]="!!errorMessage"
+            type="date"
+            [id]="id || null"
+            [value]="value"
+            [required]="required"
+            [attr.min]="min"
+            [attr.max]="max"
+            [disabled]="disabled"
+            (input)="onInput($event)"
+            (blur)="onBlur()" />
+    </div>
+
+    @if (errorMessage) {
+        <small class="text-danger d-block mt-1">{{ errorMessage }}</small>
+    }
+</div>

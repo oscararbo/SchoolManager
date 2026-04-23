@@ -1,0 +1,167 @@
+<div class="row g-3">
+    <div class="col-12 col-lg-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                @if (cargandoFormularioEstudiantes) {
+                    <div class="placeholder-glow skeleton-panel" aria-hidden="true">
+                        <span class="placeholder col-5 mb-3"></span>
+                        @for (_ of [1, 2, 3, 4, 5, 6, 7]; track $index) {
+                            <div class="skeleton-field">
+                                <span class="skeleton-field-label"></span>
+                                <span class="skeleton-input-box"></span>
+                            </div>
+                        }
+                        <span class="skeleton-btn-box"></span>
+                    </div>
+                } @else if (editandoEstudianteId !== null) {
+                    <h5 class="card-title">Editar estudiante</h5>
+                    <form [formGroup]="editEstudianteForm">
+                        <app-text-input id="editEstudianteNombre" label="Nombre" formControlName="nombre"></app-text-input>
+                        <app-text-input id="editEstudianteApellidos" label="Apellidos" formControlName="apellidos"></app-text-input>
+                        <app-text-input id="editEstudianteDni" label="DNI" formControlName="dni" placeholder="12345678Z"></app-text-input>
+                        <app-text-input id="editEstudianteTelefono" label="Telefono" type="tel" formControlName="telefono" placeholder="612345678"></app-text-input>
+                        <app-date-input
+                            class="d-block mb-2"
+                            id="editFechaNacimiento"
+                            label="Fecha nacimiento"
+                            formControlName="fechaNacimiento"
+                            [errorMessage]="controlErrorMessage(editEstudianteForm.get('fechaNacimiento'))">
+                        </app-date-input>
+                        <app-text-input
+                            id="editEstudianteCorreo"
+                            type="email"
+                            label="Correo"
+                            formControlName="correo"
+                            [maxLength]="200"
+                            [errorMessage]="controlErrorMessage(editEstudianteForm.get('correo'))">
+                        </app-text-input>
+                        <app-text-input
+                            id="editEstudiantePass"
+                            type="password"
+                            label="Nueva contraseña (opcional)"
+                            formControlName="nuevaContrasena"
+                            placeholder="Dejar en blanco para no cambiar"
+                            [maxLength]="200"
+                            [errorMessage]="controlErrorMessage(editEstudianteForm.get('nuevaContrasena'))">
+                        </app-text-input>
+                        <app-select-input
+                            id="editEstudianteCurso"
+                            label="Curso"
+                            formControlName="cursoId"
+                            [valueType]="'number'"
+                            [options]="cursoOptions"
+                            [errorMessage]="controlErrorMessage(editEstudianteForm.get('cursoId'))">
+                        </app-select-input>
+
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success" type="button" (click)="guardarEstudiante.emit()" [disabled]="cargandoGuardarEstudiante || editEstudianteForm.invalid">
+                                {{ cargandoGuardarEstudiante ? 'Guardando...' : 'Guardar' }}
+                            </button>
+                            <button class="btn btn-outline-secondary" type="button" (click)="cancelarEditarEstudiante.emit()">Cancelar</button>
+                        </div>
+                    </form>
+                } @else {
+                    <h5 class="card-title">Nuevo estudiante</h5>
+                    <form [formGroup]="estudianteForm" (ngSubmit)="crearEstudiante.emit()">
+                        <app-text-input id="createEstudianteNombre" label="Nombre" formControlName="nombre"></app-text-input>
+                        <app-text-input id="createEstudianteApellidos" label="Apellidos" formControlName="apellidos"></app-text-input>
+                        <app-text-input id="createEstudianteDni" label="DNI" formControlName="dni" placeholder="12345678Z"></app-text-input>
+                        <app-text-input id="createEstudianteTelefono" label="Telefono" type="tel" formControlName="telefono" placeholder="612345678"></app-text-input>
+                        <app-date-input
+                            class="d-block mb-2"
+                            id="createFechaNacimiento"
+                            label="Fecha nacimiento"
+                            formControlName="fechaNacimiento"
+                            [errorMessage]="controlErrorMessage(estudianteForm.get('fechaNacimiento'))">
+                        </app-date-input>
+                        <app-text-input
+                            id="createEstudianteCorreo"
+                            type="email"
+                            label="Correo"
+                            formControlName="correo"
+                            [maxLength]="200"
+                            [errorMessage]="controlErrorMessage(estudianteForm.get('correo'))">
+                        </app-text-input>
+                        <app-text-input
+                            id="createEstudianteContrasena"
+                            type="password"
+                            label="Contrasena"
+                            formControlName="contrasena"
+                            [maxLength]="200"
+                            [errorMessage]="controlErrorMessage(estudianteForm.get('contrasena'))">
+                        </app-text-input>
+                        <app-select-input
+                            id="createEstudianteCurso"
+                            label="Curso"
+                            placeholder="Selecciona un curso"
+                            formControlName="cursoId"
+                            [valueType]="'number'"
+                            [options]="cursoOptions"
+                            [errorMessage]="controlErrorMessage(estudianteForm.get('cursoId'))">
+                        </app-select-input>
+
+                        <button class="btn btn-primary" type="submit" [disabled]="cargandoCrearEstudiante || estudianteForm.invalid">
+                            {{ cargandoCrearEstudiante ? 'Creando...' : 'Crear estudiante' }}
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <h5 class="card-title mb-0">Estudiantes ({{ estudiantesVista.length }})</h5>
+                    <div class="d-flex gap-2">
+                        <input class="form-control form-control-sm" style="max-width:150px" type="text" placeholder="Buscar..." [ngModel]="busquedaEstudiantes" (ngModelChange)="busquedaEstudiantesChange.emit($event)">
+                        <select class="form-select form-select-sm" style="max-width:160px" [ngModel]="filtroEstudiantesCursoId" (ngModelChange)="filtroEstudiantesCursoIdChange.emit($event)">
+                            <option [ngValue]="null">Todos los cursos</option>
+                            @for (c of cursos; track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
+                        </select>
+                    </div>
+                </div>
+                <div class="table-responsive list-scroll-body">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead><tr><th>Nombre</th><th>Correo</th><th>Curso</th><th></th></tr></thead>
+                        <tbody>
+                            @if (cargandoListaEstudiantes) {
+                                <tr>
+                                    <td colspan="4" class="p-0 border-0">
+                                        <div class="skeleton-table-wrap" aria-hidden="true">
+                                            <div class="skeleton-tablelike-wrap">
+                                                @for (_ of [1, 2, 3, 4, 5]; track $index) {
+                                                    <div class="skeleton-tablelike-row">
+                                                        <span class="skeleton-line skeleton-w-70"></span>
+                                                        <span class="skeleton-line skeleton-w-55"></span>
+                                                        <span class="skeleton-line skeleton-w-45"></span>
+                                                        <span class="skeleton-list-action"></span>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            } @else {
+                                @for (e of estudiantesVista; track e.id) {
+                                    <tr>
+                                        <td>{{ e.nombre }}</td>
+                                        <td class="text-secondary small">{{ e.correo }}</td>
+                                        <td>{{ e.curso ?? '—' }}</td>
+                                        <td class="text-end pe-2">
+                                            <button class="btn btn-xs btn-outline-primary me-1" type="button" (click)="iniciarEditarEstudiante.emit(e)">Editar</button>
+                                            <button class="btn btn-xs btn-outline-danger" type="button" (click)="eliminarEstudiante.emit({ id: e.id, nombre: e.nombre })" [disabled]="cargandoEliminarEstudiante">
+                                                {{ cargandoEliminarEstudiante ? 'Eliminando...' : 'Eliminar' }}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (estudiantesVista.length === 0) { <tr><td colspan="4" class="text-secondary">Sin estudiantes.</td></tr> }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

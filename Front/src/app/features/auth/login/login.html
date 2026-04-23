@@ -12,58 +12,28 @@
     </div>
 
     <!-- Email input -->
-    <div class="form-floating">
-        <input
-        type="email"
-        name="email"
-        formControlName="email"
-        class="form-control"
+    <app-text-input
         id="emailInput"
+        type="email"
+        label="Correo electrónico"
         placeholder="name@example.com"
         autocomplete="email"
-        [ngClass]="{
-            'is-invalid': mostrarErrores && formLogin.get('email')?.touched && formLogin.get('email')?.errors,
-            'is-valid': mostrarErrores && formLogin.get('email')?.touched && !formLogin.get('email')?.errors
-        }">
-        <label for="emailInput">Correo electrónico</label>
-        @if (mostrarErrores && formLogin.get('email')?.errors) {
-            <div class="form-text text-danger small mt-1">
-                @if (formLogin.get('email')?.hasError('required')) {
-                    Campo obligatorio
-                } @else if (formLogin.get('email')?.hasError('invalidEmail')) {
-                    Email debe tener formato: texto@texto.texto
-                } @else if (formLogin.get('email')?.hasError('maxlength')) {
-                    Maximo 200 caracteres
-                }
-            </div>
-        }
-    </div>
+        formControlName="email"
+        [errorMessage]="controlErrorMessage('email')"
+        [showValidState]="mostrarErrores">
+    </app-text-input>
 
     <!-- Password input -->
-    <div class="form-floating">
-        <input
-        type="password"
-        name="password"
-        formControlName="password"
-        class="form-control"
+    <app-text-input
         id="passwordInput"
+        type="password"
+        label="Contraseña"
         placeholder="Password"
         autocomplete="current-password"
-        [ngClass]="{
-            'is-invalid': mostrarErrores && formLogin.get('password')?.touched && formLogin.get('password')?.errors,
-            'is-valid': mostrarErrores && formLogin.get('password')?.touched && !formLogin.get('password')?.errors
-        }">
-        <label for="passwordInput">Contraseña</label>
-        @if (mostrarErrores && formLogin.get('password')?.errors) {
-            <div class="form-text text-danger small mt-1">
-                @if (formLogin.get('password')?.hasError('required')) {
-                    Campo obligatorio
-                } @else if (formLogin.get('password')?.hasError('maxlength')) {
-                    Maximo 200 caracteres
-                }
-            </div>
-        }
-    </div>
+        formControlName="password"
+        [errorMessage]="controlErrorMessage('password')"
+        [showValidState]="mostrarErrores">
+    </app-text-input>
 
     <!-- Submit action -->
     <div class="d-grid mt-2">

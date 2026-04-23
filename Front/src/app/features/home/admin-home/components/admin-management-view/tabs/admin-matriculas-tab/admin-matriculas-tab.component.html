@@ -1,0 +1,107 @@
+<div class="row g-3">
+    <div class="col-12 col-lg-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                @if (cargandoFormularioMatriculas) {
+                    <div class="placeholder-glow skeleton-panel" aria-hidden="true">
+                        <span class="placeholder col-7 mb-3"></span>
+                        @for (_ of [1, 2]; track $index) {
+                            <div class="skeleton-field">
+                                <span class="skeleton-field-label"></span>
+                                <span class="skeleton-input-box"></span>
+                            </div>
+                        }
+                        <span class="skeleton-btn-box"></span>
+                    </div>
+                } @else {
+                    <h5 class="card-title">Matricular alumno en asignatura</h5>
+                    <div class="mb-3">
+                        <label class="form-label">Estudiante</label>
+                        <select class="form-select" [ngModel]="matriculaEstudianteId" (ngModelChange)="matriculaEstudianteIdChange.emit($event)">
+                            <option [ngValue]="null" disabled>Selecciona un estudiante</option>
+                            @for (e of estudiantes; track e.id) { <option [value]="e.id">{{ e.nombre }} — {{ e.curso ?? 'Sin curso' }}</option> }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Asignatura</label>
+                        <select class="form-select" [ngModel]="matriculaAsignaturaId" (ngModelChange)="matriculaAsignaturaIdChange.emit($event)">
+                            <option [ngValue]="null" disabled>Selecciona una asignatura</option>
+                            @for (a of asignaturasFiltradas; track a.id) { <option [value]="a.id">{{ a.nombre }} — {{ a.curso.nombre }}</option> }
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" type="button" (click)="matricularEstudiante.emit()" [disabled]="cargandoMatricularEstudiante">
+                        {{ cargandoMatricularEstudiante ? 'Matriculando...' : 'Matricular' }}
+                    </button>
+                    <p class="form-text text-secondary mt-2">Solo se muestran asignaturas del curso del estudiante.</p>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <h5 class="card-title mb-0">Listado de matriculas</h5>
+                    <select class="form-select form-select-sm" style="max-width:220px" [ngModel]="filtroMatriculasCursoId" (ngModelChange)="filtroMatriculasCursoIdChange.emit($event)">
+                        <option [ngValue]="null">Todos los cursos</option>
+                        @for (c of cursos; track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
+                    </select>
+                </div>
+                <div class="table-responsive list-scroll-body">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead><tr><th>Alumno</th><th>Curso</th><th>Asignaturas matriculadas</th><th></th></tr></thead>
+                        <tbody>
+                            @if (cargandoListaMatriculas) {
+                                <tr>
+                                    <td colspan="4" class="p-0 border-0">
+                                        <div class="skeleton-table-wrap" aria-hidden="true">
+                                            <div class="skeleton-cardlike-wrap">
+                                                @for (_ of [1, 2, 3, 4, 5]; track $index) {
+                                                    <div class="skeleton-cardlike-item">
+                                                        <span class="skeleton-line skeleton-w-55"></span>
+                                                        <span class="skeleton-line skeleton-w-35"></span>
+                                                        <div class="skeleton-badge-row">
+                                                            <span class="skeleton-badge"></span>
+                                                            <span class="skeleton-badge"></span>
+                                                            <span class="skeleton-badge"></span>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            } @else {
+                                @for (m of matriculasVista; track m.estudianteId) {
+                                    <tr>
+                                        <td>{{ m.estudiante }}</td>
+                                        <td>{{ m.curso ?? '—' }}</td>
+                                        <td>
+                                            @if (m.asignaturas.length) {
+                                                @for (asig of m.asignaturas; track asig.asignaturaId) {
+                                                    <span class="badge text-bg-light border me-1 mb-1">{{ asig.asignatura }}</span>
+                                                }
+                                            } @else {
+                                                <span class="text-secondary">Sin matriculas</span>
+                                            }
+                                        </td>
+                                        <td class="text-end pe-2">
+                                            @for (asig of m.asignaturas; track asig.asignaturaId) {
+                                                <button class="btn btn-xs btn-outline-danger me-1 mb-1" type="button"
+                                                    (click)="eliminarMatricula.emit({ estudianteId: m.estudianteId, asignaturaId: asig.asignaturaId, asignaturaNombre: asig.asignatura })"
+                                                    [disabled]="cargandoEliminarMatricula">
+                                                    {{ asig.asignatura }}
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                                @if (matriculasVista.length === 0) { <tr><td colspan="4" class="text-secondary">No hay alumnos.</td></tr> }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

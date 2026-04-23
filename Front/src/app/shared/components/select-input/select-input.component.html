@@ -1,0 +1,19 @@
+<app-form-field
+    [label]="label"
+    [forId]="id"
+    [required]="required"
+    [errorMessage]="errorMessage">
+    <select
+        class="form-select"
+        [id]="id || null"
+        [class.is-invalid]="!!errorMessage"
+        [value]="value"
+        [disabled]="disabled"
+        (change)="onSelectChange($event)"
+        (blur)="onBlur()">
+        <option value="">{{ placeholder }}</option>
+        @for (option of options; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+        }
+    </select>
+</app-form-field>

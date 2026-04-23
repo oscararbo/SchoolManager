@@ -5,7 +5,50 @@
     </header>
 
     @if (cargando()) {
-        <div class="alert alert-secondary mb-0" role="status">Cargando panel...</div>
+        <section class="placeholder-glow" aria-hidden="true">
+            <div class="row g-3 mb-3">
+                @for (_ of [1, 2, 3, 4]; track $index) {
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-body">
+                                <span class="placeholder col-7 mb-2"></span>
+                                <span class="placeholder col-5"></span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="row g-3">
+                <div class="col-12 col-lg-3">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body vstack gap-2">
+                            <span class="placeholder col-8 mb-2"></span>
+                            @for (_ of [1, 2, 3, 4]; track $index) {
+                                <span class="placeholder col-12"></span>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-9">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body vstack gap-3">
+                            <span class="placeholder col-5"></span>
+                            <div class="row g-3">
+                                @for (_ of [1, 2, 3, 4]; track $index) {
+                                    <div class="col-12 col-xl-6">
+                                        <div class="border rounded-3 p-3">
+                                            <span class="placeholder col-8 mb-2"></span>
+                                            <span class="placeholder col-10 mb-2"></span>
+                                            <span class="placeholder col-7"></span>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     } @else {
         @if (error()) {
             <div class="alert alert-danger mb-0" role="alert">{{ error() }}</div>
@@ -289,7 +332,11 @@
 
                                                         @if (alumnoExpandido(alumno.estudianteId)) {
                                                             @if (alumnoDetalleCargando(alumno.estudianteId)) {
-                                                                <div class="text-secondary small mt-2">Cargando detalle del alumno...</div>
+                                                                <div class="placeholder-glow mt-2" aria-hidden="true">
+                                                                    <span class="placeholder col-4 mb-2"></span>
+                                                                    <span class="placeholder col-12 mb-2"></span>
+                                                                    <span class="placeholder col-10"></span>
+                                                                </div>
                                                             } @else if (alumnoDetalle(alumno.estudianteId)) {
                                                                 <div class="row g-3 mt-1">
                                                                     @for (trimestre of [1, 2, 3]; track trimestre) {

@@ -10,17 +10,32 @@
             <div class="col-12 col-lg-5">
                 <div class="card shadow-sm border-0">
                     <div class="card-body">
-                        <h5 class="card-title">Nuevo curso</h5>
-                        <form [formGroup]="cursoForm" (ngSubmit)="crearCurso()">
-                            <div class="mb-3">
-                                <label class="form-label">Nombre</label>
-                                <input class="form-control" type="text" placeholder="Ej: 1°A"
-                                    formControlName="nombre">
-                            </div>
-                            <button class="btn btn-primary" type="submit" [disabled]="estaCargando('crearCurso') || cursoForm.invalid">
-                                {{ estaCargando('crearCurso') ? 'Creando...' : 'Crear curso' }}
-                            </button>
-                        </form>
+                        @if (editandoCursoId !== null) {
+                            <h5 class="card-title">Editar curso</h5>
+                            <form [formGroup]="editCursoForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Nombre</label>
+                                    <input class="form-control" type="text" formControlName="nombre">
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-success" type="button" (click)="guardarCurso()" [disabled]="estaCargando('guardarCurso') || editCursoForm.invalid">
+                                        {{ estaCargando('guardarCurso') ? 'Guardando...' : 'Guardar' }}
+                                    </button>
+                                    <button class="btn btn-outline-secondary" type="button" (click)="editandoCursoId=null">Cancelar</button>
+                                </div>
+                            </form>
+                        } @else {
+                            <h5 class="card-title">Nuevo curso</h5>
+                            <form [formGroup]="cursoForm" (ngSubmit)="crearCurso()">
+                                <div class="mb-3">
+                                    <label class="form-label">Nombre</label>
+                                    <input class="form-control" type="text" formControlName="nombre">
+                                </div>
+                                <button class="btn btn-primary" type="submit" [disabled]="estaCargando('crearCurso') || cursoForm.invalid">
+                                    {{ estaCargando('crearCurso') ? 'Creando...' : 'Crear curso' }}
+                                </button>
+                            </form>
+                        }
                     </div>
                 </div>
             </div>
@@ -29,37 +44,36 @@
                     <div class="card-body">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                             <h5 class="card-title mb-0">Cursos ({{ cursosVista().length }})</h5>
-                            <input class="form-control form-control-sm" style="max-width:200px" type="text" placeholder="Buscar..." [ngModel]="busquedaCursos()" (ngModelChange)="onBusquedaCursosChange($event)">
+                            <input class="form-control form-control-sm" style="max-width:180px" type="text" placeholder="Buscar..." [ngModel]="busquedaCursos()" (ngModelChange)="onBusquedaCursosChange($event)">
                         </div>
-                        @if (cursosVista().length === 0) {
-                            <p class="text-secondary mb-0">No hay cursos.</p>
-                        } @else {
-                            <ul class="list-group list-group-flush list-scroll-body">
-                                @for (c of cursosVista(); track c.id) {
-                                    <li class="list-group-item px-0">
-                                        @if (editandoCursoId === c.id) {
-                                            <div class="d-flex gap-2 align-items-center">
-                                                <input class="form-control form-control-sm" [formControl]="editCursoForm.controls.nombre" (keydown.enter)="guardarCurso()">
-                                                <button class="btn btn-sm btn-success" (click)="guardarCurso()" [disabled]="estaCargando('guardarCurso') || editCursoForm.invalid">
-                                                    {{ estaCargando('guardarCurso') ? 'Guardando...' : 'Guardar' }}
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-secondary" (click)="editandoCursoId=null">Cancelar</button>
-                                            </div>
-                                        } @else {
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <span>{{ c.nombre }}</span>
-                                                <div class="d-flex gap-1">
-                                                    <button class="btn btn-sm btn-outline-primary" (click)="iniciarEditarCurso(c)">Editar</button>
-                                                    <button class="btn btn-sm btn-outline-danger" (click)="eliminarCurso(c.id, c.nombre)" [disabled]="estaCargando('eliminarCurso')">
+                        <div class="table-responsive list-scroll-body">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead><tr><th>Nombre</th><th></th></tr></thead>
+                                <tbody>
+                                    @if (cargandoListaCursos()) {
+                                        @for (_ of [1, 2, 3, 4, 5]; track $index) {
+                                            <tr class="placeholder-glow" aria-hidden="true">
+                                                <td><span class="placeholder col-8"></span></td>
+                                                <td><span class="placeholder col-6"></span></td>
+                                            </tr>
+                                        }
+                                    } @else {
+                                        @for (c of cursosVista(); track c.id) {
+                                            <tr>
+                                                <td>{{ c.nombre }}</td>
+                                                <td class="text-end pe-2">
+                                                    <button class="btn btn-xs btn-outline-primary me-1" type="button" (click)="iniciarEditarCurso(c)">Editar</button>
+                                                    <button class="btn btn-xs btn-outline-danger" type="button" (click)="eliminarCurso(c.id, c.nombre)" [disabled]="estaCargando('eliminarCurso')">
                                                         {{ estaCargando('eliminarCurso') ? 'Eliminando...' : 'Eliminar' }}
                                                     </button>
-                                                </div>
-                                            </div>
+                                                </td>
+                                            </tr>
                                         }
-                                    </li>
-                                }
-                            </ul>
-                        }
+                                        @if (cursosVista().length === 0) { <tr><td colspan="2" class="text-secondary">Sin cursos.</td></tr> }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -72,7 +86,14 @@
             <div class="col-12 col-lg-5">
                 <div class="card shadow-sm border-0">
                     <div class="card-body">
-                        @if (editandoAsignaturaId !== null) {
+                        @if (cargandoFormularioAsignaturas()) {
+                            <div class="placeholder-glow" aria-hidden="true">
+                                <span class="placeholder col-5 mb-3"></span>
+                                <span class="placeholder col-12 mb-2"></span>
+                                <span class="placeholder col-12 mb-2"></span>
+                                <span class="placeholder col-8"></span>
+                            </div>
+                        } @else if (editandoAsignaturaId !== null) {
                             <h5 class="card-title">Editar asignatura</h5>
                             <form [formGroup]="editAsignaturaForm">
                                 <div class="mb-2">
@@ -80,16 +101,20 @@
                                     <input class="form-control" type="text" formControlName="nombre">
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Curso</label>
-                                    <select class="form-select" formControlName="cursoId">
-                                        @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
-                                    </select>
+                                    <app-select-input
+                                        id="editAsignaturaCurso"
+                                        label="Curso"
+                                        formControlName="cursoId"
+                                        [valueType]="'number'"
+                                        [options]="cursoOptions()"
+                                        [errorMessage]="getControlErrorMessage(editAsignaturaForm.get('cursoId'))">
+                                    </app-select-input>
                                 </div>
                                 <div class="d-flex gap-2">
-                                    <button class="btn btn-success" (click)="guardarAsignatura()" [disabled]="estaCargando('guardarAsignatura') || editAsignaturaForm.invalid">
+                                    <button class="btn btn-success" type="button" (click)="guardarAsignatura()" [disabled]="estaCargando('guardarAsignatura') || editAsignaturaForm.invalid">
                                         {{ estaCargando('guardarAsignatura') ? 'Guardando...' : 'Guardar' }}
                                     </button>
-                                    <button class="btn btn-outline-secondary" (click)="editandoAsignaturaId=null">Cancelar</button>
+                                    <button class="btn btn-outline-secondary" type="button" (click)="editandoAsignaturaId=null">Cancelar</button>
                                 </div>
                             </form>
                         } @else {
@@ -100,11 +125,15 @@
                                     <input class="form-control" type="text" formControlName="nombre">
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Curso</label>
-                                    <select class="form-select" formControlName="cursoId">
-                                        <option [ngValue]="null" disabled>Selecciona un curso</option>
-                                        @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
-                                    </select>
+                                    <app-select-input
+                                        id="createAsignaturaCurso"
+                                        label="Curso"
+                                        placeholder="Selecciona un curso"
+                                        formControlName="cursoId"
+                                        [valueType]="'number'"
+                                        [options]="cursoOptions()"
+                                        [errorMessage]="getControlErrorMessage(asignaturaForm.get('cursoId'))">
+                                    </app-select-input>
                                 </div>
                                 <button class="btn btn-primary" type="submit" [disabled]="estaCargando('crearAsignatura') || asignaturaForm.invalid">
                                     {{ estaCargando('crearAsignatura') ? 'Creando...' : 'Crear asignatura' }}
@@ -131,23 +160,32 @@
                             <table class="table table-sm table-hover mb-0">
                                 <thead><tr><th>Nombre</th><th>Curso</th><th>Profs</th><th>Alumnos</th><th></th></tr></thead>
                                 <tbody>
-                                    @for (a of asignaturasVista(); track a.id) {
-                                        <tr>
-                                            <td>{{ a.nombre }}</td>
-                                            <td>{{ a.curso.nombre }}</td>
-                                            <td>{{ a.profesores.length }}</td>
-                                            <td>{{ a.alumnos.length }}</td>
-                                            <td class="text-end pe-2">
-                                                <button class="btn btn-xs btn-outline-info me-1" (click)="verTareasAsignatura(a.id)">Ver tareas</button>
-                                                <button class="btn btn-xs btn-outline-primary me-1" (click)="iniciarEditarAsignatura(a)">Editar</button>
-                                                <button class="btn btn-xs btn-outline-danger" (click)="eliminarAsignatura(a.id, a.nombre)" [disabled]="estaCargando('eliminarAsignatura')">
-                                                    {{ estaCargando('eliminarAsignatura') ? 'Eliminando...' : 'Eliminar' }}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    }
-                                    @if (asignaturasVista().length === 0) {
-                                        <tr><td colspan="5" class="text-secondary">Sin asignaturas.</td></tr>
+                                    @if (cargandoListaAsignaturas()) {
+                                        @for (_ of [1, 2, 3, 4, 5]; track $index) {
+                                            <tr class="placeholder-glow" aria-hidden="true">
+                                                <td><span class="placeholder col-8"></span></td>
+                                                <td><span class="placeholder col-7"></span></td>
+                                                <td><span class="placeholder col-4"></span></td>
+                                                <td><span class="placeholder col-4"></span></td>
+                                                <td><span class="placeholder col-6"></span></td>
+                                            </tr>
+                                        }
+                                    } @else {
+                                        @for (a of asignaturasVista(); track a.id) {
+                                            <tr>
+                                                <td>{{ a.nombre }}</td>
+                                                <td>{{ a.curso.nombre }}</td>
+                                                <td>{{ a.profesores.length }}</td>
+                                                <td>{{ a.alumnos.length }}</td>
+                                                <td class="text-end pe-2">
+                                                    <button class="btn btn-xs btn-outline-primary me-1" type="button" (click)="iniciarEditarAsignatura(a)">Editar</button>
+                                                    <button class="btn btn-xs btn-outline-danger" type="button" (click)="eliminarAsignatura(a.id, a.nombre)" [disabled]="estaCargando('eliminarAsignatura')">
+                                                        {{ estaCargando('eliminarAsignatura') ? 'Eliminando...' : 'Eliminar' }}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                        @if (asignaturasVista().length === 0) { <tr><td colspan="5" class="text-secondary">Sin asignaturas.</td></tr> }
                                     }
                                 </tbody>
                             </table>
@@ -160,510 +198,120 @@
 
     <!-- PROFESORES -->
     @if (tabActiva() === 'profesores') {
-        <div class="row g-3">
-            <div class="col-12 col-lg-5">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body">
-                        @if (editandoProfesorId !== null) {
-                            <h5 class="card-title">Editar profesor</h5>
-                            <form [formGroup]="editProfesorForm">
-                                <div class="mb-2"><label class="form-label">Nombre</label><input class="form-control" type="text" formControlName="nombre"></div>
-                                <div class="mb-2"><label class="form-label">Apellidos</label><input class="form-control" type="text" formControlName="apellidos"></div>
-                                <div class="mb-2"><label class="form-label">DNI</label><input class="form-control" type="text" formControlName="dni" placeholder="12345678Z"></div>
-                                <div class="mb-2"><label class="form-label">Telefono</label><input class="form-control" type="tel" formControlName="telefono" placeholder="612345678"></div>
-                                <div class="mb-2"><label class="form-label">Especialidad</label><input class="form-control" type="text" formControlName="especialidad"></div>
-                                <div class="mb-2">
-                                    <label class="form-label">Correo</label>
-                                    <input class="form-control" type="email" formControlName="correo" maxlength="200">
-                                    @if (editProfesorForm.get('correo')?.touched && editProfesorForm.get('correo')?.errors) {
-                                        <small class="text-danger d-block mt-1">
-                                            @if (editProfesorForm.get('correo')?.hasError('required')) {
-                                                Campo obligatorio.
-                                            } @else if (editProfesorForm.get('correo')?.hasError('email')) {
-                                                Correo no valido.
-                                            } @else if (editProfesorForm.get('correo')?.hasError('maxlength')) {
-                                                Maximo 200 caracteres.
-                                            }
-                                        </small>
-                                    }
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label">Nueva contraseña (opcional)</label>
-                                    <input class="form-control" type="password" formControlName="nuevaContrasena" placeholder="Dejar en blanco para no cambiar" maxlength="200">
-                                    @if (editProfesorForm.get('nuevaContrasena')?.touched && editProfesorForm.get('nuevaContrasena')?.errors) {
-                                        <small class="text-danger d-block mt-1">
-                                            @if (editProfesorForm.get('nuevaContrasena')?.hasError('minlength')) {
-                                                Minimo 6 caracteres.
-                                            } @else if (editProfesorForm.get('nuevaContrasena')?.hasError('maxlength')) {
-                                                Maximo 200 caracteres.
-                                            }
-                                        </small>
-                                    }
-                                </div>
-
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-success" (click)="guardarProfesor()" [disabled]="estaCargando('guardarProfesor') || editProfesorForm.invalid">
-                                        {{ estaCargando('guardarProfesor') ? 'Guardando...' : 'Guardar' }}
-                                    </button>
-                                    <button class="btn btn-outline-secondary" (click)="editandoProfesorId=null">Cancelar</button>
-                                </div>
-                            </form>
-                        } @else {
-                            <h5 class="card-title">Nuevo profesor</h5>
-                            <form [formGroup]="profesorForm" (ngSubmit)="crearProfesor()">
-                                <div class="mb-2"><label class="form-label">Nombre</label><input class="form-control" type="text" formControlName="nombre"></div>
-                                <div class="mb-2"><label class="form-label">Apellidos</label><input class="form-control" type="text" formControlName="apellidos"></div>
-                                <div class="mb-2"><label class="form-label">DNI</label><input class="form-control" type="text" formControlName="dni" placeholder="12345678Z"></div>
-                                <div class="mb-2"><label class="form-label">Telefono</label><input class="form-control" type="tel" formControlName="telefono" placeholder="612345678"></div>
-                                <div class="mb-2"><label class="form-label">Especialidad</label><input class="form-control" type="text" formControlName="especialidad"></div>
-                                <div class="mb-2">
-                                    <label class="form-label">Correo</label>
-                                    <input class="form-control" type="email" formControlName="correo" maxlength="200">
-                                    @if (profesorForm.get('correo')?.touched && profesorForm.get('correo')?.errors) {
-                                        <small class="text-danger d-block mt-1">
-                                            @if (profesorForm.get('correo')?.hasError('required')) {
-                                                Campo obligatorio.
-                                            } @else if (profesorForm.get('correo')?.hasError('email')) {
-                                                Correo no valido.
-                                            } @else if (profesorForm.get('correo')?.hasError('maxlength')) {
-                                                Maximo 200 caracteres.
-                                            }
-                                        </small>
-                                    }
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label">Contrasena</label>
-                                    <input class="form-control" type="password" formControlName="contrasena" maxlength="200">
-                                    @if (profesorForm.get('contrasena')?.touched && profesorForm.get('contrasena')?.errors) {
-                                        <small class="text-danger d-block mt-1">
-                                            @if (profesorForm.get('contrasena')?.hasError('required')) {
-                                                Campo obligatorio.
-                                            } @else if (profesorForm.get('contrasena')?.hasError('minlength')) {
-                                                Minimo 6 caracteres.
-                                            } @else if (profesorForm.get('contrasena')?.hasError('maxlength')) {
-                                                Maximo 200 caracteres.
-                                            }
-                                        </small>
-                                    }
-                                </div>
-
-                                <button class="btn btn-primary" type="submit" [disabled]="estaCargando('crearProfesor') || profesorForm.invalid">
-                                    {{ estaCargando('crearProfesor') ? 'Creando...' : 'Crear profesor' }}
-                                </button>
-                            </form>
-                        }
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-lg-7">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body">
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                            <h5 class="card-title mb-0">Profesores ({{ profesoresVista().length }})</h5>
-                            <div class="d-flex gap-2">
-                                <input class="form-control form-control-sm" style="max-width:150px" type="text" placeholder="Buscar..." [ngModel]="busquedaProfesores()" (ngModelChange)="onBusquedaProfesoresChange($event)">
-                                <select class="form-select form-select-sm" style="max-width:160px" [ngModel]="filtroProfesoresCursoId()" (ngModelChange)="filtroProfesoresCursoId.set($event)">
-                                    <option [ngValue]="null">Todos los cursos</option>
-                                    @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
-                                </select>
-                            </div>
-                        </div>
-                        <div class="table-responsive list-scroll-body">
-                            <table class="table table-sm table-hover mb-0">
-                                <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Asig.</th><th></th></tr></thead>
-                                <tbody>
-                                    @for (p of profesoresVista(); track p.id) {
-                                        <tr>
-                                            <td>{{ p.nombre }}</td>
-                                            <td class="text-secondary small">{{ p.correo }}</td>
-                                            <td><span class="badge text-bg-success">Profesor</span></td>
-                                            <td>{{ p.imparticiones.length }}</td>
-                                            <td class="text-end pe-2">
-                                                <button class="btn btn-xs btn-outline-primary me-1" (click)="iniciarEditarProfesor(p)">Editar</button>
-                                                <button class="btn btn-xs btn-outline-danger" (click)="eliminarProfesor(p.id, p.nombre)" [disabled]="estaCargando('eliminarProfesor')">
-                                                    {{ estaCargando('eliminarProfesor') ? 'Eliminando...' : 'Eliminar' }}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    }
-                                    @if (profesoresVista().length === 0) { <tr><td colspan="5" class="text-secondary">Sin profesores.</td></tr> }
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <app-admin-profesores-tab
+            [editandoProfesorId]="editandoProfesorId"
+            [editProfesorForm]="editProfesorForm"
+            [profesorForm]="profesorForm"
+            [profesoresVista]="profesoresVista()"
+            [cursos]="cursos()"
+            [filtroProfesoresCursoId]="filtroProfesoresCursoId()"
+            [busquedaProfesores]="busquedaProfesores()"
+            [cargandoListaProfesores]="cargandoListaProfesores()"
+            [cargandoCrearProfesor]="estaCargando('crearProfesor')"
+            [cargandoGuardarProfesor]="estaCargando('guardarProfesor')"
+            [cargandoEliminarProfesor]="estaCargando('eliminarProfesor')"
+            [controlErrorMessage]="getControlErrorMessage"
+            (busquedaProfesoresChange)="onBusquedaProfesoresChange($event)"
+            (filtroProfesoresCursoIdChange)="filtroProfesoresCursoId.set($event)"
+            (iniciarEditarProfesor)="iniciarEditarProfesor($event)"
+            (eliminarProfesor)="eliminarProfesor($event.id, $event.nombre)"
+            (guardarProfesor)="guardarProfesor()"
+            (cancelarEditarProfesor)="editandoProfesorId=null"
+            (crearProfesor)="crearProfesor()">
+        </app-admin-profesores-tab>
     }
 
     <!-- ESTUDIANTES -->
     @if (tabActiva() === 'estudiantes') {
-        <div class="row g-3">
-            <div class="col-12 col-lg-5">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body">
-                        @if (editandoEstudianteId !== null) {
-                            <h5 class="card-title">Editar estudiante</h5>
-                            <form [formGroup]="editEstudianteForm">
-                                <div class="mb-2"><label class="form-label">Nombre</label><input class="form-control" type="text" formControlName="nombre"></div>
-                                <div class="mb-2"><label class="form-label">Apellidos</label><input class="form-control" type="text" formControlName="apellidos"></div>
-                                <div class="mb-2"><label class="form-label">DNI</label><input class="form-control" type="text" formControlName="dni" placeholder="12345678Z"></div>
-                                <div class="mb-2"><label class="form-label">Telefono</label><input class="form-control" type="tel" formControlName="telefono" placeholder="612345678"></div>
-                                <div class="mb-2"><label class="form-label">Fecha nacimiento</label><input class="form-control" type="date" formControlName="fechaNacimiento"></div>
-                                <div class="mb-2">
-                                    <label class="form-label">Correo</label>
-                                    <input class="form-control" type="email" formControlName="correo" maxlength="200">
-                                    @if (editEstudianteForm.get('correo')?.touched && editEstudianteForm.get('correo')?.errors) {
-                                        <small class="text-danger d-block mt-1">
-                                            @if (editEstudianteForm.get('correo')?.hasError('required')) {
-                                                Campo obligatorio.
-                                            } @else if (editEstudianteForm.get('correo')?.hasError('email')) {
-                                                Correo no valido.
-                                            } @else if (editEstudianteForm.get('correo')?.hasError('maxlength')) {
-                                                Maximo 200 caracteres.
-                                            }
-                                        </small>
-                                    }
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label">Nueva contraseña (opcional)</label>
-                                    <input class="form-control" type="password" formControlName="nuevaContrasena" placeholder="Dejar en blanco para no cambiar" maxlength="200">
-                                    @if (editEstudianteForm.get('nuevaContrasena')?.touched && editEstudianteForm.get('nuevaContrasena')?.errors) {
-                                        <small class="text-danger d-block mt-1">
-                                            @if (editEstudianteForm.get('nuevaContrasena')?.hasError('minlength')) {
-                                                Minimo 6 caracteres.
-                                            } @else if (editEstudianteForm.get('nuevaContrasena')?.hasError('maxlength')) {
-                                                Maximo 200 caracteres.
-                                            }
-                                        </small>
-                                    }
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Curso</label>
-                                    <select class="form-select" formControlName="cursoId">
-                                        @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
-                                    </select>
-                                </div>
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-success" (click)="guardarEstudiante()" [disabled]="estaCargando('guardarEstudiante') || editEstudianteForm.invalid">
-                                        {{ estaCargando('guardarEstudiante') ? 'Guardando...' : 'Guardar' }}
-                                    </button>
-                                    <button class="btn btn-outline-secondary" (click)="editandoEstudianteId=null">Cancelar</button>
-                                </div>
-                            </form>
-                        } @else {
-                            <h5 class="card-title">Nuevo estudiante</h5>
-                            <form [formGroup]="estudianteForm" (ngSubmit)="crearEstudiante()">
-                                <div class="mb-2"><label class="form-label">Nombre</label><input class="form-control" type="text" formControlName="nombre"></div>
-                                <div class="mb-2"><label class="form-label">Apellidos</label><input class="form-control" type="text" formControlName="apellidos"></div>
-                                <div class="mb-2"><label class="form-label">DNI</label><input class="form-control" type="text" formControlName="dni" placeholder="12345678Z"></div>
-                                <div class="mb-2"><label class="form-label">Telefono</label><input class="form-control" type="tel" formControlName="telefono" placeholder="612345678"></div>
-                                <div class="mb-2"><label class="form-label">Fecha nacimiento</label><input class="form-control" type="date" formControlName="fechaNacimiento"></div>
-                                <div class="mb-2">
-                                    <label class="form-label">Correo</label>
-                                    <input class="form-control" type="email" formControlName="correo" maxlength="200">
-                                    @if (estudianteForm.get('correo')?.touched && estudianteForm.get('correo')?.errors) {
-                                        <small class="text-danger d-block mt-1">
-                                            @if (estudianteForm.get('correo')?.hasError('required')) {
-                                                Campo obligatorio.
-                                            } @else if (estudianteForm.get('correo')?.hasError('email')) {
-                                                Correo no valido.
-                                            } @else if (estudianteForm.get('correo')?.hasError('maxlength')) {
-                                                Maximo 200 caracteres.
-                                            }
-                                        </small>
-                                    }
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label">Contrasena</label>
-                                    <input class="form-control" type="password" formControlName="contrasena" maxlength="200">
-                                    @if (estudianteForm.get('contrasena')?.touched && estudianteForm.get('contrasena')?.errors) {
-                                        <small class="text-danger d-block mt-1">
-                                            @if (estudianteForm.get('contrasena')?.hasError('required')) {
-                                                Campo obligatorio.
-                                            } @else if (estudianteForm.get('contrasena')?.hasError('minlength')) {
-                                                Minimo 6 caracteres.
-                                            } @else if (estudianteForm.get('contrasena')?.hasError('maxlength')) {
-                                                Maximo 200 caracteres.
-                                            }
-                                        </small>
-                                    }
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Curso</label>
-                                    <select class="form-select" formControlName="cursoId">
-                                        <option [ngValue]="null" disabled>Selecciona un curso</option>
-                                        @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
-                                    </select>
-                                </div>
-                                <button class="btn btn-primary" type="submit" [disabled]="estaCargando('crearEstudiante') || estudianteForm.invalid">
-                                    {{ estaCargando('crearEstudiante') ? 'Creando...' : 'Crear estudiante' }}
-                                </button>
-                            </form>
-                        }
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-lg-7">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body">
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                            <h5 class="card-title mb-0">Estudiantes ({{ estudiantesVista().length }})</h5>
-                            <div class="d-flex gap-2">
-                                <input class="form-control form-control-sm" style="max-width:150px" type="text" placeholder="Buscar..." [ngModel]="busquedaEstudiantes()" (ngModelChange)="onBusquedaEstudiantesChange($event)">
-                                <select class="form-select form-select-sm" style="max-width:160px" [ngModel]="filtroEstudiantesCursoId()" (ngModelChange)="filtroEstudiantesCursoId.set($event)">
-                                    <option [ngValue]="null">Todos los cursos</option>
-                                    @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
-                                </select>
-                            </div>
-                        </div>
-                        <div class="table-responsive list-scroll-body">
-                            <table class="table table-sm table-hover mb-0">
-                                <thead><tr><th>Nombre</th><th>Correo</th><th>Curso</th><th></th></tr></thead>
-                                <tbody>
-                                    @for (e of estudiantesVista(); track e.id) {
-                                        <tr>
-                                            <td>{{ e.nombre }}</td>
-                                            <td class="text-secondary small">{{ e.correo }}</td>
-                                            <td>{{ e.curso ?? '—' }}</td>
-                                            <td class="text-end pe-2">
-                                                <button class="btn btn-xs btn-outline-primary me-1" (click)="iniciarEditarEstudiante(e)">Editar</button>
-                                                <button class="btn btn-xs btn-outline-danger" (click)="eliminarEstudiante(e.id, e.nombre)" [disabled]="estaCargando('eliminarEstudiante')">
-                                                    {{ estaCargando('eliminarEstudiante') ? 'Eliminando...' : 'Eliminar' }}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    }
-                                    @if (estudiantesVista().length === 0) { <tr><td colspan="4" class="text-secondary">Sin estudiantes.</td></tr> }
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <app-admin-estudiantes-tab
+            [editandoEstudianteId]="editandoEstudianteId"
+            [editEstudianteForm]="editEstudianteForm"
+            [estudianteForm]="estudianteForm"
+            [estudiantesVista]="estudiantesVista()"
+            [cursos]="cursos()"
+            [cursoOptions]="cursoOptions()"
+            [filtroEstudiantesCursoId]="filtroEstudiantesCursoId()"
+            [busquedaEstudiantes]="busquedaEstudiantes()"
+            [cargandoFormularioEstudiantes]="cargandoFormularioEstudiantes()"
+            [cargandoListaEstudiantes]="cargandoListaEstudiantes()"
+            [cargandoCrearEstudiante]="estaCargando('crearEstudiante')"
+            [cargandoGuardarEstudiante]="estaCargando('guardarEstudiante')"
+            [cargandoEliminarEstudiante]="estaCargando('eliminarEstudiante')"
+            [controlErrorMessage]="getControlErrorMessage"
+            (busquedaEstudiantesChange)="onBusquedaEstudiantesChange($event)"
+            (filtroEstudiantesCursoIdChange)="filtroEstudiantesCursoId.set($event)"
+            (iniciarEditarEstudiante)="iniciarEditarEstudiante($event)"
+            (eliminarEstudiante)="eliminarEstudiante($event.id, $event.nombre)"
+            (guardarEstudiante)="guardarEstudiante()"
+            (cancelarEditarEstudiante)="editandoEstudianteId=null"
+            (crearEstudiante)="crearEstudiante()">
+        </app-admin-estudiantes-tab>
     }
 
     <!-- MATRICULAS -->
     @if (tabActiva() === 'matriculas') {
-        <div class="row g-3">
-            <div class="col-12 col-lg-5">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body">
-                        <h5 class="card-title">Matricular alumno en asignatura</h5>
-                        <div class="mb-3">
-                            <label class="form-label">Estudiante</label>
-                            <select class="form-select" [ngModel]="matriculaEstudianteId()" (ngModelChange)="matriculaEstudianteId.set($event)">
-                                <option [ngValue]="null" disabled>Selecciona un estudiante</option>
-                                @for (e of estudiantes(); track e.id) { <option [value]="e.id">{{ e.nombre }} — {{ e.curso ?? 'Sin curso' }}</option> }
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Asignatura</label>
-                            <select class="form-select" [ngModel]="matriculaAsignaturaId()" (ngModelChange)="matriculaAsignaturaId.set($event)">
-                                <option [ngValue]="null" disabled>Selecciona una asignatura</option>
-                                @for (a of asignaturasFiltradas(); track a.id) { <option [value]="a.id">{{ a.nombre }} — {{ a.curso.nombre }}</option> }
-                            </select>
-                        </div>
-                        <button class="btn btn-primary" (click)="matricularEstudiante()" [disabled]="estaCargando('matricularEstudiante')">
-                            {{ estaCargando('matricularEstudiante') ? 'Matriculando...' : 'Matricular' }}
-                        </button>
-                        <p class="form-text text-secondary mt-2">Solo se muestran asignaturas del curso del estudiante.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-lg-7">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body">
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                            <h5 class="card-title mb-0">Listado de matriculas</h5>
-                            <select class="form-select form-select-sm" style="max-width:220px" [ngModel]="filtroMatriculasCursoId()" (ngModelChange)="filtroMatriculasCursoId.set($event)">
-                                <option [ngValue]="null">Todos los cursos</option>
-                                @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
-                            </select>
-                        </div>
-                        <div class="table-responsive list-scroll-body">
-                            <table class="table table-sm table-hover mb-0">
-                                <thead><tr><th>Alumno</th><th>Curso</th><th>Asignaturas matriculadas</th><th></th></tr></thead>
-                                <tbody>
-                                    @for (m of matriculasVista(); track m.estudianteId) {
-                                        <tr>
-                                            <td>{{ m.estudiante }}</td>
-                                            <td>{{ m.curso ?? '—' }}</td>
-                                            <td>
-                                                @if (m.asignaturas.length) {
-                                                    @for (asig of m.asignaturas; track asig.asignaturaId) {
-                                                        <span class="badge text-bg-light border me-1 mb-1">{{ asig.asignatura }}</span>
-                                                    }
-                                                } @else {
-                                                    <span class="text-secondary">Sin matriculas</span>
-                                                }
-                                            </td>
-                                            <td class="text-end pe-2">
-                                                @for (asig of m.asignaturas; track asig.asignaturaId) {
-                                                    <button class="btn btn-xs btn-outline-danger me-1 mb-1"
-                                                        (click)="eliminarMatricula(m.estudianteId, asig.asignaturaId, asig.asignatura)"
-                                                        [disabled]="estaCargando('eliminarMatricula')">
-                                                        {{ asig.asignatura }}
-                                                    </button>
-                                                }
-                                            </td>
-                                        </tr>
-                                    }
-                                    @if (matriculasVista().length === 0) { <tr><td colspan="4" class="text-secondary">No hay alumnos.</td></tr> }
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <app-admin-matriculas-tab
+            [cargandoFormularioMatriculas]="cargandoFormularioMatriculas()"
+            [cargandoListaMatriculas]="cargandoListaMatriculas()"
+            [cargandoMatricularEstudiante]="estaCargando('matricularEstudiante')"
+            [cargandoEliminarMatricula]="estaCargando('eliminarMatricula')"
+            [estudiantes]="estudiantes()"
+            [asignaturasFiltradas]="asignaturasFiltradas()"
+            [matriculasVista]="matriculasVista()"
+            [cursos]="cursos()"
+            [matriculaEstudianteId]="matriculaEstudianteId()"
+            [matriculaAsignaturaId]="matriculaAsignaturaId()"
+            [filtroMatriculasCursoId]="filtroMatriculasCursoId()"
+            (matriculaEstudianteIdChange)="matriculaEstudianteId.set($event)"
+            (matriculaAsignaturaIdChange)="matriculaAsignaturaId.set($event)"
+            (filtroMatriculasCursoIdChange)="filtroMatriculasCursoId.set($event)"
+            (matricularEstudiante)="matricularEstudiante()"
+            (eliminarMatricula)="eliminarMatricula($event.estudianteId, $event.asignaturaId, $event.asignaturaNombre)">
+        </app-admin-matriculas-tab>
     }
 
     <!-- IMPARTICIONES -->
     @if (tabActiva() === 'imparticiones') {
-        <div class="row g-3">
-            <div class="col-12 col-lg-5">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body">
-                        <h5 class="card-title">Asignar profesor a asignatura</h5>
-                        <div class="mb-3">
-                            <label class="form-label">Profesor</label>
-                            <select class="form-select" [ngModel]="imparticionProfesorId()" (ngModelChange)="imparticionProfesorId.set($event)">
-                                <option [ngValue]="null" disabled>Selecciona un profesor</option>
-                                @for (p of profesores(); track p.id) { <option [value]="p.id">{{ p.nombre }}</option> }
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Curso</label>
-                            <select class="form-select" [ngModel]="imparticionCursoId()" (ngModelChange)="imparticionCursoId.set($event)">
-                                <option [ngValue]="null" disabled>Selecciona un curso</option>
-                                @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Asignatura</label>
-                            <select class="form-select" [ngModel]="imparticionAsignaturaId()" (ngModelChange)="imparticionAsignaturaId.set($event)">
-                                <option [ngValue]="null" disabled>Selecciona una asignatura</option>
-                                @for (a of asignaturasDeImparticion(); track a.id) { <option [value]="a.id">{{ a.nombre }}</option> }
-                            </select>
-                        </div>
-                        <button class="btn btn-primary" (click)="asignarImparticion()" [disabled]="estaCargando('asignarImparticion')">
-                            {{ estaCargando('asignarImparticion') ? 'Asignando...' : 'Asignar' }}
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-lg-7">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body">
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                            <h5 class="card-title mb-0">Listado de imparticiones</h5>
-                            <select class="form-select form-select-sm" style="max-width:220px" [ngModel]="filtroImparticionesCursoId()" (ngModelChange)="filtroImparticionesCursoId.set($event)">
-                                <option [ngValue]="null">Todos los cursos</option>
-                                @for (c of cursos(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
-                            </select>
-                        </div>
-                        <div class="table-responsive list-scroll-body">
-                            <table class="table table-sm table-hover mb-0">
-                                <thead><tr><th>Profesor</th><th>Curso</th><th>Asignatura</th><th></th></tr></thead>
-                                <tbody>
-                                    @for (i of imparticionesVista(); track i.profesorId + '-' + i.cursoId + '-' + i.asignatura) {
-                                        <tr>
-                                            <td>{{ i.profesor }}</td>
-                                            <td>{{ i.curso }}</td>
-                                            <td>{{ i.asignatura }}</td>
-                                            <td class="text-end pe-2">
-                                                <button class="btn btn-xs btn-outline-danger"
-                                                    (click)="eliminarImparticion(i.profesorId, i.asignaturaId, i.cursoId, i.asignatura)"
-                                                    [disabled]="estaCargando('eliminarImparticion')">
-                                                    Eliminar
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    }
-                                    @if (imparticionesVista().length === 0) { <tr><td colspan="4" class="text-secondary">Sin imparticiones.</td></tr> }
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <app-admin-imparticiones-tab
+            [cargandoFormularioImparticiones]="cargandoFormularioImparticiones()"
+            [cargandoListaImparticiones]="cargandoListaImparticiones()"
+            [cargandoAsignarImparticion]="estaCargando('asignarImparticion')"
+            [cargandoEliminarImparticion]="estaCargando('eliminarImparticion')"
+            [profesores]="profesores()"
+            [cursos]="cursos()"
+            [asignaturasDeImparticion]="asignaturasDeImparticion()"
+            [imparticionesVista]="imparticionesVista()"
+            [imparticionProfesorId]="imparticionProfesorId()"
+            [imparticionCursoId]="imparticionCursoId()"
+            [imparticionAsignaturaId]="imparticionAsignaturaId()"
+            [filtroImparticionesCursoId]="filtroImparticionesCursoId()"
+            (imparticionProfesorIdChange)="imparticionProfesorId.set($event)"
+            (imparticionCursoIdChange)="imparticionCursoId.set($event)"
+            (imparticionAsignaturaIdChange)="imparticionAsignaturaId.set($event)"
+            (filtroImparticionesCursoIdChange)="filtroImparticionesCursoId.set($event)"
+            (asignarImparticion)="asignarImparticion()"
+            (eliminarImparticion)="eliminarImparticion($event.profesorId, $event.asignaturaId, $event.cursoId, $event.asignaturaNombre)">
+        </app-admin-imparticiones-tab>
     }
 
     <!-- IMPORTAR CSV -->
     @if (tabActiva() === 'importar') {
-        <div class="row g-3">
-            <div class="col-12">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body">
-                        <h5 class="card-title mb-1">Importar datos desde CSV</h5>
-                        <p class="text-secondary small mb-3">Importa cursos, asignaturas, profesores, estudiantes, imparticiones y matriculas desde archivos CSV. Sigue el orden sugerido para evitar referencias incompletas.</p>
-                    </div>
-                </div>
-            </div>
-
-            @for (item of csvImportItems; track item.entidad) {
-                <app-csv-import-card
-                    class="col-12 col-md-6"
-                    [entidad]="item.entidad"
-                    [titulo]="item.orden + '. ' + item.titulo"
-                    [descripcion]="item.descripcion"
-                    [cargando]="csvCargando() && csvEntidadActual() === item.entidad"
-                    [archivo]="item.entidad === 'cursos' ? csvCursosFile
-                        : item.entidad === 'asignaturas' ? csvAsignaturasFile
-                        : item.entidad === 'profesores' ? csvProfesoresFile
-                        : item.entidad === 'estudiantes' ? csvEstudiantesFile
-                        : item.entidad === 'tareas' ? csvTareasFile
-                        : item.entidad === 'matriculas' ? csvMatriculasFile
-                        : item.entidad === 'imparticiones' ? csvImparticionesFile
-                        : csvNotasFile"
-                    (fileSelected)="onCsvFileChange($event.event, $event.entidad)"
-                    (importar)="importarCsv($event)"
-                    (descargarPlantilla)="descargarPlantilla($event)">
-                </app-csv-import-card>
-            }
-
-            @if (csvResultado()) {
-                <div class="col-12">
-                    <div class="alert" [class.alert-success]="csvResultado()!.errores.length === 0" [class.alert-warning]="csvResultado()!.errores.length > 0">
-                        <strong>Resultado ({{ csvEntidadActual() }}):</strong>
-                        {{ csvResultado()!.creados }} registros creados.
-                        @if (csvResultado()!.omitidos) { {{ csvResultado()!.omitidos }} omitidos (ya existian). }
-                        @if (csvResultado()!.errores.length > 0) {
-                            <div class="mt-2">
-                                <p class="mb-2 fw-semibold">Errores detectados:</p>
-                                <div class="vstack gap-2">
-                                    @for (grupo of csvErroresAgrupados(); track grupo.key) {
-                                        <div class="border rounded-3 bg-light p-2">
-                                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                                <span class="fw-semibold">{{ grupo.label }}</span>
-                                                <span class="badge text-bg-danger">{{ grupo.errors.length }}</span>
-                                            </div>
-                                            <ul class="mb-0 small">
-                                                @for (err of erroresVisiblesGrupo(grupo); track err) {
-                                                    <li>{{ err }}</li>
-                                                }
-                                            </ul>
-                                            @if (grupo.errors.length > 5) {
-                                                <button class="btn btn-link btn-sm px-0 mt-1"
-                                                    type="button"
-                                                    (click)="toggleGrupoErrores(grupo.key)">
-                                                    {{ grupoErroresExpandido(grupo.key)
-                                                        ? 'Ver menos'
-                                                        : 'Ver mas (' + erroresOcultosGrupo(grupo) + ' ocultos)' }}
-                                                </button>
-                                            }
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
-        </div>
+        <app-admin-importar-csv-tab
+            [csvImportItems]="csvImportItems"
+            [csvCargando]="csvCargando()"
+            [csvEntidadActual]="csvEntidadActual()"
+            [csvResultado]="csvResultado()"
+            [csvErroresAgrupados]="csvErroresAgrupados()"
+            [csvArchivo]="csvArchivo.bind(this)"
+            [erroresVisiblesGrupo]="erroresVisiblesGrupo.bind(this)"
+            [csvPuedeExpandirGrupo]="csvPuedeExpandirGrupo.bind(this)"
+            [grupoErroresExpandido]="grupoErroresExpandido.bind(this)"
+            [erroresOcultosGrupo]="erroresOcultosGrupo.bind(this)"
+            (fileSelected)="onCsvFileChange($event.event, $event.entidad)"
+            (importar)="importarCsv($event)"
+            (descargarPlantilla)="descargarPlantilla($event)"
+            (toggleGrupoErrores)="toggleGrupoErrores($event)">
+        </app-admin-importar-csv-tab>
     }
 </section>
 

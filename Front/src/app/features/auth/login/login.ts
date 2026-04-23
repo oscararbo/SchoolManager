@@ -1,10 +1,10 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { NgClass, CommonModule } from '@angular/common';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { emailValidator } from '../../../core/validators/auth.validators';
 import { Router } from '@angular/router';
 import { SchoolApiService } from '../../../shared/services/school-api.service';
 import { SessionService } from '../../../core/services/session.service';
+import { TextInputComponent } from '../../../shared/components/text-input/text-input.component';
 
 interface LoginNavigationState {
     email?: string;
@@ -13,7 +13,7 @@ interface LoginNavigationState {
 
 @Component({
     selector: 'app-login',
-    imports: [ReactiveFormsModule, NgClass, CommonModule],
+    imports: [ReactiveFormsModule, TextInputComponent],
     templateUrl: './login.html',
     styleUrls: ['./login.scss'],
     standalone: true,
@@ -33,6 +33,31 @@ export class Login implements OnInit {
             email: ['', [Validators.required, emailValidator(), Validators.maxLength(200)]],
             password: ['', [Validators.required, Validators.maxLength(200)]],
         });
+    }
+
+    private getControl(name: 'email' | 'password'): AbstractControl | null {
+        return this.formLogin.get(name);
+    }
+
+    controlErrorMessage(name: 'email' | 'password'): string | null {
+        const control = this.getControl(name);
+        if (!this.mostrarErrores || !control?.errors) {
+            return null;
+        }
+
+        if (control.hasError('required')) {
+            return 'Campo obligatorio';
+        }
+
+        if (control.hasError('invalidEmail')) {
+            return 'Email debe tener formato: texto@texto.texto';
+        }
+
+        if (control.hasError('maxlength')) {
+            return 'Maximo 200 caracteres';
+        }
+
+        return null;
     }
 
 // #region LIFECYCLE
