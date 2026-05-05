@@ -1,5 +1,4 @@
-import { Component, ViewChild, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, ViewChild, signal } from '@angular/core';
 import { AdminSectionsNavComponent } from './components/admin-sections-nav/admin-sections-nav.component';
 import { AdminStatsViewComponent } from './components/admin-stats-view/admin-stats-view.component';
 import { AdminManagementViewComponent } from './components/admin-management-view/admin-management-view.component';
@@ -10,13 +9,13 @@ type AdminSection = 'estadisticas' | 'gestion';
     selector: 'app-admin-home',
     standalone: true,
     imports: [
-        CommonModule,
         AdminSectionsNavComponent,
         AdminStatsViewComponent,
         AdminManagementViewComponent
     ],
     templateUrl: './admin-home.html',
-    styleUrl: './admin-home.scss'
+    styleUrl: './admin-home.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AdminHomeComponent {
     @ViewChild(AdminStatsViewComponent) private statsView?: AdminStatsViewComponent;

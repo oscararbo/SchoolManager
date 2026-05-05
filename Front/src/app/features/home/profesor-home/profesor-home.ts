@@ -1,5 +1,4 @@
-import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, Input, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, Input, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
     SchoolApiService,
@@ -17,9 +16,10 @@ type ProfesorDetalleView = 'resumen' | 'calificar';
 @Component({
     selector: 'app-profesor-home',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [FormsModule],
     templateUrl: './profesor-home.html',
-    styleUrl: './profesor-home.scss'
+    styleUrl: './profesor-home.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProfesorHomeComponent implements OnInit {
     @Input({ required: true }) profesorId!: number;
@@ -41,9 +41,10 @@ export class ProfesorHomeComponent implements OnInit {
     tareaActiva = signal<TareaResumen | null>(null);
     notaInputs = signal<Record<number, number | null>>({});
     guardandoNota = signal(false);
-    alumnosExpandidos = new Set<number>();
+    alumnosExpandidos = signal(new Set<number>());
 
     private alumnoDetalles = signal<Record<number, AsignaturaAlumno>>({});
+    private alumnoTareasByTrimestre = signal<Record<number, Record<number, Array<{ tareaId: number; nombre: string; valor: number | null }>>>>({});
     private alumnoDetallesLoading = signal<Record<number, boolean>>({});
     private calificacionesActuales = signal<Record<number, number | null>>({});
 
@@ -95,7 +96,8 @@ export class ProfesorHomeComponent implements OnInit {
         this.calificacionesActuales.set({});
         this.alumnoDetalles.set({});
         this.alumnoDetallesLoading.set({});
-        this.alumnosExpandidos.clear();
+        this.alumnoTareasByTrimestre.set({});
+        this.alumnosExpandidos.set(new Set<number>());
 
         try {
             const data = await this.api.getAlumnosResumenDeAsignatura(this.profesorId, asignaturaId);
@@ -192,6 +194,7 @@ export class ProfesorHomeComponent implements OnInit {
             if (asignaturaId) {
                 const detalle = await this.api.getAlumnoDetalleDeAsignatura(this.profesorId, asignaturaId, estudianteId);
                 this.alumnoDetalles.update(m => ({ ...m, [estudianteId]: detalle }));
+                this.actualizarCacheTareasAlumno(detalle);
                 this.actualizarResumenDesdeDetalle(detalle);
             }
             await this.recargarStatsSilencioso();
@@ -320,17 +323,25 @@ export class ProfesorHomeComponent implements OnInit {
     }
 
     async toggleAlumno(alumnoId: number): Promise<void> {
-        if (this.alumnosExpandidos.has(alumnoId)) {
-            this.alumnosExpandidos.delete(alumnoId);
+        if (this.alumnosExpandidos().has(alumnoId)) {
+            this.alumnosExpandidos.update(expanded => {
+                const next = new Set(expanded);
+                next.delete(alumnoId);
+                return next;
+            });
             return;
         }
 
-        this.alumnosExpandidos.add(alumnoId);
+        this.alumnosExpandidos.update(expanded => {
+            const next = new Set(expanded);
+            next.add(alumnoId);
+            return next;
+        });
         await this.cargarDetalleAlumno(alumnoId);
     }
 
     alumnoExpandido(alumnoId: number): boolean {
-        return this.alumnosExpandidos.has(alumnoId);
+        return this.alumnosExpandidos().has(alumnoId);
     }
 
     alumnoDetalle(alumnoId: number): AsignaturaAlumno | null {
@@ -342,19 +353,7 @@ export class ProfesorHomeComponent implements OnInit {
     }
 
     tareasPorTrimestre(alumno: AsignaturaAlumnoResumen, trimestre: number): Array<{ tareaId: number; nombre: string; valor: number | null }> {
-        const detalle = this.detalleAsignatura();
-        const detalleAlumno = this.alumnoDetalle(alumno.estudianteId);
-        if (!detalle || !detalleAlumno) {
-            return [];
-        }
-
-        return detalle.tareas
-            .filter(t => t.trimestre === trimestre)
-            .map(t => ({
-                tareaId: t.tareaId,
-                nombre: t.nombre,
-                valor: detalleAlumno.notas.find(n => n.tareaId === t.tareaId)?.valor ?? null
-            }));
+        return this.alumnoTareasByTrimestre()[alumno.estudianteId]?.[trimestre] ?? [];
     }
 
     tieneTareasEnTrimestre(trimestre: number): boolean {
@@ -378,6 +377,7 @@ export class ProfesorHomeComponent implements OnInit {
                 return;
             }
             this.alumnoDetalles.update(m => ({ ...m, [estudianteId]: detalle }));
+            this.actualizarCacheTareasAlumno(detalle);
             this.actualizarResumenDesdeDetalle(detalle);
         } catch (e) {
             if (!this.isDestroyed) {
@@ -405,6 +405,34 @@ export class ProfesorHomeComponent implements OnInit {
                 )
             };
         });
+    }
+
+    private actualizarCacheTareasAlumno(detalle: AsignaturaAlumno): void {
+        const tasks = this.detalleAsignatura()?.tareas;
+        if (!tasks || tasks.length === 0) {
+            return;
+        }
+
+        const gradesByTaskId = detalle.notas.reduce((acc, grade) => {
+            acc[grade.tareaId] = grade.valor;
+            return acc;
+        }, {} as Record<number, number | null>);
+
+        const tasksByTerm = tasks.reduce((acc, task) => {
+            const current = acc[task.trimestre] ?? [];
+            current.push({
+                tareaId: task.tareaId,
+                nombre: task.nombre,
+                valor: gradesByTaskId[task.tareaId] ?? null
+            });
+            acc[task.trimestre] = current;
+            return acc;
+        }, {} as Record<number, Array<{ tareaId: number; nombre: string; valor: number | null }>>);
+
+        this.alumnoTareasByTrimestre.update(cache => ({
+            ...cache,
+            [detalle.estudianteId]: tasksByTerm
+        }));
     }
 
     private async recargarStatsSilencioso(): Promise<void> {

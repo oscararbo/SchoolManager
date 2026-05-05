@@ -1,12 +1,12 @@
-import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { AdminImparticionListItem, AsignaturaItem, CursoItem, ProfesorListItem } from '../../../../../../../shared/services/school-api.service';
 import { FormsModule } from '@angular/forms';
 
 @Component({
     selector: 'app-admin-imparticiones-tab',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [FormsModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './admin-imparticiones-tab.component.html'
 })
 export class AdminImparticionesTabComponent {

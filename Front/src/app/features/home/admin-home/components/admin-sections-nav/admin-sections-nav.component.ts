@@ -1,13 +1,13 @@
-import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 
 export type AdminSection = 'estadisticas' | 'gestion';
 
 @Component({
     selector: 'app-admin-sections-nav',
     standalone: true,
-    imports: [CommonModule],
-    templateUrl: './admin-sections-nav.component.html'
+    imports: [],
+    templateUrl: './admin-sections-nav.component.html',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AdminSectionsNavComponent {
     @Input({ required: true }) seccionActiva!: AdminSection;

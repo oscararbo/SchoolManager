@@ -262,12 +262,13 @@ public class ImportDomainRepository(AppDbContext context) : IImportDomainReposit
             {
                 actual.Valor = nota.Valor;
                 actual.IsDeleted = false;
-                continue;
             }
-
-            var nueva = new Nota { EstudianteId = nota.EstudianteId, TareaId = nota.TareaId, Valor = nota.Valor };
-            context.Notas.Add(nueva);
-            existentesMap[(nota.EstudianteId, nota.TareaId)] = nueva;
+            else
+            {
+                var nueva = new Nota { EstudianteId = nota.EstudianteId, TareaId = nota.TareaId, Valor = nota.Valor };
+                context.Notas.Add(nueva);
+                existentesMap[(nota.EstudianteId, nota.TareaId)] = nueva;
+            }
         }
 
         await context.SaveChangesAsync(cancellationToken);

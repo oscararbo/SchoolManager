@@ -1,5 +1,4 @@
-import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { AbstractControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { CursoItem, EstudianteItem } from '../../../../../../../shared/services/school-api.service';
 import { DateInputComponent } from '../../../../../../../shared/components/date-input/date-input.component';
@@ -9,7 +8,8 @@ import { TextInputComponent } from '../../../../../../../shared/components/text-
 @Component({
     selector: 'app-admin-estudiantes-tab',
     standalone: true,
-    imports: [CommonModule, FormsModule, ReactiveFormsModule, DateInputComponent, SelectInputComponent, TextInputComponent],
+    imports: [FormsModule, ReactiveFormsModule, DateInputComponent, SelectInputComponent, TextInputComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './admin-estudiantes-tab.component.html'
 })
 export class AdminEstudiantesTabComponent {

@@ -1,5 +1,4 @@
-import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { AbstractControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { CursoItem, ProfesorListItem } from '../../../../../../../shared/services/school-api.service';
 import { TextInputComponent } from '../../../../../../../shared/components/text-input/text-input.component';
@@ -7,7 +6,8 @@ import { TextInputComponent } from '../../../../../../../shared/components/text-
 @Component({
     selector: 'app-admin-profesores-tab',
     standalone: true,
-    imports: [CommonModule, FormsModule, ReactiveFormsModule, TextInputComponent],
+    imports: [FormsModule, ReactiveFormsModule, TextInputComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './admin-profesores-tab.component.html'
 })
 export class AdminProfesoresTabComponent {

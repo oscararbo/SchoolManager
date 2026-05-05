@@ -175,17 +175,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             if (entry.State == EntityState.Added)
             {
                 entry.Entity.IsDeleted = false;
-                continue;
             }
-
-            if (entry.State != EntityState.Deleted)
+            else if (entry.State == EntityState.Deleted)
             {
-                continue;
+                entry.State = EntityState.Modified;
+                entry.Entity.IsDeleted = true;
+                entry.Property(x => x.IsDeleted).IsModified = true;
             }
-
-            entry.State = EntityState.Modified;
-            entry.Entity.IsDeleted = true;
-            entry.Property(x => x.IsDeleted).IsModified = true;
         }
     }
 }

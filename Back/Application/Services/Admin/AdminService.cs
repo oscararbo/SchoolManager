@@ -22,11 +22,11 @@ public class AdminService(
 
     public async Task<ApplicationResult> GetStatsByCursoAsync(int cursoId, CancellationToken cancellationToken = default)
     {
-        var cursoStats = await adminDomain.GetStatsByCursoAsync(cursoId, cancellationToken);
-        if (cursoStats is null)
+        var courseStats = await adminDomain.GetStatsByCursoAsync(cursoId, cancellationToken);
+        if (courseStats is null)
             return ApplicationResult.NotFound("El curso no existe.");
 
-        return ApplicationResult.Ok(cursoStats);
+        return ApplicationResult.Ok(courseStats);
     }
 
     public async Task<ApplicationResult> CompareCursosAsync(IEnumerable<int> cursoIds, CancellationToken cancellationToken = default)
@@ -57,11 +57,11 @@ public class AdminService(
         if (!user.IsInRole(Roles.Admin))
             return ApplicationResult.Forbidden("No tienes permisos para crear administradores.");
 
-        var correo = createAdminRequestDto.Correo.Trim().ToLowerInvariant();
-        if (await adminDomain.CorreoDuplicadoAsync(correo, cancellationToken))
-            return ApplicationResult.BadRequest("Ya existe un administrador con ese correo.");
+        var email = createAdminRequestDto.Correo.Trim().ToLowerInvariant();
+        if (await adminDomain.CorreoDuplicadoAsync(email, cancellationToken))
+            return ApplicationResult.BadRequest("Ya existe un administrador con ese email.");
 
-        var createdAdmin = await adminDomain.CreateAdminAsync(createAdminRequestDto.Nombre.Trim(), correo, passwordService.Hash(createAdminRequestDto.Contrasena.Trim()), cancellationToken);
+        var createdAdmin = await adminDomain.CreateAdminAsync(createAdminRequestDto.Nombre.Trim(), email, passwordService.Hash(createAdminRequestDto.Contrasena.Trim()), cancellationToken);
         return ApplicationResult.Created($"/api/admin/{createdAdmin.Id}", createdAdmin);
     }
 }

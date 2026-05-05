@@ -1,5 +1,4 @@
-import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CsvImportCardComponent } from '../../../csv-import-card/csv-import-card.component';
 import { CsvImportEntity, CsvImportResult } from '../../../../../../../shared/services/school-api.service';
 import { CsvErrorGroup } from '../../admin-management-view.csv';
@@ -14,7 +13,8 @@ type CsvImportItem = {
 @Component({
     selector: 'app-admin-importar-csv-tab',
     standalone: true,
-    imports: [CommonModule, CsvImportCardComponent],
+    imports: [CsvImportCardComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './admin-importar-csv-tab.component.html'
 })
 export class AdminImportarCsvTabComponent {

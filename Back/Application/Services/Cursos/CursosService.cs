@@ -11,14 +11,14 @@ public class CursosService(ICursosDomainRepository cursosDomain) : ICursosServic
 
     public async Task<ApplicationResult> GetSimpleCursosAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok((await cursosDomain.GetAllResumenAsync(cancellationToken))
-            .Select(c => new CursoLookupDto { Id = c.Id, Nombre = c.Nombre }));
+            .Select(curso => new CursoLookupDto { Id = curso.Id, Nombre = curso.Nombre }));
 
     public async Task<ApplicationResult> GetCursoByIdAsync(int cursoId, CancellationToken cancellationToken = default)
     {
-        var cursoDetalle = await cursosDomain.GetDetalleAsync(cursoId, cancellationToken);
-        return cursoDetalle is null
+        var courseDetail = await cursosDomain.GetDetalleAsync(cursoId, cancellationToken);
+        return courseDetail is null
             ? ApplicationResult.NotFound("El curso no existe.")
-            : ApplicationResult.Ok(cursoDetalle);
+            : ApplicationResult.Ok(courseDetail);
     }
 
     public async Task<ApplicationResult> CreateCursoAsync(CreateCursoRequestDto createCursoRequestDto, CancellationToken cancellationToken = default)
@@ -26,21 +26,19 @@ public class CursosService(ICursosDomainRepository cursosDomain) : ICursosServic
         if (string.IsNullOrWhiteSpace(createCursoRequestDto.Nombre))
             return ApplicationResult.BadRequest("El nombre del curso es obligatorio.");
 
-        var createdCurso = await cursosDomain.CreateCursoAsync(createCursoRequestDto.Nombre.Trim(), cancellationToken);
-        return ApplicationResult.Created($"/api/cursos/{createdCurso.Id}", createdCurso);
+        var createdCourse = await cursosDomain.CreateCursoAsync(createCursoRequestDto.Nombre.Trim(), cancellationToken);
+        return ApplicationResult.Created($"/api/cursos/{createdCourse.Id}", createdCourse);
     }
 
     public async Task<ApplicationResult> UpdateCursoAsync(int cursoId, CreateCursoRequestDto updateCursoRequestDto, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(updateCursoRequestDto.Nombre))
             return ApplicationResult.BadRequest("El nombre del curso es obligatorio.");
-        if (!await cursosDomain.ExisteAsync(cursoId, cancellationToken))
-            return ApplicationResult.NotFound("El curso no existe.");
 
-        var updatedCurso = await cursosDomain.UpdateCursoAsync(cursoId, updateCursoRequestDto.Nombre.Trim(), cancellationToken);
-        return updatedCurso is null
+        var updatedCourse = await cursosDomain.UpdateCursoAsync(cursoId, updateCursoRequestDto.Nombre.Trim(), cancellationToken);
+        return updatedCourse is null
             ? ApplicationResult.NotFound("El curso no existe.")
-            : ApplicationResult.Ok(updatedCurso);
+            : ApplicationResult.Ok(updatedCourse);
     }
 
     public async Task<ApplicationResult> DeleteCursoAsync(int cursoId, CancellationToken cancellationToken = default)

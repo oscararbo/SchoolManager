@@ -1,5 +1,4 @@
-import { Component, OnInit, computed, inject, signal, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import {
     SchoolApiService,
     AdminStats,
@@ -14,9 +13,10 @@ import { Chart, registerables } from 'chart.js';
 @Component({
     selector: 'app-admin-stats-view',
     standalone: true,
-    imports: [CommonModule, AdminStatsCardsComponent],
+    imports: [AdminStatsCardsComponent],
     templateUrl: './admin-stats-view.component.html',
-    styleUrl: './admin-stats-view.component.scss'
+    styleUrl: './admin-stats-view.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AdminStatsViewComponent implements OnInit, AfterViewInit {
     private static readonly CURSOS_PAGINA = 24;
@@ -75,14 +75,15 @@ export class AdminStatsViewComponent implements OnInit, AfterViewInit {
     statsDisponibles = computed(() => this.stats() !== null);
     cursoNotasSeleccionado = computed<AdminCursoNotasStats | null>(() => this.cursoDetalle());
     cursoActivoNombre = computed(() => this.cursoDetalle()?.curso ?? 'Sin curso seleccionado');
+    cursosOrdenados = computed(() => [...this.cursosSelector()].sort((a, b) => a.curso.localeCompare(b.curso)));
     cursosFiltrados = computed(() => {
         const term = this.filtroCursos().trim().toLocaleLowerCase();
-        const base = [...this.cursosSelector()].sort((a, b) => a.curso.localeCompare(b.curso));
+        const sorted = this.cursosOrdenados();
         if (!term) {
-            return base;
+            return sorted;
         }
 
-        return base.filter(curso =>
+        return sorted.filter(curso =>
             curso.curso.toLocaleLowerCase().includes(term)
             || `${curso.totalEstudiantes}`.includes(term)
             || `${curso.totalAsignaturas}`.includes(term));

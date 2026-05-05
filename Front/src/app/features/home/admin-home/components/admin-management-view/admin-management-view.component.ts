@@ -1,5 +1,4 @@
-import { Component, OnInit, computed, inject, signal, ViewChild, DestroyRef, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, DestroyRef, EventEmitter, OnInit, Output, ViewChild, computed, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
     SchoolApiService,
@@ -34,7 +33,6 @@ type AdminTab = 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matri
     selector: 'app-admin-management-view',
     standalone: true,
     imports: [
-        CommonModule,
         FormsModule,
         ReactiveFormsModule,
         AdminTabsNavComponent,
@@ -47,7 +45,8 @@ type AdminTab = 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matri
         AdminImportarCsvTabComponent
     ],
     templateUrl: './admin-management-view.html',
-    styleUrls: ['./admin-management-view.scss']
+    styleUrls: ['./admin-management-view.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AdminManagementViewComponent implements OnInit {
     @ViewChild(ConfirmDialogComponent) confirmDialog!: ConfirmDialogComponent;

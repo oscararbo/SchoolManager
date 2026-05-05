@@ -39,33 +39,16 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
                 """)
             .SingleAsync(cancellationToken);
 
-        var estudiantesPorCurso = await context.Estudiantes
-            .AsNoTracking()
-            .GroupBy(e => e.CursoId)
-            .Select(g => new { CursoId = g.Key, Count = g.Count() })
-            .ToListAsync(cancellationToken);
-
-        var asignaturasPorCurso = await context.Asignaturas
-            .AsNoTracking()
-            .GroupBy(a => a.CursoId)
-            .Select(g => new { CursoId = g.Key, Count = g.Count() })
-            .ToListAsync(cancellationToken);
-
-        var estudiantesMap = estudiantesPorCurso.ToDictionary(x => x.CursoId, x => x.Count);
-        var asignaturasMap = asignaturasPorCurso.ToDictionary(x => x.CursoId, x => x.Count);
-
-        var cursos = await context.Cursos
+        var porCurso = await context.Cursos
             .AsNoTracking()
             .OrderBy(c => c.Nombre)
-            .Select(c => new { c.Id, c.Nombre })
+            .Select(c => new CursoStatsItemDto
+            {
+                Curso = c.Nombre,
+                Estudiantes = c.Estudiantes.Count(e => !e.IsDeleted),
+                Asignaturas = c.Asignaturas.Count(a => !a.IsDeleted)
+            })
             .ToListAsync(cancellationToken);
-
-        var porCurso = cursos.Select(curso => new CursoStatsItemDto
-        {
-            Curso = curso.Nombre,
-            Estudiantes = estudiantesMap.GetValueOrDefault(curso.Id),
-            Asignaturas = asignaturasMap.GetValueOrDefault(curso.Id)
-        }).ToList();
 
         return new AdminStatsDto
         {

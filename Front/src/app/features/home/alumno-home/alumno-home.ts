@@ -1,5 +1,4 @@
-import { CommonModule } from '@angular/common';
-import { Component, Input, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, OnInit, inject, signal } from '@angular/core';
 import {
     SchoolApiService,
     AlumnoPanelResumen,
@@ -10,9 +9,10 @@ import {
 @Component({
     selector: 'app-alumno-home',
     standalone: true,
-    imports: [CommonModule],
+    imports: [],
     templateUrl: './alumno-home.html',
-    styleUrl: './alumno-home.scss'
+    styleUrl: './alumno-home.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AlumnoHomeComponent implements OnInit {
     @Input({ required: true }) estudianteId!: number;
@@ -24,7 +24,8 @@ export class AlumnoHomeComponent implements OnInit {
 
     private materiaDetalles = signal<Record<number, AlumnoMateriaDetalle>>({});
     private materiaDetallesLoading = signal<Record<number, boolean>>({});
-    expandidas = new Set<number>();
+    private materiaTareasByTrimestre = signal<Record<number, Record<number, Array<{ tareaId: number; nombre: string; valor: number | null }>>>>({});
+    expandidas = signal(new Set<number>());
 
     private api = inject(SchoolApiService);
 
@@ -46,16 +47,25 @@ export class AlumnoHomeComponent implements OnInit {
     }
 
     async toggleExpandir(asignaturaId: number): Promise<void> {
-        if (this.expandidas.has(asignaturaId)) {
-            this.expandidas.delete(asignaturaId);
+        if (this.expandidas().has(asignaturaId)) {
+            this.expandidas.update(expanded => {
+                const next = new Set(expanded);
+                next.delete(asignaturaId);
+                return next;
+            });
             return;
         }
-        this.expandidas.add(asignaturaId);
+
+        this.expandidas.update(expanded => {
+            const next = new Set(expanded);
+            next.add(asignaturaId);
+            return next;
+        });
         await this.cargarMateriaDetalle(asignaturaId);
     }
 
     estaExpandida(asignaturaId: number): boolean {
-        return this.expandidas.has(asignaturaId);
+        return this.expandidas().has(asignaturaId);
     }
 
     materiaDetalle(asignaturaId: number): AlumnoMateriaDetalle | null {
@@ -67,14 +77,11 @@ export class AlumnoHomeComponent implements OnInit {
     }
 
     tareasPorTrimestre(asignaturaId: number, trimestre: number): Array<{ tareaId: number; nombre: string; valor: number | null }> {
-        const detalle = this.materiaDetalle(asignaturaId);
-        if (!detalle) return [];
-        return detalle.notas.filter(t => t.trimestre === trimestre);
+        return this.materiaTareasByTrimestre()[asignaturaId]?.[trimestre] ?? [];
     }
 
     tieneTareasEnTrimestre(asignaturaId: number, trimestre: number): boolean {
-        const detalle = this.materiaDetalle(asignaturaId);
-        return detalle?.notas.some(t => t.trimestre === trimestre) ?? false;
+        return (this.materiaTareasByTrimestre()[asignaturaId]?.[trimestre]?.length ?? 0) > 0;
     }
 
     formatNota(valor: number | null | undefined): string {
@@ -88,11 +95,24 @@ export class AlumnoHomeComponent implements OnInit {
         try {
             const detalle = await this.api.getMateriaDetalle(this.estudianteId, asignaturaId);
             this.materiaDetalles.update(m => ({ ...m, [asignaturaId]: detalle }));
+            this.materiaTareasByTrimestre.update(m => ({
+                ...m,
+                [asignaturaId]: this.buildTareasByTrimestre(detalle)
+            }));
         } catch (e) {
             this.error.set((e as Error).message);
         } finally {
             this.materiaDetallesLoading.update(m => ({ ...m, [asignaturaId]: false }));
         }
+    }
+
+    private buildTareasByTrimestre(detalle: AlumnoMateriaDetalle): Record<number, Array<{ tareaId: number; nombre: string; valor: number | null }>> {
+        return detalle.notas.reduce((acc, task) => {
+            const current = acc[task.trimestre] ?? [];
+            current.push({ tareaId: task.tareaId, nombre: task.nombre, valor: task.valor });
+            acc[task.trimestre] = current;
+            return acc;
+        }, {} as Record<number, Array<{ tareaId: number; nombre: string; valor: number | null }>>);
     }
 }
 

@@ -9,19 +9,19 @@ namespace Back.Api.Persistence.Repositories;
 public class CursosDomainRepository(AppDbContext context) : ICursosDomainRepository
 {
     public Task<bool> ExisteAsync(int cursoId, CancellationToken cancellationToken = default) =>
-        context.Cursos.AnyAsync(c => c.Id == cursoId);
+        context.Cursos.AnyAsync(c => c.Id == cursoId, cancellationToken);
 
     public Task<bool> TieneEstudiantesAsync(int cursoId, CancellationToken cancellationToken = default) =>
-        context.Estudiantes.AnyAsync(e => e.CursoId == cursoId);
+        context.Estudiantes.AnyAsync(e => e.CursoId == cursoId, cancellationToken);
 
     public Task<bool> TieneAsignaturasAsync(int cursoId, CancellationToken cancellationToken = default) =>
-        context.Asignaturas.AnyAsync(a => a.CursoId == cursoId);
+        context.Asignaturas.AnyAsync(a => a.CursoId == cursoId, cancellationToken);
 
     public Task<CursoLookupDto?> GetCursoLookupAsync(int cursoId, CancellationToken cancellationToken = default) =>
         context.Cursos.AsNoTracking()
             .Where(c => c.Id == cursoId)
             .Select(c => new CursoLookupDto { Id = c.Id, Nombre = c.Nombre })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
     public async Task<IEnumerable<CursoResumenDto>> GetAllResumenAsync(CancellationToken cancellationToken = default)
     {
@@ -48,39 +48,44 @@ public class CursosDomainRepository(AppDbContext context) : ICursosDomainReposit
             .OrderBy(a => a.Nombre)
             .ToListAsync(cancellationToken);
 
-        return cursosBase.Select(curso => new CursoResumenDto
+        var subjectsByCourseId = asignaturasConProfesor
+            .GroupBy(subject => subject.CursoId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .Select(subject => new CursoAsignaturaDto
+                    {
+                        Id = subject.Id,
+                        Nombre = subject.Nombre,
+                        ProfesorId = subject.ProfesorId,
+                        Profesor = subject.Profesor
+                    })
+                    .ToList());
+
+        return cursosBase.Select(course => new CursoResumenDto
         {
-            Id = curso.Id,
-            Nombre = curso.Nombre,
-            Asignaturas = asignaturasConProfesor
-                .Where(asignatura => asignatura.CursoId == curso.Id)
-                .Select(asignatura => new CursoAsignaturaDto
-                {
-                    Id = asignatura.Id,
-                    Nombre = asignatura.Nombre,
-                    ProfesorId = asignatura.ProfesorId,
-                    Profesor = asignatura.Profesor
-                })
-                .ToList()
+            Id = course.Id,
+            Nombre = course.Nombre,
+            Asignaturas = subjectsByCourseId.GetValueOrDefault(course.Id, [])
         });
     }
 
     public async Task<CursoDetalleDto?> GetDetalleAsync(int cursoId, CancellationToken cancellationToken = default)
     {
-        var cursoLookup = await context.Cursos
+        var courseLookup = await context.Cursos
             .AsNoTracking()
             .Where(c => c.Id == cursoId)
             .Select(c => new CursoLookupDto { Id = c.Id, Nombre = c.Nombre })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
-        if (cursoLookup is null) return null;
+        if (courseLookup is null) return null;
 
         var alumnos = await context.Estudiantes
             .AsNoTracking()
             .Where(e => e.CursoId == cursoId)
             .Select(e => new CursoAlumnoDto { Id = e.Id, Nombre = e.Nombre })
             .OrderBy(e => e.Nombre)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         var asignaturas = await context.Asignaturas
             .AsNoTracking()
@@ -101,12 +106,12 @@ public class CursosDomainRepository(AppDbContext context) : ICursosDomainReposit
                     .ToList()
             })
             .OrderBy(a => a.Nombre)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return new CursoDetalleDto
         {
-            Id = cursoLookup.Id,
-            Nombre = cursoLookup.Nombre,
+            Id = courseLookup.Id,
+            Nombre = courseLookup.Nombre,
             Alumnos = alumnos,
             Asignaturas = asignaturas
         };
@@ -116,40 +121,40 @@ public class CursosDomainRepository(AppDbContext context) : ICursosDomainReposit
 
     public async Task<CursoLookupDto> CreateCursoAsync(string nombre, CancellationToken cancellationToken = default)
     {
-        var existingCurso = await context.Cursos
+        var existingCourse = await context.Cursos
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(c => c.Nombre == nombre, cancellationToken);
 
-        if (existingCurso is null)
+        if (existingCourse is null)
         {
-            existingCurso = new Curso { Nombre = nombre };
-            context.Cursos.Add(existingCurso);
+            existingCourse = new Curso { Nombre = nombre };
+            context.Cursos.Add(existingCourse);
         }
         else
         {
-            existingCurso.Nombre = nombre;
-            existingCurso.IsDeleted = false;
+            existingCourse.Nombre = nombre;
+            existingCourse.IsDeleted = false;
         }
 
         await context.SaveChangesAsync(cancellationToken);
-        return new CursoLookupDto { Id = existingCurso.Id, Nombre = existingCurso.Nombre };
+        return new CursoLookupDto { Id = existingCourse.Id, Nombre = existingCourse.Nombre };
     }
 
     public async Task<CursoLookupDto?> UpdateCursoAsync(int cursoId, string nombre, CancellationToken cancellationToken = default)
     {
-        var cursoToUpdate = await context.Cursos.FirstOrDefaultAsync(c => c.Id == cursoId, cancellationToken);
-        if (cursoToUpdate is null) return null;
-        cursoToUpdate.Nombre = nombre;
+        var courseToUpdate = await context.Cursos.FirstOrDefaultAsync(c => c.Id == cursoId, cancellationToken);
+        if (courseToUpdate is null) return null;
+        courseToUpdate.Nombre = nombre;
         await context.SaveChangesAsync(cancellationToken);
-        return new CursoLookupDto { Id = cursoToUpdate.Id, Nombre = cursoToUpdate.Nombre };
+        return new CursoLookupDto { Id = courseToUpdate.Id, Nombre = courseToUpdate.Nombre };
     }
 
     public async Task DeleteCursoAsync(int cursoId, CancellationToken cancellationToken = default)
     {
-        var cursoToDelete = await context.Cursos.FirstOrDefaultAsync(c => c.Id == cursoId, cancellationToken);
-        if (cursoToDelete is not null)
+        var courseToDelete = await context.Cursos.FirstOrDefaultAsync(c => c.Id == cursoId, cancellationToken);
+        if (courseToDelete is not null)
         {
-            cursoToDelete.IsDeleted = true;
+            courseToDelete.IsDeleted = true;
             await context.SaveChangesAsync(cancellationToken);
         }
     }

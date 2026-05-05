@@ -1,5 +1,4 @@
-import { CommonModule } from '@angular/common';
-import { Component, Input, forwardRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, forwardRef } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { FormFieldComponent } from '../form-field/form-field.component';
 
@@ -11,9 +10,10 @@ export type SelectOption = {
 @Component({
     selector: 'app-select-input',
     standalone: true,
-    imports: [CommonModule, FormFieldComponent],
+    imports: [FormFieldComponent],
     templateUrl: './select-input.component.html',
     styleUrls: ['./select-input.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     providers: [
         {
             provide: NG_VALUE_ACCESSOR,
