@@ -104,6 +104,10 @@ export class Login implements OnInit {
                 id: data.id,
                 nombre: data.nombre,
                 correo: data.correo,
+                colegioId: data.colegioId,
+                colegio: data.colegio,
+                colegioSlug: data.colegioSlug,
+                colegioLogoUrl: data.colegioLogoUrl,
                 cursoId: data.cursoId,
                 curso: data.curso
             });

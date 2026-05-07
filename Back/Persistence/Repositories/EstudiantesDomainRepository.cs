@@ -1,4 +1,5 @@
 using Back.Api.Application.Abstractions.Repositories;
+using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Configuration;
 using Back.Api.Persistence.Context;
 using Back.Api.Application.Dtos;
@@ -7,16 +8,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Back.Api.Persistence.Repositories;
 
-public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDomainRepository
+public class EstudiantesDomainRepository(AppDbContext context, ICurrentSchoolContext currentSchoolContext) : IEstudiantesDomainRepository
 {
     public Task<bool> ExisteAsync(int estudianteId, CancellationToken cancellationToken = default) =>
         context.Estudiantes.AnyAsync(e => e.Id == estudianteId, cancellationToken);
 
     public Task<bool> CorreoDuplicadoAsync(string correo, CancellationToken cancellationToken = default) =>
-        context.Cuentas.AnyAsync(c => c.Correo == correo, cancellationToken);
+        context.Cuentas.AnyAsync(c => c.Correo == correo && c.ColegioId == currentSchoolContext.SchoolId, cancellationToken);
 
     public Task<bool> CorreoDuplicadoExceptAsync(string correo, int exceptEstudianteId, CancellationToken cancellationToken = default) =>
-        context.Cuentas.AnyAsync(c => c.Correo == correo && (c.Estudiante == null || c.Estudiante.Id != exceptEstudianteId), cancellationToken);
+        context.Cuentas.AnyAsync(c => c.Correo == correo && c.ColegioId == currentSchoolContext.SchoolId && (c.Estudiante == null || c.Estudiante.Id != exceptEstudianteId), cancellationToken);
 
     public Task<bool> CursoExisteAsync(int cursoId, CancellationToken cancellationToken = default) =>
         context.Cursos.AnyAsync(c => c.Id == cursoId, cancellationToken);
@@ -321,7 +322,7 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
         var student = await context.Estudiantes
             .IgnoreQueryFilters()
             .Include(e => e.Cuenta)
-            .FirstOrDefaultAsync(e => e.Cuenta != null && e.Cuenta.Correo == correo, cancellationToken);
+            .FirstOrDefaultAsync(e => e.Cuenta != null && e.Cuenta.Correo == correo && e.Cuenta.ColegioId == currentSchoolContext.SchoolId, cancellationToken);
 
         if (student is null)
         {
@@ -337,7 +338,8 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
                 {
                     Correo = correo,
                     Contrasena = contrasenaHash,
-                    Rol = Roles.Alumno
+                    Rol = Roles.Alumno,
+                    ColegioId = currentSchoolContext.SchoolId
                 }
             };
             context.Estudiantes.Add(student);
@@ -356,6 +358,7 @@ public class EstudiantesDomainRepository(AppDbContext context) : IEstudiantesDom
                 student.Cuenta.Correo = correo;
                 student.Cuenta.Contrasena = contrasenaHash;
                 student.Cuenta.Rol = Roles.Alumno;
+                student.Cuenta.ColegioId = currentSchoolContext.SchoolId;
                 student.Cuenta.IsDeleted = false;
             }
         }

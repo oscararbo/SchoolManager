@@ -21,7 +21,9 @@ public class AuthController(IAuthService authService, IOptions<JwtOptions> jwtOp
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequestDto loginRequestDto)
     {
-        var loginResult = await authService.LoginAsync(loginRequestDto, HttpContext.RequestAborted);
+        Request.Headers.TryGetValue("X-School-Slug", out var colegioSlugHeader);
+        var colegioSlug = colegioSlugHeader.FirstOrDefault();
+        var loginResult = await authService.LoginAsync(loginRequestDto, colegioSlug, HttpContext.RequestAborted);
         if (loginResult.Type == ApplicationResultType.Ok && loginResult.Value is LoginResponseDto loginResponseDto)
         {
             SetRefreshTokenCookie(loginResponseDto.RefreshToken);
@@ -29,7 +31,11 @@ public class AuthController(IAuthService authService, IOptions<JwtOptions> jwtOp
             {
                 Rol = loginResponseDto.Rol, Id = loginResponseDto.Id, Nombre = loginResponseDto.Nombre,
                 Correo = loginResponseDto.Correo, Token = loginResponseDto.Token,
-                CursoId = loginResponseDto.CursoId, Curso = loginResponseDto.Curso
+                CursoId = loginResponseDto.CursoId, Curso = loginResponseDto.Curso,
+                ColegioId = loginResponseDto.ColegioId,
+                Colegio = loginResponseDto.Colegio,
+                ColegioSlug = loginResponseDto.ColegioSlug,
+                ColegioLogoUrl = loginResponseDto.ColegioLogoUrl
             });
         }
         return this.ToActionResult(loginResult);

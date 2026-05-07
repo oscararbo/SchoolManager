@@ -1,4 +1,6 @@
 using Back.Api.Application.Abstractions.Repositories;
+using Back.Api.Application.Abstractions.Security;
+using Back.Api.Application.Configuration;
 using Back.Api.Persistence.Context;
 using Back.Api.Application.Dtos;
 using Back.Api.Domain.Entities;
@@ -6,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Back.Api.Persistence.Repositories;
 
-public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomainRepository
+public class ProfesoresDomainRepository(AppDbContext context, ICurrentSchoolContext currentSchoolContext) : IProfesoresDomainRepository
 {
     private sealed record ProfesorAlumnoStatsRow(int EstudianteId, string Alumno, int AsignaturaId);
     private sealed record ProfesorTareaStatsRow(int TareaId, string Nombre, int Trimestre, int AsignaturaId, int ProfesorId);
@@ -24,10 +26,10 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
         => context.Tareas.AnyAsync(t => t.Id == tareaId && t.ProfesorId == profesorId, cancellationToken);
 
     public Task<bool> CorreoDuplicadoAsync(string correo, CancellationToken cancellationToken = default)
-        => context.Cuentas.AnyAsync(c => c.Correo == correo, cancellationToken);
+        => context.Cuentas.AnyAsync(c => c.Correo == correo && c.ColegioId == currentSchoolContext.SchoolId, cancellationToken);
 
     public Task<bool> CorreoDuplicadoExceptAsync(string correo, int exceptProfesorId, CancellationToken cancellationToken = default)
-        => context.Cuentas.AnyAsync(c => c.Correo == correo && (c.Profesor == null || c.Profesor.Id != exceptProfesorId), cancellationToken);
+        => context.Cuentas.AnyAsync(c => c.Correo == correo && c.ColegioId == currentSchoolContext.SchoolId && (c.Profesor == null || c.Profesor.Id != exceptProfesorId), cancellationToken);
 
     public Task<bool> CursoExisteAsync(int cursoId, CancellationToken cancellationToken = default)
         => context.Cursos.AnyAsync(c => c.Id == cursoId, cancellationToken);
@@ -620,7 +622,7 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
         var teacher = await context.Profesores
             .IgnoreQueryFilters()
             .Include(p => p.Cuenta)
-            .FirstOrDefaultAsync(p => p.Cuenta != null && p.Cuenta.Correo == correo, cancellationToken);
+            .FirstOrDefaultAsync(p => p.Cuenta != null && p.Cuenta.Correo == correo && p.Cuenta.ColegioId == currentSchoolContext.SchoolId, cancellationToken);
 
         if (teacher is null)
         {
@@ -635,7 +637,8 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
                 {
                     Correo = correo,
                     Contrasena = contrasenaHash,
-                    Rol = "teacher"
+                    Rol = Roles.Profesor,
+                    ColegioId = currentSchoolContext.SchoolId
                 }
             };
             context.Profesores.Add(teacher);
@@ -652,7 +655,8 @@ public class ProfesoresDomainRepository(AppDbContext context) : IProfesoresDomai
             {
                 teacher.Cuenta.Correo = correo;
                 teacher.Cuenta.Contrasena = contrasenaHash;
-                teacher.Cuenta.Rol = "teacher";
+                teacher.Cuenta.Rol = Roles.Profesor;
+                teacher.Cuenta.ColegioId = currentSchoolContext.SchoolId;
                 teacher.Cuenta.IsDeleted = false;
             }
         }

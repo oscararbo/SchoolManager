@@ -1,11 +1,13 @@
 using Back.Api.Application.Abstractions.Repositories;
+using Back.Api.Application.Abstractions.Security;
+using Back.Api.Application.Configuration;
 using Back.Api.Domain.Entities;
 using Back.Api.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 
 namespace Back.Api.Persistence.Repositories;
 
-public class ImportDomainRepository(AppDbContext context) : IImportDomainRepository
+public class ImportDomainRepository(AppDbContext context, ICurrentSchoolContext currentSchoolContext) : IImportDomainRepository
 {
     public Task<List<ImportCursoLookup>> GetCursosAsync(CancellationToken cancellationToken = default) => context.Cursos
         .AsNoTracking()
@@ -53,10 +55,10 @@ public class ImportDomainRepository(AppDbContext context) : IImportDomainReposit
         {
             var existente = await context.Cursos
                 .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(c => c.Nombre == nombre, cancellationToken);
+                .FirstOrDefaultAsync(c => c.Nombre == nombre && c.ColegioId == (currentSchoolContext.SchoolId ?? 1), cancellationToken);
 
             if (existente is null)
-                context.Cursos.Add(new Curso { Nombre = nombre });
+                context.Cursos.Add(new Curso { Nombre = nombre, ColegioId = currentSchoolContext.SchoolId ?? 1 });
             else
                 existente.IsDeleted = false;
         }
@@ -88,7 +90,7 @@ public class ImportDomainRepository(AppDbContext context) : IImportDomainReposit
             var existente = await context.Profesores
                 .IgnoreQueryFilters()
                 .Include(p => p.Cuenta)
-                .FirstOrDefaultAsync(p => p.Cuenta != null && p.Cuenta.Correo == item.Correo, cancellationToken);
+                .FirstOrDefaultAsync(p => p.Cuenta != null && p.Cuenta.Correo == item.Correo && p.Cuenta.ColegioId == currentSchoolContext.SchoolId, cancellationToken);
 
             if (existente is null)
             {
@@ -103,7 +105,8 @@ public class ImportDomainRepository(AppDbContext context) : IImportDomainReposit
                     {
                         Correo = item.Correo,
                         Contrasena = item.ContrasenaHash,
-                        Rol = "profesor"
+                        Rol = Roles.Profesor,
+                        ColegioId = currentSchoolContext.SchoolId
                     }
                 });
             }
@@ -119,7 +122,8 @@ public class ImportDomainRepository(AppDbContext context) : IImportDomainReposit
                 {
                     existente.Cuenta.Correo = item.Correo;
                     existente.Cuenta.Contrasena = item.ContrasenaHash;
-                    existente.Cuenta.Rol = "profesor";
+                    existente.Cuenta.Rol = Roles.Profesor;
+                    existente.Cuenta.ColegioId = currentSchoolContext.SchoolId;
                     existente.Cuenta.IsDeleted = false;
                 }
             }
@@ -135,7 +139,7 @@ public class ImportDomainRepository(AppDbContext context) : IImportDomainReposit
             var existente = await context.Estudiantes
                 .IgnoreQueryFilters()
                 .Include(e => e.Cuenta)
-                .FirstOrDefaultAsync(e => e.Cuenta != null && e.Cuenta.Correo == item.Correo, cancellationToken);
+                .FirstOrDefaultAsync(e => e.Cuenta != null && e.Cuenta.Correo == item.Correo && e.Cuenta.ColegioId == currentSchoolContext.SchoolId, cancellationToken);
 
             if (existente is null)
             {
@@ -151,7 +155,8 @@ public class ImportDomainRepository(AppDbContext context) : IImportDomainReposit
                     {
                         Correo = item.Correo,
                         Contrasena = item.ContrasenaHash,
-                        Rol = "alumno"
+                        Rol = Roles.Alumno,
+                        ColegioId = currentSchoolContext.SchoolId
                     }
                 });
             }
@@ -168,7 +173,8 @@ public class ImportDomainRepository(AppDbContext context) : IImportDomainReposit
                 {
                     existente.Cuenta.Correo = item.Correo;
                     existente.Cuenta.Contrasena = item.ContrasenaHash;
-                    existente.Cuenta.Rol = "alumno";
+                    existente.Cuenta.Rol = Roles.Alumno;
+                    existente.Cuenta.ColegioId = currentSchoolContext.SchoolId;
                     existente.Cuenta.IsDeleted = false;
                 }
             }

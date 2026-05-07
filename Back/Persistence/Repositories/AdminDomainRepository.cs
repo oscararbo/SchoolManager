@@ -1,12 +1,13 @@
 using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Persistence.Context;
 using Back.Api.Application.Dtos;
+using Back.Api.Application.Abstractions.Security;
 using Back.Api.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Back.Api.Persistence.Repositories;
 
-public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDbContext> contextFactory) : IAdminDomainRepository
+public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDbContext> contextFactory, ICurrentSchoolContext currentSchoolContext) : IAdminDomainRepository
 {
     private sealed class AdminTotalsSnapshot
     {
@@ -26,18 +27,15 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
 
     public async Task<AdminStatsDto> GetStatsAsync(CancellationToken cancellationToken = default)
     {
-        var totals = await context.Database
-            .SqlQueryRaw<AdminTotalsSnapshot>(
-                """
-                SELECT
-                    (SELECT COUNT(*) FROM "Cursos" c WHERE c."IsDeleted" = FALSE) AS "TotalCursos",
-                    (SELECT COUNT(*) FROM "Asignaturas" a WHERE a."IsDeleted" = FALSE) AS "TotalAsignaturas",
-                    (SELECT COUNT(*) FROM "Profesores" p WHERE p."IsDeleted" = FALSE) AS "TotalProfesores",
-                    (SELECT COUNT(*) FROM "Estudiantes" e WHERE e."IsDeleted" = FALSE) AS "TotalEstudiantes",
-                    (SELECT COUNT(*) FROM "EstudianteAsignaturas" ea WHERE ea."IsDeleted" = FALSE) AS "TotalMatriculas",
-                    (SELECT COUNT(*) FROM "Tareas" t WHERE t."IsDeleted" = FALSE) AS "TotalTareas"
-                """)
-            .SingleAsync(cancellationToken);
+        var totals = new AdminTotalsSnapshot
+        {
+            TotalCursos = await context.Cursos.CountAsync(cancellationToken),
+            TotalAsignaturas = await context.Asignaturas.CountAsync(cancellationToken),
+            TotalProfesores = await context.Profesores.CountAsync(cancellationToken),
+            TotalEstudiantes = await context.Estudiantes.CountAsync(cancellationToken),
+            TotalMatriculas = await context.EstudianteAsignaturas.CountAsync(cancellationToken),
+            TotalTareas = await context.Tareas.CountAsync(cancellationToken)
+        };
 
         var porCurso = await context.Cursos
             .AsNoTracking()
@@ -120,7 +118,7 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
     }
 
     public Task<bool> CorreoDuplicadoAsync(string correo, CancellationToken cancellationToken = default)
-        => context.Cuentas.AnyAsync(c => c.Correo == correo, cancellationToken);
+        => context.Cuentas.AnyAsync(c => c.Correo == correo && c.ColegioId == currentSchoolContext.SchoolId, cancellationToken);
 
     public async Task<AdminListItemDto> CreateAdminAsync(string nombre, string correo, string contrasenaHash, CancellationToken cancellationToken = default)
     {
@@ -131,7 +129,8 @@ public class AdminDomainRepository(AppDbContext context, IDbContextFactory<AppDb
             {
                 Correo = correo,
                 Contrasena = contrasenaHash,
-                Rol = "admin"
+                Rol = "admin",
+                ColegioId = currentSchoolContext.SchoolId
             }
         };
         context.Admins.Add(admin);

@@ -12,10 +12,10 @@ public class AsignaturasDomainRepository(AppDbContext context) : IAsignaturasDom
         context.Asignaturas.AnyAsync(a => a.Id == asignaturaId);
 
     public Task<bool> CursoExisteAsync(int cursoId, CancellationToken cancellationToken = default) =>
-        context.Cursos.AnyAsync(c => c.Id == cursoId);
+        context.Cursos.AnyAsync(c => c.Id == cursoId, cancellationToken);
 
     public Task<bool> ExisteEnCursoAsync(int cursoId, string nombre, CancellationToken cancellationToken = default) =>
-        context.Asignaturas.AnyAsync(a => a.CursoId == cursoId && a.Nombre == nombre);
+        context.Asignaturas.AnyAsync(a => a.CursoId == cursoId && a.Nombre == nombre, cancellationToken);
 
     public Task<string?> GetCursoNombreAsync(int cursoId, CancellationToken cancellationToken = default) =>
         context.Cursos.AsNoTracking()

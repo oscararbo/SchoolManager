@@ -1,6 +1,6 @@
 # Proyecto Inicial
 
-Aplicacion de gestion escolar con backend en ASP.NET Core y frontend en Angular.
+Aplicacion de gestion escolar multi-colegio con backend en ASP.NET Core y frontend en Angular.
 
 ## Stack
 
@@ -13,7 +13,7 @@ Aplicacion de gestion escolar con backend en ASP.NET Core y frontend en Angular.
 ```text
 proyectoInicial/
 ├── Back/                      # API REST por capas (Application/Domain/Infrastructure/Persistence/Presentation)
-├── Front/                     # Aplicacion Angular (admin, profesor, alumno)
+├── Front/                     # Aplicacion Angular (superusuario, admin, profesor, alumno)
 ├── Back.Tests/                # Pruebas de backend
 └── docker-compose.yml         # Orquestacion local (postgres + back + front)
 ```
@@ -25,6 +25,7 @@ proyectoInicial/
 ```bash
 cd Back
 dotnet restore Back.Api.csproj
+dotnet ef database update --project Back.Api.csproj --startup-project Back.Api.csproj
 dotnet run --project Back.Api.csproj
 ```
 
@@ -32,6 +33,13 @@ dotnet run --project Back.Api.csproj
 - Swagger UI: `http://localhost:5014/swagger`
 
 Base de datos local por defecto: PostgreSQL (`Host=localhost;Port=5432;Database=schooldb;Username=postgres;Password=postgres`).
+
+Si no tienes PostgreSQL local levantado, arranca al menos el contenedor de DB:
+
+```bash
+cd ..
+docker compose up -d postgres
+```
 
 ### Frontend
 
@@ -57,10 +65,28 @@ Servicios:
 
 ## Credenciales semilla
 
-El backend asegura un administrador inicial (configurable en `Back/appsettings.json`):
+El backend asegura un administrador inicial y un superusuario inicial (configurable en `Back/appsettings.json`):
 
 - correo: `admin@prueba.com`
 - contrasena: `Prueba1`
+- superusuario correo: `root@schoolmanager.com`
+- superusuario contrasena: `Super123!`
+
+Colegio semilla por defecto:
+
+- nombre: `Colegio Principal`
+- slug: `default`
+
+Puedes probar tenant por query string en local: `http://localhost:4200/?school=default`.
+
+## Troubleshooting rapido (PostgreSQL)
+
+Si al ejecutar `dotnet ef database update` ves `Failed to connect to 127.0.0.1:5432`:
+
+1. Verifica que Docker Desktop este iniciado.
+2. Levanta PostgreSQL con `docker compose up -d postgres` desde la raiz del repo.
+3. Revisa estado con `docker compose ps`.
+4. Reintenta: `cd Back && dotnet ef database update --project Back.Api.csproj --startup-project Back.Api.csproj`.
 
 ## Flujo funcional recomendado
 

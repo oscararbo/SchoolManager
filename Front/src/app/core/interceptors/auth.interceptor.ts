@@ -4,6 +4,7 @@ import { catchError, from, switchMap, throwError } from 'rxjs';
 import { SessionService } from '../services/session.service';
 import { AuthStateService } from '../services/auth-state.service';
 import { environment } from '../../../environments/environment';
+import { TenantService } from '../services/tenant.service';
 
 /**
  * Extrae el mensaje legible de un error `401 Unauthorized`.
@@ -30,6 +31,7 @@ function getUnauthorizedMessage(error: HttpErrorResponse): string {
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
     const sessionService = inject(SessionService);
     const authState = inject(AuthStateService);
+    const tenantService = inject(TenantService);
 
     const skipAuth = req.headers.has('X-Skip-Auth');
     const request = skipAuth
@@ -46,11 +48,18 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
      * Si no hay token activo, devuelve la peticion original sin modificar.
      */
     const addAuth = (r: HttpRequest<unknown>): HttpRequest<unknown> => {
+        const schoolSlug = tenantService.getSchoolSlug();
         const token = sessionService.getToken();
         if (!token) {
-            return r.clone({ withCredentials: true });
+            return r.clone({ withCredentials: true, setHeaders: { 'X-School-Slug': schoolSlug } });
         }
-        return r.clone({ withCredentials: true, setHeaders: { Authorization: `Bearer ${token}` } });
+        return r.clone({
+            withCredentials: true,
+            setHeaders: {
+                Authorization: `Bearer ${token}`,
+                'X-School-Slug': schoolSlug
+            }
+        });
     };
 
     const isAuthUrl = request.url.includes('/auth/login') || request.url.includes('/auth/refresh');

@@ -1,11 +1,37 @@
 export interface ApiLoginResponse {
-  rol: 'profesor' | 'alumno' | 'admin';
+  rol: 'profesor' | 'alumno' | 'admin' | 'superusuario';
   id: number;
   nombre: string;
   correo: string;
   token: string;
+  colegioId?: number;
+  colegio?: string;
+  colegioSlug?: string;
+  colegioLogoUrl?: string;
   cursoId?: number;
   curso?: string;
+}
+
+export interface ApiColegioItem {
+  id: number;
+  nombre: string;
+  slug: string;
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
+  colorPrimario?: string | null;
+  mensajeLogin?: string | null;
+  totalAdmins?: number;
+  totalProfesores?: number;
+  totalAlumnos?: number;
+  totalCursos?: number;
+}
+
+export interface ApiColegioAdminItem {
+  id: number;
+  nombre: string;
+  correo: string;
+  colegioId: number;
+  colegio: string;
 }
 
 export interface ApiCursoItem {

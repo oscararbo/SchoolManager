@@ -69,6 +69,7 @@ public class AdminEndpointsIntegrationTests : IClassFixture<TestWebAppFactory>
         var authenticatedClient = webAppFactory.CreateClient();
         authenticatedClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(TestWebAppFactory.TestScheme);
         authenticatedClient.DefaultRequestHeaders.Add(TestAuthHandler.RoleHeader, userRole);
+        authenticatedClient.DefaultRequestHeaders.Add(TestAuthHandler.SchoolIdHeader, "1");
         return authenticatedClient;
     }
 

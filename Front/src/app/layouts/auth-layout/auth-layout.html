@@ -1,9 +1,12 @@
 <div class="auth-shell">
         <div class="row g-0 align-items-stretch rounded-4 overflow-hidden shadow h-100">
         <div class="col-12 col-lg-7">
-            <div class="auth-brand-panel h-100 d-flex flex-column justify-content-center p-4 p-md-5 text-white">
-                <h1 class="display-6 fw-semibold mb-3">School Manager</h1>
-                <p class="lead mb-0">Consulta tus clases, tus asignaturas y tus notas en un solo lugar.</p>
+            <div class="auth-brand-panel h-100 d-flex flex-column justify-content-center p-4 p-md-5 text-white" [style.background]="'linear-gradient(160deg, ' + schoolPrimaryColor() + ' 0%, color-mix(in srgb, ' + schoolPrimaryColor() + ' 78%, white) 100%)'">
+                @if (schoolLogoUrl()) {
+                    <img [src]="schoolLogoUrl()!" [alt]="schoolName()" class="mb-3" style="max-height:72px; width:auto; object-fit:contain;" />
+                }
+                <h1 class="display-6 fw-semibold mb-3">{{ schoolName() }}</h1>
+                <p class="lead mb-0">{{ schoolMessage() }}</p>
             </div>
         </div>
 

@@ -1,0 +1,162 @@
+<section class="row g-3">
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h2 class="h5 mb-3">{{ colegioEnEdicionId() ? 'Editar colegio' : 'Crear colegio' }}</h2>
+                <form [formGroup]="colegioForm" (ngSubmit)="guardarColegio()" class="vstack gap-2">
+                    <input class="form-control" formControlName="nombre" placeholder="Nombre del colegio" />
+                    <input class="form-control" formControlName="slug" placeholder="slug-del-colegio" />
+                    <input class="form-control" formControlName="logoUrl" placeholder="https://... (logo opcional)" />
+                    <input class="form-control" formControlName="faviconUrl" placeholder="https://... (favicon opcional)" />
+                    <input class="form-control form-control-color" formControlName="colorPrimario" type="color" />
+                    <textarea class="form-control" formControlName="mensajeLogin" rows="3" placeholder="Mensaje de bienvenida para el login"></textarea>
+                    <div class="rounded-3 p-3 text-white" [style.background]="colegioForm.controls.colorPrimario.value || '#1f2937'">
+                        <div class="fw-semibold">Vista previa</div>
+                        <div>{{ colegioForm.controls.nombre.value || 'Nombre del colegio' }}</div>
+                        <small>{{ colegioForm.controls.mensajeLogin.value || 'Mensaje configurable del login.' }}</small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-dark" type="submit">{{ colegioEnEdicionId() ? 'Guardar cambios' : 'Crear colegio' }}</button>
+                        @if (colegioEnEdicionId()) {
+                            <button class="btn btn-outline-secondary" type="button" (click)="cancelarEdicion()">Cancelar</button>
+                        }
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Crear admin de colegio</h2>
+                <form [formGroup]="adminForm" (ngSubmit)="crearAdminColegio()" class="vstack gap-2">
+                    <select class="form-select" formControlName="colegioId">
+                        <option [ngValue]="null">Selecciona colegio</option>
+                        @for (colegio of colegios(); track colegio.id) {
+                            <option [ngValue]="colegio.id">{{ colegio.nombre }} ({{ colegio.slug }})</option>
+                        }
+                    </select>
+                    <input class="form-control" formControlName="nombre" placeholder="Nombre del administrador" />
+                    <input class="form-control" formControlName="correo" placeholder="admin@colegio.com" />
+                    <input class="form-control" type="password" formControlName="contrasena" placeholder="Contrasena" />
+                    <button class="btn btn-primary" type="submit">Crear admin</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h2 class="h5 mb-0">Colegios</h2>
+                    <button class="btn btn-outline-secondary btn-sm" type="button" (click)="cargarColegios()">Recargar</button>
+                </div>
+
+                @if (cargando()) {
+                    <p class="mb-0 text-muted">Cargando...</p>
+                } @else if (colegios().length === 0) {
+                    <p class="mb-0 text-muted">No hay colegios registrados.</p>
+                } @else {
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Slug</th>
+                                    <th>Resumen</th>
+                                    <th>URL acceso</th>
+                                    <th>Branding</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (colegio of colegios(); track colegio.id) {
+                                    <tr>
+                                        <td>{{ colegio.nombre }}</td>
+                                        <td>{{ colegio.slug }}</td>
+                                        <td>
+                                            <div class="small">Admins: {{ colegio.totalAdmins ?? 0 }}</div>
+                                            <div class="small">Profesores: {{ colegio.totalProfesores ?? 0 }}</div>
+                                            <div class="small">Alumnos: {{ colegio.totalAlumnos ?? 0 }}</div>
+                                            <div class="small">Cursos: {{ colegio.totalCursos ?? 0 }}</div>
+                                        </td>
+                                        <td>
+                                            <div><a [href]="getDevUrl(colegio)">{{ getDevUrl(colegio) }}</a></div>
+                                            <small class="text-muted">Prod sugerida: {{ getSuggestedSubdomainUrl(colegio) }}</small>
+                                        </td>
+                                        <td>
+                                            <div>{{ colegio.logoUrl || '-' }}</div>
+                                            <div class="d-flex align-items-center gap-2 small mt-1">
+                                                <span class="rounded-circle border d-inline-block" [style.background]="colegio.colorPrimario || '#1f2937'" style="width:16px; height:16px;"></span>
+                                                <span>{{ colegio.colorPrimario || 'Sin color' }}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-column gap-2">
+                                                <button class="btn btn-outline-dark btn-sm" type="button" (click)="editarColegio(colegio)">Editar</button>
+                                                <button class="btn btn-outline-primary btn-sm" type="button" (click)="cargarAdminsColegio(colegio.id)">Ver admins</button>
+                                                <button class="btn btn-outline-danger btn-sm" type="button" (click)="eliminarColegio(colegio)">Desactivar</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h2 class="h5 mb-0">Admins por colegio</h2>
+                    @if (colegioAdminsActivo()) {
+                        <span class="text-muted small">{{ colegioAdminsActivo()!.nombre }}</span>
+                    }
+                </div>
+
+                @if (cargandoAdmins()) {
+                    <p class="mb-0 text-muted">Cargando administradores...</p>
+                } @else if (!colegioAdminsActivo()) {
+                    <p class="mb-0 text-muted">Selecciona un colegio para ver sus administradores.</p>
+                } @else if (adminsColegio().length === 0) {
+                    <p class="mb-0 text-muted">Este colegio no tiene administradores activos.</p>
+                } @else {
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Correo</th>
+                                    <th>Colegio</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (admin of adminsColegio(); track admin.id) {
+                                    <tr>
+                                        <td>{{ admin.nombre }}</td>
+                                        <td>{{ admin.correo }}</td>
+                                        <td>{{ admin.colegio }}</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+@if (mensaje()) {
+    <div class="alert alert-success mt-3 mb-0">{{ mensaje() }}</div>
+}
+
+@if (error()) {
+    <div class="alert alert-danger mt-3 mb-0">{{ error() }}</div>
+}

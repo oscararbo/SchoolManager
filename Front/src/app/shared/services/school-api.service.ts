@@ -3,6 +3,7 @@ import { SchoolApiAdminService } from './school-api-admin.service';
 import { SchoolApiAlumnoService } from './school-api-alumno.service';
 import { SchoolApiAuthService } from './school-api-auth.service';
 import { SchoolApiProfesorService } from './school-api-profesor.service';
+import { SchoolApiSuperUsuarioService } from './school-api-superusuario.service';
 import type {
     AdminComparacionCursos,
     AdminCursoNotasStats,
@@ -22,6 +23,8 @@ import type {
     CreateProfesorData,
     CsvImportEntity,
     CsvImportResult,
+    ColegioAdminItem,
+    ColegioItem,
     CursoItem,
     EstudianteItem,
     LoginResponse,
@@ -78,7 +81,9 @@ export type {
     ProfesorTareaStats,
     ProfesorAsignaturaStats,
     ProfesorStats,
-    CsvImportEntity
+    CsvImportEntity,
+    ColegioAdminItem,
+    ColegioItem
 } from './school-api.types';
 export { CsvImportError } from './school-api.types';
 
@@ -88,10 +93,18 @@ export class SchoolApiService {
     private profesor = inject(SchoolApiProfesorService);
     private alumno = inject(SchoolApiAlumnoService);
     private admin = inject(SchoolApiAdminService);
+    private superUsuario = inject(SchoolApiSuperUsuarioService);
 
     // Auth
     login(correo: string, contrasena: string): Promise<LoginResponse> { return this.auth.login(correo, contrasena); }
     logout(): Promise<void> { return this.auth.logout(); }
+    getColegioBySlug(slug: string): Promise<ColegioItem> { return this.superUsuario.getColegioBySlug(slug); }
+    getColegios(): Promise<ColegioItem[]> { return this.superUsuario.getColegios(); }
+    getAdminsByColegio(colegioId: number): Promise<ColegioAdminItem[]> { return this.superUsuario.getAdminsByColegio(colegioId); }
+    createColegio(nombre: string, slug: string, logoUrl?: string, faviconUrl?: string, colorPrimario?: string, mensajeLogin?: string): Promise<ColegioItem> { return this.superUsuario.createColegio(nombre, slug, logoUrl, faviconUrl, colorPrimario, mensajeLogin); }
+    updateColegio(id: number, nombre: string, slug: string, logoUrl?: string, faviconUrl?: string, colorPrimario?: string, mensajeLogin?: string): Promise<ColegioItem> { return this.superUsuario.updateColegio(id, nombre, slug, logoUrl, faviconUrl, colorPrimario, mensajeLogin); }
+    deleteColegio(id: number): Promise<void> { return this.superUsuario.deleteColegio(id); }
+    createAdminColegio(colegioId: number, nombre: string, correo: string, contrasena: string): Promise<ColegioAdminItem> { return this.superUsuario.createAdminColegio(colegioId, nombre, correo, contrasena); }
 
     // Profesor panel
     getPanelProfesor(profesorId: number): Promise<ProfesorPanel> { return this.profesor.getPanelProfesor(profesorId); }

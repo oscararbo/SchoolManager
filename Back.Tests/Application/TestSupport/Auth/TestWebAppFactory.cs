@@ -50,6 +50,8 @@ public sealed class TestWebAppFactory : WebApplicationFactory<Program>
 public sealed class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
     public const string RoleHeader = "X-Test-Role";
+    public const string SchoolIdHeader = "X-Test-SchoolId";
+    public const string SchoolSlugHeader = "X-Test-SchoolSlug";
 
     public TestAuthHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
@@ -71,11 +73,22 @@ public sealed class TestAuthHandler : AuthenticationHandler<AuthenticationScheme
             ? roleHeaderValues.ToString()
             : Roles.Alumno;
 
+        var schoolId = Request.Headers.TryGetValue(SchoolIdHeader, out var schoolHeaderValues)
+            ? schoolHeaderValues.ToString()
+            : "1";
+
+        var schoolSlug = Request.Headers.TryGetValue(SchoolSlugHeader, out var schoolSlugHeaderValues)
+            ? schoolSlugHeaderValues.ToString()
+            : "default";
+
         var userClaims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, "test-user"),
+            new(ClaimTypes.NameIdentifier, "1"),
             new(ClaimTypes.Name, "Usuario Test"),
-            new(ClaimTypes.Role, userRole)
+            new(ClaimTypes.Role, userRole),
+            new("id", "1"),
+            new("schoolId", schoolId),
+            new("schoolSlug", schoolSlug)
         };
 
         var identity = new ClaimsIdentity(userClaims, TestWebAppFactory.TestScheme);

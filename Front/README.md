@@ -1,6 +1,6 @@
 # Front
 
-Cliente Angular del sistema de gestion escolar. Consume la API de `Back/` y ofrece paneles para admin, profesor y alumno.
+Cliente Angular del sistema de gestion escolar multi-colegio. Consume la API de `Back/` y ofrece paneles para superusuario, admin, profesor y alumno.
 
 ## Stack
 
@@ -31,6 +31,10 @@ npm start
 ```
 
 App en `http://localhost:4200`.
+
+Tenant local recomendado por query string:
+
+- `http://localhost:4200/?school=default`
 
 ## Build y test
 
@@ -93,6 +97,12 @@ Front/
 
 ## Paneles funcionales
 
+### Superusuario
+
+- Gestion de colegios (crear, editar, desactivar).
+- Configuracion de branding por colegio (logo, favicon, color primario, mensaje de login).
+- Creacion y consulta de administradores por colegio.
+
 ### Admin
 
 - CRUD de cursos, asignaturas, profesores y estudiantes.
@@ -148,8 +158,15 @@ Cliente HTTP tipado que centraliza endpoints y normaliza errores.
 ### `auth.interceptor.ts`
 
 - inyecta JWT
+- inyecta `X-School-Slug` segun el tenant actual
 - reintenta con refresh ante `401`
 - si refresh falla, activa dialogo de sesion expirada con mensaje contextual
+
+### `tenant.service.ts`
+
+- resuelve colegio por `?school=slug` en local
+- soporta subdominio en entornos productivos
+- aplica fallback configurado en `environment.defaultSchoolSlug`
 
 ### `error.interceptor.ts`
 

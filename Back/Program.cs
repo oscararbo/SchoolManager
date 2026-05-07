@@ -23,6 +23,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddApiVersioning(options =>
 {
     options.DefaultApiVersion = new ApiVersion(1, 0);
@@ -104,13 +105,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization(options =>
 {
+    options.AddPolicy(AuthorizationPolicies.SuperUsuarioOnly, policy => policy.RequireRole(Roles.SuperUsuario));
     options.AddPolicy(AuthorizationPolicies.AdminOnly, policy => policy.RequireRole(Roles.Admin));
     options.AddPolicy(AuthorizationPolicies.ProfesorOrAdmin, policy => policy.RequireRole(Roles.Profesor, Roles.Admin));
     options.AddPolicy(AuthorizationPolicies.AlumnoOrAdmin, policy => policy.RequireRole(Roles.Alumno, Roles.Admin));
 });
 
 builder.Services.AddScoped<IPasswordService, PasswordService>();
+builder.Services.AddScoped<ICurrentSchoolContext, CurrentSchoolContext>();
 builder.Services.AddScoped<IAdminDomainRepository, AdminDomainRepository>();
+builder.Services.AddScoped<ISuperUsuarioDomainRepository, SuperUsuarioDomainRepository>();
 builder.Services.AddScoped<IAuthDomainRepository, AuthDomainRepository>();
 builder.Services.AddScoped<IProfesoresDomainRepository, ProfesoresDomainRepository>();
 builder.Services.AddScoped<ICursosDomainRepository, CursosDomainRepository>();
@@ -119,6 +123,7 @@ builder.Services.AddScoped<IEstudiantesDomainRepository, EstudiantesDomainReposi
 builder.Services.AddScoped<IImportDomainRepository, ImportDomainRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<ISuperUsuarioService, SuperUsuarioService>();
 builder.Services.AddScoped<IProfesoresService, ProfesoresService>();
 builder.Services.AddScoped<IEstudiantesService, EstudiantesService>();
 builder.Services.AddScoped<ICursosService, CursosService>();

@@ -81,6 +81,54 @@ namespace Back.Api.Persistence.Migrations
                     b.ToTable("Asignaturas");
                 });
 
+            modelBuilder.Entity("Back.Api.Domain.Entities.Colegio", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ColorPrimario")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("FaviconUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("MensajeLogin")
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.ToTable("Colegios");
+                });
+
             modelBuilder.Entity("Back.Api.Domain.Entities.Cuenta", b =>
                 {
                     b.Property<int>("Id")
@@ -88,6 +136,11 @@ namespace Back.Api.Persistence.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ColegioId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
 
                     b.Property<string>("Contrasena")
                         .IsRequired()
@@ -110,7 +163,7 @@ namespace Back.Api.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Correo")
+                    b.HasIndex("ColegioId", "Correo")
                         .IsUnique()
                         .HasFilter("\"IsDeleted\" = FALSE");
 
@@ -125,6 +178,11 @@ namespace Back.Api.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("ColegioId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -136,6 +194,8 @@ namespace Back.Api.Persistence.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ColegioId");
 
                     b.ToTable("Cursos");
                 });
@@ -423,6 +483,27 @@ namespace Back.Api.Persistence.Migrations
                     b.Navigation("Curso");
                 });
 
+            modelBuilder.Entity("Back.Api.Domain.Entities.Cuenta", b =>
+                {
+                    b.HasOne("Back.Api.Domain.Entities.Colegio", "Colegio")
+                        .WithMany("Cuentas")
+                        .HasForeignKey("ColegioId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Colegio");
+                });
+
+            modelBuilder.Entity("Back.Api.Domain.Entities.Curso", b =>
+                {
+                    b.HasOne("Back.Api.Domain.Entities.Colegio", "Colegio")
+                        .WithMany("Cursos")
+                        .HasForeignKey("ColegioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Colegio");
+                });
+
             modelBuilder.Entity("Back.Api.Domain.Entities.Estudiante", b =>
                 {
                     b.HasOne("Back.Api.Domain.Entities.Cuenta", "Cuenta")
@@ -544,6 +625,13 @@ namespace Back.Api.Persistence.Migrations
                     b.Navigation("ProfesorAsignaturaCursos");
 
                     b.Navigation("Tareas");
+                });
+
+            modelBuilder.Entity("Back.Api.Domain.Entities.Colegio", b =>
+                {
+                    b.Navigation("Cuentas");
+
+                    b.Navigation("Cursos");
                 });
 
             modelBuilder.Entity("Back.Api.Domain.Entities.Cuenta", b =>

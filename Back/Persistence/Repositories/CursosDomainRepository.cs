@@ -1,12 +1,13 @@
 using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Persistence.Context;
 using Back.Api.Application.Dtos;
+using Back.Api.Application.Abstractions.Security;
 using Back.Api.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Back.Api.Persistence.Repositories;
 
-public class CursosDomainRepository(AppDbContext context) : ICursosDomainRepository
+public class CursosDomainRepository(AppDbContext context, ICurrentSchoolContext currentSchoolContext) : ICursosDomainRepository
 {
     public Task<bool> ExisteAsync(int cursoId, CancellationToken cancellationToken = default) =>
         context.Cursos.AnyAsync(c => c.Id == cursoId, cancellationToken);
@@ -123,11 +124,11 @@ public class CursosDomainRepository(AppDbContext context) : ICursosDomainReposit
     {
         var existingCourse = await context.Cursos
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(c => c.Nombre == nombre, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Nombre == nombre && c.ColegioId == (currentSchoolContext.SchoolId ?? 1), cancellationToken);
 
         if (existingCourse is null)
         {
-            existingCourse = new Curso { Nombre = nombre };
+            existingCourse = new Curso { Nombre = nombre, ColegioId = currentSchoolContext.SchoolId ?? 1 };
             context.Cursos.Add(existingCourse);
         }
         else

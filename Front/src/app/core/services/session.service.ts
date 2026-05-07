@@ -1,12 +1,16 @@
 import { Injectable } from '@angular/core';
 
-export type SessionRole = 'profesor' | 'alumno' | 'admin';
+export type SessionRole = 'profesor' | 'alumno' | 'admin' | 'superusuario';
 
 export interface UserSession {
     rol: SessionRole;
     id: number;
     nombre: string;
     correo: string;
+    colegioId?: number;
+    colegio?: string;
+    colegioSlug?: string;
+    colegioLogoUrl?: string;
     cursoId?: number;
     curso?: string;
 }

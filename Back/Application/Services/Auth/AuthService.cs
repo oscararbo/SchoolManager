@@ -13,36 +13,94 @@ namespace Back.Api.Application.Services;
 
 public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> jwtOptions, IPasswordService passwordService) : IAuthService
 {
-    public async Task<ApplicationResult> LoginAsync(LoginRequestDto loginRequestDto, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> LoginAsync(LoginRequestDto loginRequestDto, string? colegioSlug, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(loginRequestDto.Correo) || string.IsNullOrWhiteSpace(loginRequestDto.Contrasena))
             return ApplicationResult.BadRequest("Correo y password son obligatorios.");
 
         var email = loginRequestDto.Correo.Trim().ToLowerInvariant();
         var password = loginRequestDto.Contrasena.Trim();
+        var slug = colegioSlug?.Trim().ToLowerInvariant();
 
-        var admin = await authDomain.FindAdminByCorreoAsync(email, cancellationToken);
+        var superUsuario = await authDomain.FindSuperUsuarioByCorreoAsync(email, cancellationToken);
+        if (superUsuario is not null && passwordService.Verify(superUsuario.Contrasena, password))
+        {
+            var tokenSuperUsuario = GenerarToken(superUsuario.Id, superUsuario.Correo, Roles.SuperUsuario, null, null);
+            var refreshSuperUsuario = await authDomain.CreateRefreshTokenAsync(superUsuario.Id, Roles.SuperUsuario, jwtOptions.Value.RefreshExpiresDays, cancellationToken);
+            return ApplicationResult.Ok(new LoginResponseDto
+            {
+                Rol = Roles.SuperUsuario,
+                Id = superUsuario.Id,
+                Nombre = "Superusuario",
+                Correo = superUsuario.Correo,
+                Token = tokenSuperUsuario,
+                RefreshToken = refreshSuperUsuario
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(slug))
+            return ApplicationResult.BadRequest("Debes indicar el colegio para iniciar sesion.");
+
+        var admin = await authDomain.FindAdminByCorreoAsync(email, slug, cancellationToken);
         if (admin?.Cuenta is not null && passwordService.Verify(admin.Cuenta.Contrasena, password))
         {
-            var token = GenerarToken(admin.Id, admin.Cuenta.Correo, Roles.Admin);
+            var token = GenerarToken(admin.Id, admin.Cuenta.Correo, Roles.Admin, admin.Cuenta.ColegioId, admin.Cuenta.Colegio?.Slug);
             var refreshToken = await authDomain.CreateRefreshTokenAsync(admin.Id, Roles.Admin, jwtOptions.Value.RefreshExpiresDays, cancellationToken);
-            return ApplicationResult.Ok(new LoginResponseDto { Rol = Roles.Admin, Id = admin.Id, Nombre = admin.Nombre, Correo = admin.Cuenta.Correo, Token = token, RefreshToken = refreshToken });
+            return ApplicationResult.Ok(new LoginResponseDto
+            {
+                Rol = Roles.Admin,
+                Id = admin.Id,
+                Nombre = admin.Nombre,
+                Correo = admin.Cuenta.Correo,
+                Token = token,
+                RefreshToken = refreshToken,
+                ColegioId = admin.Cuenta.ColegioId,
+                Colegio = admin.Cuenta.Colegio?.Nombre,
+                ColegioSlug = admin.Cuenta.Colegio?.Slug,
+                ColegioLogoUrl = admin.Cuenta.Colegio?.LogoUrl
+            });
         }
 
-        var teacher = await authDomain.FindProfesorByCorreoAsync(email, cancellationToken);
+        var teacher = await authDomain.FindProfesorByCorreoAsync(email, slug, cancellationToken);
         if (teacher?.Cuenta is not null && passwordService.Verify(teacher.Cuenta.Contrasena, password))
         {
-            var token = GenerarToken(teacher.Id, teacher.Cuenta.Correo, Roles.Profesor);
+            var token = GenerarToken(teacher.Id, teacher.Cuenta.Correo, Roles.Profesor, teacher.Cuenta.ColegioId, teacher.Cuenta.Colegio?.Slug);
             var refreshToken = await authDomain.CreateRefreshTokenAsync(teacher.Id, Roles.Profesor, jwtOptions.Value.RefreshExpiresDays, cancellationToken);
-            return ApplicationResult.Ok(new LoginResponseDto { Rol = Roles.Profesor, Id = teacher.Id, Nombre = teacher.Nombre, Correo = teacher.Cuenta.Correo, Token = token, RefreshToken = refreshToken });
+            return ApplicationResult.Ok(new LoginResponseDto
+            {
+                Rol = Roles.Profesor,
+                Id = teacher.Id,
+                Nombre = teacher.Nombre,
+                Correo = teacher.Cuenta.Correo,
+                Token = token,
+                RefreshToken = refreshToken,
+                ColegioId = teacher.Cuenta.ColegioId,
+                Colegio = teacher.Cuenta.Colegio?.Nombre,
+                ColegioSlug = teacher.Cuenta.Colegio?.Slug,
+                ColegioLogoUrl = teacher.Cuenta.Colegio?.LogoUrl
+            });
         }
 
-        var student = await authDomain.FindEstudianteByCorreoAsync(email, cancellationToken);
+        var student = await authDomain.FindEstudianteByCorreoAsync(email, slug, cancellationToken);
         if (student?.Cuenta is not null && passwordService.Verify(student.Cuenta.Contrasena, password))
         {
-            var token = GenerarToken(student.Id, student.Cuenta.Correo, Roles.Alumno);
+            var token = GenerarToken(student.Id, student.Cuenta.Correo, Roles.Alumno, student.Cuenta.ColegioId, student.Cuenta.Colegio?.Slug);
             var refreshToken = await authDomain.CreateRefreshTokenAsync(student.Id, Roles.Alumno, jwtOptions.Value.RefreshExpiresDays, cancellationToken);
-            return ApplicationResult.Ok(new LoginResponseDto { Rol = Roles.Alumno, Id = student.Id, Nombre = student.Nombre, Correo = student.Cuenta.Correo, Token = token, RefreshToken = refreshToken, CursoId = student.CursoId, Curso = student.Curso?.Nombre });
+            return ApplicationResult.Ok(new LoginResponseDto
+            {
+                Rol = Roles.Alumno,
+                Id = student.Id,
+                Nombre = student.Nombre,
+                Correo = student.Cuenta.Correo,
+                Token = token,
+                RefreshToken = refreshToken,
+                CursoId = student.CursoId,
+                Curso = student.Curso?.Nombre,
+                ColegioId = student.Cuenta.ColegioId,
+                Colegio = student.Cuenta.Colegio?.Nombre,
+                ColegioSlug = student.Cuenta.Colegio?.Slug,
+                ColegioLogoUrl = student.Cuenta.Colegio?.LogoUrl
+            });
         }
 
         return ApplicationResult.Unauthorized("Credenciales incorrectas.");
@@ -57,15 +115,15 @@ public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> 
         if (storedToken is null || !storedToken.IsActive)
             return ApplicationResult.Unauthorized("Refresh token no valido o expirado.");
 
-        var email = await authDomain.ObtenerCorreoAsync(storedToken.UserId, storedToken.Rol, cancellationToken);
-        if (email is null)
+        var userContext = await authDomain.GetUserContextAsync(storedToken.UserId, storedToken.Rol, cancellationToken);
+        if (userContext is null)
         {
             await authDomain.RevokeTokenAsync(storedToken, cancellationToken);
             return ApplicationResult.Unauthorized("Usuario no valido.");
         }
 
         await authDomain.RevokeTokenAsync(storedToken, cancellationToken);
-        var newAccessToken = GenerarToken(storedToken.UserId, email, storedToken.Rol);
+        var newAccessToken = GenerarToken(storedToken.UserId, userContext.Correo, storedToken.Rol, userContext.ColegioId, userContext.ColegioSlug);
         var newRefreshToken = await authDomain.CreateRefreshTokenAsync(storedToken.UserId, storedToken.Rol, jwtOptions.Value.RefreshExpiresDays, cancellationToken);
 
         return ApplicationResult.Ok(new RefreshResponseDto { Token = newAccessToken, RefreshToken = newRefreshToken });
@@ -93,7 +151,7 @@ public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> 
         return ApplicationResult.NoContent();
     }
 
-    private string GenerarToken(int userId, string email, string role)
+    private string GenerarToken(int userId, string email, string role, int? colegioId, string? colegioSlug)
     {
         var options = jwtOptions.Value;
 
@@ -105,6 +163,16 @@ public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> 
             new(ClaimTypes.NameIdentifier, userId.ToString()),
             new("id", userId.ToString())
         };
+
+        if (colegioId.HasValue)
+        {
+            claims.Add(new Claim("schoolId", colegioId.Value.ToString()));
+        }
+
+        if (!string.IsNullOrWhiteSpace(colegioSlug))
+        {
+            claims.Add(new Claim("schoolSlug", colegioSlug));
+        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(options.Key));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

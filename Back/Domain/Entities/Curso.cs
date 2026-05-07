@@ -4,6 +4,8 @@ public class Curso : ISoftDeletable
 {
     public int Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
+    public int ColegioId { get; set; }
+    public Colegio? Colegio { get; set; }
     public bool IsDeleted { get; set; }
     public ICollection<Asignatura> Asignaturas { get; set; } = new List<Asignatura>();
     public ICollection<Estudiante> Estudiantes { get; set; } = new List<Estudiante>();

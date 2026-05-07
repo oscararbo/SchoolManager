@@ -3,6 +3,8 @@ namespace Back.Api.Domain.Entities;
 public class Cuenta : ISoftDeletable
 {
     public int Id { get; set; }
+    public int? ColegioId { get; set; }
+    public Colegio? Colegio { get; set; }
     public string Correo { get; set; } = string.Empty;
     public string Contrasena { get; set; } = string.Empty;
     public string Rol { get; set; } = string.Empty;

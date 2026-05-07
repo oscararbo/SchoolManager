@@ -6,6 +6,7 @@ import { AuthStateService } from '../../core/services/auth-state.service';
 import { ProfesorHomeComponent } from '../../features/home/profesor-home/profesor-home';
 import { AlumnoHomeComponent } from '../../features/home/alumno-home/alumno-home';
 import { AdminHomeComponent } from '../../features/home/admin-home/admin-home';
+import { SuperusuarioHomeComponent } from '../../features/home/superusuario-home/superusuario-home.component';
 import { LogoutButtonComponent } from '../../shared/components/logout-button/logout-button.component';
 import { SchoolApiService } from '../../shared/services/school-api.service';
 import { SessionExpiredDialogComponent } from '../../shared/components/session-expired-dialog/session-expired-dialog.component';
@@ -13,7 +14,7 @@ import { SessionExpiredDialogComponent } from '../../shared/components/session-e
 @Component({
   selector: 'app-home-layout',
   standalone: true,
-  imports: [CommonModule, ProfesorHomeComponent, AlumnoHomeComponent, AdminHomeComponent, LogoutButtonComponent, SessionExpiredDialogComponent],
+  imports: [CommonModule, ProfesorHomeComponent, AlumnoHomeComponent, AdminHomeComponent, SuperusuarioHomeComponent, LogoutButtonComponent, SessionExpiredDialogComponent],
   templateUrl: './home-layout.html',
   styleUrl: './home-layout.scss',
 })
@@ -33,6 +34,10 @@ export class HomeLayout implements OnInit {
 
     if (currentSession.rol === 'admin') {
       return 'Panel de administracion';
+    }
+
+    if (currentSession.rol === 'superusuario') {
+      return 'Panel de superusuario';
     }
 
     if (currentSession.rol === 'profesor') {

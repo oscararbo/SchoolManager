@@ -6,6 +6,20 @@
 
 	@if (session()) {
         @switch (session()!.rol) {
+            @case ('superusuario') {
+                @defer (when session()!.rol === 'superusuario') {
+                    <app-superusuario-home></app-superusuario-home>
+                } @placeholder {
+                    <section class="placeholder-glow" aria-hidden="true">
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-body">
+                                <span class="placeholder col-4 mb-2"></span>
+                                <span class="placeholder col-8"></span>
+                            </div>
+                        </div>
+                    </section>
+                }
+            }
             @case ('admin') {
                 @defer (when session()!.rol === 'admin') {
                     <app-admin-home></app-admin-home>

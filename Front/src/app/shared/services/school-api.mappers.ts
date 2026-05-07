@@ -1,5 +1,7 @@
 import type {
   ApiAsignaturaItem,
+  ApiColegioAdminItem,
+  ApiColegioItem,
   ApiCursoItem,
   ApiEstudianteItem,
   ApiLoginResponse,
@@ -7,11 +9,13 @@ import type {
 } from './school-api.contracts';
 import type {
   AsignaturaItem,
+  ColegioAdminItem,
+  ColegioItem,
   CursoItem,
   EstudianteItem,
   LoginResponse,
   ProfesorListItem
-} from './school-api.service';
+} from './school-api.types';
 
 function safeText(value: string | null | undefined): string {
   return (value ?? '').trim();
@@ -24,8 +28,38 @@ export function mapLoginResponse(api: ApiLoginResponse): LoginResponse {
     nombre: safeText(api.nombre),
     correo: safeText(api.correo).toLowerCase(),
     token: safeText(api.token),
+    colegioId: api.colegioId,
+    colegio: api.colegio ? safeText(api.colegio) : undefined,
+    colegioSlug: api.colegioSlug ? safeText(api.colegioSlug) : undefined,
+    colegioLogoUrl: api.colegioLogoUrl ? safeText(api.colegioLogoUrl) : undefined,
     cursoId: api.cursoId,
     curso: api.curso ? safeText(api.curso) : undefined
+  };
+}
+
+export function mapColegioItem(api: ApiColegioItem): ColegioItem {
+  return {
+    id: api.id,
+    nombre: safeText(api.nombre),
+    slug: safeText(api.slug),
+    logoUrl: api.logoUrl ? safeText(api.logoUrl) : null,
+    faviconUrl: api.faviconUrl ? safeText(api.faviconUrl) : null,
+    colorPrimario: api.colorPrimario ? safeText(api.colorPrimario) : null,
+    mensajeLogin: api.mensajeLogin ? safeText(api.mensajeLogin) : null,
+    totalAdmins: api.totalAdmins,
+    totalProfesores: api.totalProfesores,
+    totalAlumnos: api.totalAlumnos,
+    totalCursos: api.totalCursos
+  };
+}
+
+export function mapColegioAdminItem(api: ApiColegioAdminItem): ColegioAdminItem {
+  return {
+    id: api.id,
+    nombre: safeText(api.nombre),
+    correo: safeText(api.correo).toLowerCase(),
+    colegioId: api.colegioId,
+    colegio: safeText(api.colegio)
   };
 }
 

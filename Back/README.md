@@ -1,6 +1,6 @@
 # Back
 
-API REST del sistema de gestion escolar. Expone autenticacion, administracion academica, panel del profesor, panel del alumno e importacion masiva por CSV.
+API REST del sistema de gestion escolar multi-colegio. Expone autenticacion, administracion academica, superusuario, panel del profesor, panel del alumno e importacion masiva por CSV.
 
 ## Stack
 
@@ -36,6 +36,14 @@ Variables relevantes del servicio `back`:
 - `SeedAdmin__Nombre`
 - `SeedAdmin__Correo`
 - `SeedAdmin__Contrasena`
+- `SeedSchool__Nombre`
+- `SeedSchool__Slug`
+- `SeedSchool__LogoUrl`
+- `SeedSchool__FaviconUrl`
+- `SeedSchool__ColorPrimario`
+- `SeedSchool__MensajeLogin`
+- `SeedSuperUsuario__Correo`
+- `SeedSuperUsuario__Contrasena`
 
 ## Configuracion
 
@@ -46,6 +54,8 @@ Claves relevantes:
 - `ConnectionStrings:DefaultConnection`
 - `Jwt:Key`, `Jwt:Issuer`, `Jwt:Audience`
 - `SeedAdmin:Nombre`, `SeedAdmin:Correo`, `SeedAdmin:Contrasena`
+- `SeedSchool:Nombre`, `SeedSchool:Slug`, `SeedSchool:LogoUrl`, `SeedSchool:FaviconUrl`, `SeedSchool:ColorPrimario`, `SeedSchool:MensajeLogin`
+- `SeedSuperUsuario:Correo`, `SeedSuperUsuario:Contrasena`
 
 ## Administrador semilla
 
@@ -56,6 +66,16 @@ Valores por defecto:
 - nombre: `Administrador`
 - correo: `admin@prueba.com`
 - contrasena: `Prueba1`
+
+Superusuario semilla por defecto:
+
+- correo: `root@schoolmanager.com`
+- contrasena: `Super123!`
+
+Colegio semilla por defecto:
+
+- nombre: `Colegio Principal`
+- slug: `default`
 
 ## Estructura de archivos
 
@@ -113,6 +133,19 @@ Referencia completa: `Application/Dtos/DTO_CONVENTIONS.md`.
 - `POST /api/auth/login`
 - `POST /api/auth/refresh`
 - `POST /api/auth/logout`
+
+Para login de roles por colegio (`admin`, `profesor`, `alumno`) se debe enviar header `X-School-Slug`.
+`superusuario` no requiere slug.
+
+### Superusuario
+
+- `GET /api/superusuario/colegios`
+- `GET /api/superusuario/colegios/slug/{slug}`
+- `POST /api/superusuario/colegios`
+- `PUT /api/superusuario/colegios/{colegioId}`
+- `DELETE /api/superusuario/colegios/{colegioId}`
+- `GET /api/superusuario/colegios/{colegioId}/admins`
+- `POST /api/superusuario/colegios/{colegioId}/admins`
 
 ### Admin
 
@@ -217,3 +250,21 @@ dotnet build Back.slnx
 ```bash
 dotnet test ../Back.Tests/Back.Tests.csproj
 ```
+
+## Migraciones EF Core
+
+Antes de `dotnet ef database update`, asegúrate de tener PostgreSQL escuchando en `localhost:5432`.
+
+Desde la raiz del repo:
+
+```bash
+docker compose up -d postgres
+```
+
+Luego, en `Back/`:
+
+```bash
+dotnet ef database update --project Back.Api.csproj --startup-project Back.Api.csproj
+```
+
+Si aparece `Failed to connect to 127.0.0.1:5432`, el motor PostgreSQL no esta levantado o Docker Desktop no esta iniciado.
