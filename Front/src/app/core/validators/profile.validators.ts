@@ -1,6 +1,6 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 
-const dniRegex = /^\d{8}[TRWAGMYFPDXBNJZSQVHLCKE]$/i;
+const dniRegex = /^(?:\d{8}|[XYZ]\d{7})[TRWAGMYFPDXBNJZSQVHLCKE]$/i;
 const phoneRegex = /^[6-9]\d{8}$/;
 
 export function dniValidator(): ValidatorFn {

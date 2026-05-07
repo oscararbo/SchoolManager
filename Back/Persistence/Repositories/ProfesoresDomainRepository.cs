@@ -31,6 +31,14 @@ public class ProfesoresDomainRepository(AppDbContext context, ICurrentSchoolCont
     public Task<bool> CorreoDuplicadoExceptAsync(string correo, int exceptProfesorId, CancellationToken cancellationToken = default)
         => context.Cuentas.AnyAsync(c => c.Correo == correo && c.ColegioId == currentSchoolContext.SchoolId && (c.Profesor == null || c.Profesor.Id != exceptProfesorId), cancellationToken);
 
+    public async Task<bool> DocumentoDuplicadoAsync(string documentoIdentidad, CancellationToken cancellationToken = default)
+        => await context.Profesores.AnyAsync(p => p.DNI == documentoIdentidad, cancellationToken)
+            || await context.Estudiantes.AnyAsync(e => e.DNI == documentoIdentidad, cancellationToken);
+
+    public async Task<bool> DocumentoDuplicadoExceptAsync(string documentoIdentidad, int exceptProfesorId, CancellationToken cancellationToken = default)
+        => await context.Profesores.AnyAsync(p => p.DNI == documentoIdentidad && p.Id != exceptProfesorId, cancellationToken)
+            || await context.Estudiantes.AnyAsync(e => e.DNI == documentoIdentidad, cancellationToken);
+
     public Task<bool> CursoExisteAsync(int cursoId, CancellationToken cancellationToken = default)
         => context.Cursos.AnyAsync(c => c.Id == cursoId, cancellationToken);
 
@@ -665,7 +673,7 @@ public class ProfesoresDomainRepository(AppDbContext context, ICurrentSchoolCont
         return new ProfesorListItemDto { Id = teacher.Id, Nombre = teacher.Nombre, Apellidos = teacher.Apellidos, DNI = teacher.DNI, Telefono = teacher.Telefono, Especialidad = teacher.Especialidad, Correo = teacher.Cuenta!.Correo, Imparticiones = new() };
     }
 
-    public async Task<ProfesorListItemDto?> UpdateProfesorAsync(int profesorId, string nombre, string correo, string? contrasenaHash, string apellidos, string dni, string telefono, string especialidad, CancellationToken cancellationToken = default)
+    public async Task<ProfesorListItemDto?> UpdateProfesorAsync(int profesorId, string nombre, string apellidos, string dni, string telefono, string especialidad, CancellationToken cancellationToken = default)
     {
         var teacher = await context.Profesores
             .Include(p => p.Cuenta)
@@ -677,11 +685,6 @@ public class ProfesoresDomainRepository(AppDbContext context, ICurrentSchoolCont
         teacher.DNI = dni;
         teacher.Telefono = telefono;
         teacher.Especialidad = especialidad;
-        if (teacher.Cuenta is not null)
-        {
-            teacher.Cuenta.Correo = correo;
-            if (contrasenaHash is not null) teacher.Cuenta.Contrasena = contrasenaHash;
-        }
 
         await context.SaveChangesAsync(cancellationToken);
 

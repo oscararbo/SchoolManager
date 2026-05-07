@@ -11,6 +11,7 @@ public static class EstudiantesRepositoryMockFactory
         var repo = new Mock<IEstudiantesDomainRepository>(MockBehavior.Strict);
 
         repo.Setup(r => r.CorreoDuplicadoAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        repo.Setup(r => r.DocumentoDuplicadoAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
         repo.Setup(r => r.CursoExisteAsync(It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
         repo.Setup(r => r.CreateEstudianteAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(),

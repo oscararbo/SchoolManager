@@ -32,6 +32,7 @@ export interface ColegioAdminItem {
     correo: string;
     colegioId: number;
     colegio: string;
+    contrasenaTemporal?: string;
 }
 
 export interface ProfesorPanel {
@@ -197,6 +198,7 @@ export interface ProfesorListItem {
     telefono: string;
     especialidad: string;
     correo: string;
+    contrasenaTemporal?: string;
     imparticiones: ProfesorImparticion[];
 }
 
@@ -208,6 +210,7 @@ export interface EstudianteItem {
     telefono: string;
     fechaNacimiento: string;
     correo: string;
+    contrasenaTemporal?: string;
     cursoId: number;
     curso: string | null;
 }
@@ -218,8 +221,6 @@ export interface CreateProfesorData {
     dni: string;
     telefono: string;
     especialidad: string;
-    correo: string;
-    contrasena: string;
 }
 
 export interface UpdateProfesorData {
@@ -228,8 +229,6 @@ export interface UpdateProfesorData {
     dni: string;
     telefono: string;
     especialidad: string;
-    correo: string;
-    nuevaContrasena?: string;
 }
 
 export interface CreateEstudianteData {
@@ -238,8 +237,6 @@ export interface CreateEstudianteData {
     dni: string;
     telefono: string;
     fechaNacimiento: string;
-    correo: string;
-    contrasena: string;
     cursoId: number;
 }
 
@@ -249,9 +246,7 @@ export interface UpdateEstudianteData {
     dni: string;
     telefono: string;
     fechaNacimiento: string;
-    correo: string;
     cursoId: number;
-    nuevaContrasena?: string;
 }
 
 export interface CsvImportResult {

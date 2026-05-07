@@ -18,26 +18,9 @@
                     <form [formGroup]="editProfesorForm">
                         <app-text-input id="editProfesorNombre" label="Nombre" formControlName="nombre"></app-text-input>
                         <app-text-input id="editProfesorApellidos" label="Apellidos" formControlName="apellidos"></app-text-input>
-                        <app-text-input id="editProfesorDni" label="DNI" formControlName="dni" placeholder="12345678Z"></app-text-input>
+                        <app-text-input id="editProfesorDni" label="DNI/NIE" formControlName="dni" placeholder="12345678Z o X1234567L"></app-text-input>
                         <app-text-input id="editProfesorTelefono" label="Telefono" type="tel" formControlName="telefono" placeholder="612345678"></app-text-input>
                         <app-text-input id="editProfesorEspecialidad" label="Especialidad" formControlName="especialidad"></app-text-input>
-                        <app-text-input
-                            id="editProfesorCorreo"
-                            type="email"
-                            label="Correo"
-                            formControlName="correo"
-                            [maxLength]="200"
-                            [errorMessage]="controlErrorMessage(editProfesorForm.get('correo'))">
-                        </app-text-input>
-                        <app-text-input
-                            id="editProfesorPass"
-                            type="password"
-                            label="Nueva contraseña (opcional)"
-                            formControlName="nuevaContrasena"
-                            placeholder="Dejar en blanco para no cambiar"
-                            [maxLength]="200"
-                            [errorMessage]="controlErrorMessage(editProfesorForm.get('nuevaContrasena'))">
-                        </app-text-input>
 
                         <div class="d-flex gap-2">
                             <button class="btn btn-success" type="button" (click)="guardarProfesor.emit()" [disabled]="cargandoGuardarProfesor || editProfesorForm.invalid">
@@ -51,25 +34,12 @@
                     <form [formGroup]="profesorForm" (ngSubmit)="crearProfesor.emit()">
                         <app-text-input id="createProfesorNombre" label="Nombre" formControlName="nombre"></app-text-input>
                         <app-text-input id="createProfesorApellidos" label="Apellidos" formControlName="apellidos"></app-text-input>
-                        <app-text-input id="createProfesorDni" label="DNI" formControlName="dni" placeholder="12345678Z"></app-text-input>
+                        <app-text-input id="createProfesorDni" label="DNI/NIE" formControlName="dni" placeholder="12345678Z o X1234567L"></app-text-input>
                         <app-text-input id="createProfesorTelefono" label="Telefono" type="tel" formControlName="telefono" placeholder="612345678"></app-text-input>
                         <app-text-input id="createProfesorEspecialidad" label="Especialidad" formControlName="especialidad"></app-text-input>
-                        <app-text-input
-                            id="createProfesorCorreo"
-                            type="email"
-                            label="Correo"
-                            formControlName="correo"
-                            [maxLength]="200"
-                            [errorMessage]="controlErrorMessage(profesorForm.get('correo'))">
-                        </app-text-input>
-                        <app-text-input
-                            id="createProfesorContrasena"
-                            type="password"
-                            label="Contrasena"
-                            formControlName="contrasena"
-                            [maxLength]="200"
-                            [errorMessage]="controlErrorMessage(profesorForm.get('contrasena'))">
-                        </app-text-input>
+                        <div class="alert alert-light border small mb-2">
+                            El correo y la contrasena temporal se generan automaticamente.
+                        </div>
 
                         <button class="btn btn-primary" type="submit" [disabled]="cargandoCrearProfesor || profesorForm.invalid">
                             {{ cargandoCrearProfesor ? 'Creando...' : 'Crear profesor' }}

@@ -59,7 +59,8 @@ export function mapColegioAdminItem(api: ApiColegioAdminItem): ColegioAdminItem 
     nombre: safeText(api.nombre),
     correo: safeText(api.correo).toLowerCase(),
     colegioId: api.colegioId,
-    colegio: safeText(api.colegio)
+    colegio: safeText(api.colegio),
+    contrasenaTemporal: api.contrasenaTemporal ? safeText(api.contrasenaTemporal) : undefined
   };
 }
 
@@ -89,6 +90,7 @@ export function mapProfesorListItem(api: ApiProfesorListItem): ProfesorListItem 
     telefono: safeText(api.telefono),
     especialidad: safeText(api.especialidad),
     correo: safeText(api.correo).toLowerCase(),
+    contrasenaTemporal: api.contrasenaTemporal ? safeText(api.contrasenaTemporal) : undefined,
     imparticiones: api.imparticiones.map(i => ({
       asignaturaId: i.asignaturaId,
       asignatura: safeText(i.asignatura),
@@ -107,6 +109,7 @@ export function mapEstudianteItem(api: ApiEstudianteItem): EstudianteItem {
     telefono: safeText(api.telefono),
     fechaNacimiento: safeText(api.fechaNacimiento),
     correo: safeText(api.correo).toLowerCase(),
+    contrasenaTemporal: api.contrasenaTemporal ? safeText(api.contrasenaTemporal) : undefined,
     cursoId: api.cursoId,
     curso: api.curso ? safeText(api.curso) : null
   };

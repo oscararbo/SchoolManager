@@ -10,17 +10,6 @@ public class CreateEstudianteRequestDto
     [MaxLength(120)]
     public string Nombre { get; set; } = string.Empty;
 
-    [Required]
-    [EmailAddress]
-    [MaxLength(200)]
-    public string Correo { get; set; } = string.Empty;
-
-    [Required]
-    [MinLength(6)]
-    [TrimmedMinLength(6)]
-    [MaxLength(200)]
-    public string Contrasena { get; set; } = string.Empty;
-
     [Range(1, int.MaxValue)]
     public int CursoId { get; set; }
 
@@ -30,7 +19,7 @@ public class CreateEstudianteRequestDto
 
     [Required]
     [MaxLength(20)]
-    [RegularExpression(@"^\d{8}[TRWAGMYFPDXBNJZSQVHLCKEtrwagmyfpdxbnjzsqvhlcke]$", ErrorMessage = "El DNI debe tener 8 dígitos seguidos de una letra válida.")]
+    [RegularExpression(@"^(?:\d{8}|[XYZxyz]\d{7})[TRWAGMYFPDXBNJZSQVHLCKEtrwagmyfpdxbnjzsqvhlcke]$", ErrorMessage = "El documento debe ser un DNI o NIE valido.")]
     public string DNI { get; set; } = string.Empty;
 
     [Required]

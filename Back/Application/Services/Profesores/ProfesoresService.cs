@@ -7,7 +7,7 @@ using System.Security.Claims;
 
 namespace Back.Api.Application.Services;
 
-public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPasswordService passwordService) : IProfesoresService
+public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPasswordService passwordService, ICurrentSchoolContext currentSchoolContext) : IProfesoresService
 {
     public async Task<ApplicationResult> GetAllProfesoresAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await profesoresDomain.GetAllProfesoresAsync(cancellationToken));
@@ -27,16 +27,18 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
     {
         if (string.IsNullOrWhiteSpace(createProfesorRequestDto.Nombre))
             return ApplicationResult.BadRequest("El nombre del teacher es obligatorio.");
-        if (string.IsNullOrWhiteSpace(createProfesorRequestDto.Correo))
-            return ApplicationResult.BadRequest("El email del teacher es obligatorio.");
-        if (string.IsNullOrWhiteSpace(createProfesorRequestDto.Contrasena))
-            return ApplicationResult.BadRequest("La contrasena del teacher es obligatoria.");
+        var normalizedDocumento = CredentialGenerationHelper.NormalizeDniNie(createProfesorRequestDto.DNI);
+        if (!CredentialGenerationHelper.IsValidDniNie(normalizedDocumento))
+            return ApplicationResult.BadRequest("El documento debe ser un DNI o NIE valido.");
+        if (await profesoresDomain.DocumentoDuplicadoAsync(normalizedDocumento, cancellationToken))
+            return ApplicationResult.BadRequest("Ya existe una persona con ese DNI/NIE.");
 
-        var email = createProfesorRequestDto.Correo.Trim().ToLowerInvariant();
-        if (await profesoresDomain.CorreoDuplicadoAsync(email, cancellationToken))
-            return ApplicationResult.BadRequest("Ya existe un teacher con ese email.");
+        var schoolSlug = CredentialGenerationHelper.NormalizeSchoolSlugForDomain(currentSchoolContext.SchoolSlug, currentSchoolContext.SchoolId);
+        var generatedPassword = CredentialGenerationHelper.GeneratePassword();
+        var generatedEmail = await GenerateUniqueEmailAsync($"{createProfesorRequestDto.Nombre} {createProfesorRequestDto.Apellidos}", "profesor", schoolSlug, cancellationToken);
 
-        var createdProfesor = await profesoresDomain.CreateProfesorAsync(createProfesorRequestDto.Nombre.Trim(), email, passwordService.Hash(createProfesorRequestDto.Contrasena.Trim()), createProfesorRequestDto.Apellidos.Trim(), createProfesorRequestDto.DNI.Trim().ToUpperInvariant(), createProfesorRequestDto.Telefono.Trim(), createProfesorRequestDto.Especialidad.Trim(), cancellationToken);
+        var createdProfesor = await profesoresDomain.CreateProfesorAsync(createProfesorRequestDto.Nombre.Trim(), generatedEmail, passwordService.Hash(generatedPassword), createProfesorRequestDto.Apellidos.Trim(), normalizedDocumento, createProfesorRequestDto.Telefono.Trim(), createProfesorRequestDto.Especialidad.Trim(), cancellationToken);
+        createdProfesor.ContrasenaTemporal = generatedPassword;
         return ApplicationResult.Created($"/api/profesores/{createdProfesor.Id}", createdProfesor);
     }
 
@@ -197,23 +199,33 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
     {
         if (string.IsNullOrWhiteSpace(updateProfesorRequestDto.Nombre))
             return ApplicationResult.BadRequest("El nombre del teacher es obligatorio.");
-        if (string.IsNullOrWhiteSpace(updateProfesorRequestDto.Correo))
-            return ApplicationResult.BadRequest("El email del teacher es obligatorio.");
         if (!await profesoresDomain.ProfesorExisteAsync(profesorId, cancellationToken))
             return ApplicationResult.NotFound("El teacher no existe.");
 
-        var email = updateProfesorRequestDto.Correo.Trim().ToLowerInvariant();
-        if (await profesoresDomain.CorreoDuplicadoExceptAsync(email, profesorId, cancellationToken))
-            return ApplicationResult.BadRequest("Ya existe otro teacher con ese email.");
+        var normalizedDocumento = CredentialGenerationHelper.NormalizeDniNie(updateProfesorRequestDto.DNI);
+        if (!CredentialGenerationHelper.IsValidDniNie(normalizedDocumento))
+            return ApplicationResult.BadRequest("El documento debe ser un DNI o NIE valido.");
+        if (await profesoresDomain.DocumentoDuplicadoExceptAsync(normalizedDocumento, profesorId, cancellationToken))
+            return ApplicationResult.BadRequest("Ya existe una persona con ese DNI/NIE.");
 
-        string? passwordHash = string.IsNullOrWhiteSpace(updateProfesorRequestDto.NuevaContrasena)
-            ? null
-            : passwordService.Hash(updateProfesorRequestDto.NuevaContrasena.Trim());
-
-        var updatedProfesor = await profesoresDomain.UpdateProfesorAsync(profesorId, updateProfesorRequestDto.Nombre.Trim(), email, passwordHash, updateProfesorRequestDto.Apellidos.Trim(), updateProfesorRequestDto.DNI.Trim().ToUpperInvariant(), updateProfesorRequestDto.Telefono.Trim(), updateProfesorRequestDto.Especialidad.Trim(), cancellationToken);
+        var updatedProfesor = await profesoresDomain.UpdateProfesorAsync(profesorId, updateProfesorRequestDto.Nombre.Trim(), updateProfesorRequestDto.Apellidos.Trim(), normalizedDocumento, updateProfesorRequestDto.Telefono.Trim(), updateProfesorRequestDto.Especialidad.Trim(), cancellationToken);
         return updatedProfesor is null
             ? ApplicationResult.NotFound("El teacher no existe.")
             : ApplicationResult.Ok(updatedProfesor);
+    }
+
+    private async Task<string> GenerateUniqueEmailAsync(string fullName, string rolePrefix, string schoolSlug, CancellationToken cancellationToken)
+    {
+        for (var i = 0; i < 2000; i++)
+        {
+            var candidate = CredentialGenerationHelper.BuildGeneratedEmail(fullName, rolePrefix, schoolSlug, i);
+            if (!await profesoresDomain.CorreoDuplicadoAsync(candidate, cancellationToken))
+            {
+                return candidate;
+            }
+        }
+
+        throw new InvalidOperationException("No se pudo generar un correo unico para el profesor.");
     }
 
     public async Task<ApplicationResult> DeleteProfesorAsync(int profesorId, CancellationToken cancellationToken = default)

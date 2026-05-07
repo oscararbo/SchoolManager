@@ -104,7 +104,7 @@ export class SchoolApiService {
     createColegio(nombre: string, slug: string, logoUrl?: string, faviconUrl?: string, colorPrimario?: string, mensajeLogin?: string): Promise<ColegioItem> { return this.superUsuario.createColegio(nombre, slug, logoUrl, faviconUrl, colorPrimario, mensajeLogin); }
     updateColegio(id: number, nombre: string, slug: string, logoUrl?: string, faviconUrl?: string, colorPrimario?: string, mensajeLogin?: string): Promise<ColegioItem> { return this.superUsuario.updateColegio(id, nombre, slug, logoUrl, faviconUrl, colorPrimario, mensajeLogin); }
     deleteColegio(id: number): Promise<void> { return this.superUsuario.deleteColegio(id); }
-    createAdminColegio(colegioId: number, nombre: string, correo: string, contrasena: string): Promise<ColegioAdminItem> { return this.superUsuario.createAdminColegio(colegioId, nombre, correo, contrasena); }
+    createAdminColegio(colegioId: number, nombre: string): Promise<ColegioAdminItem> { return this.superUsuario.createAdminColegio(colegioId, nombre); }
 
     // Profesor panel
     getPanelProfesor(profesorId: number): Promise<ProfesorPanel> { return this.profesor.getPanelProfesor(profesorId); }

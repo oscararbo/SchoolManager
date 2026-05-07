@@ -65,9 +65,9 @@ export class SchoolApiSuperUsuarioService {
         }
     }
 
-    async createAdminColegio(colegioId: number, nombre: string, correo: string, contrasena: string): Promise<ColegioAdminItem> {
+    async createAdminColegio(colegioId: number, nombre: string): Promise<ColegioAdminItem> {
         try {
-            const response = await firstValueFrom(this.http.post<ApiColegioAdminItem>(`${this.apiUrl}/superusuario/colegios/${colegioId}/admins`, { nombre, correo, contrasena }));
+            const response = await firstValueFrom(this.http.post<ApiColegioAdminItem>(`${this.apiUrl}/superusuario/colegios/${colegioId}/admins`, { nombre }));
             return mapColegioAdminItem(response);
         } catch (e) {
             throw extractSchoolApiError(e);

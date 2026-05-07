@@ -60,18 +60,38 @@ public class SuperUsuarioService(
 
     public async Task<ApplicationResult> CreateAdminColegioAsync(int colegioId, CreateAdminColegioRequestDto request, CancellationToken cancellationToken = default)
     {
-        var correo = request.Correo.Trim().ToLowerInvariant();
-        if (await superUsuarioDomain.ColegioCorreoDuplicadoAsync(colegioId, correo, cancellationToken))
-            return ApplicationResult.BadRequest("Ya existe una cuenta con ese correo en este colegio.");
+        var colegio = await superUsuarioDomain.GetColegioByIdAsync(colegioId, cancellationToken);
+        if (colegio is null)
+            return ApplicationResult.NotFound("Colegio no encontrado.");
+
+        var schoolSlug = CredentialGenerationHelper.NormalizeSchoolSlugForDomain(colegio.Slug, colegio.Id);
+        var generatedPassword = CredentialGenerationHelper.GeneratePassword();
+        var generatedEmail = await GenerateUniqueEmailAsync($"{request.Nombre}", "admin", schoolSlug, colegioId, cancellationToken);
 
         var created = await superUsuarioDomain.CreateAdminColegioAsync(
             colegioId,
             request.Nombre.Trim(),
-            correo,
-            passwordService.Hash(request.Contrasena.Trim()),
+            generatedEmail,
+            passwordService.Hash(generatedPassword),
             cancellationToken);
 
+        created.ContrasenaTemporal = generatedPassword;
+
         return ApplicationResult.Created($"/api/superusuario/colegios/{colegioId}/admins/{created.Id}", created);
+    }
+
+    private async Task<string> GenerateUniqueEmailAsync(string fullName, string rolePrefix, string schoolSlug, int colegioId, CancellationToken cancellationToken)
+    {
+        for (var i = 0; i < 2000; i++)
+        {
+            var candidate = CredentialGenerationHelper.BuildGeneratedEmail(fullName, rolePrefix, schoolSlug, i);
+            if (!await superUsuarioDomain.ColegioCorreoDuplicadoAsync(colegioId, candidate, cancellationToken))
+            {
+                return candidate;
+            }
+        }
+
+        throw new InvalidOperationException("No se pudo generar un correo unico para el administrador del colegio.");
     }
 
     private static string NormalizeSlug(string slug)

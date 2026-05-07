@@ -49,6 +49,26 @@ public class SuperUsuarioDomainRepository(AppDbContext context) : ISuperUsuarioD
             })
             .FirstOrDefaultAsync(cancellationToken);
 
+    public Task<ColegioListItemDto?> GetColegioByIdAsync(int colegioId, CancellationToken cancellationToken = default)
+        => context.Colegios
+            .AsNoTracking()
+            .Where(c => c.Id == colegioId)
+            .Select(c => new ColegioListItemDto
+            {
+                Id = c.Id,
+                Nombre = c.Nombre,
+                Slug = c.Slug,
+                LogoUrl = c.LogoUrl,
+                FaviconUrl = c.FaviconUrl,
+                ColorPrimario = c.ColorPrimario,
+                MensajeLogin = c.MensajeLogin,
+                TotalAdmins = c.Cuentas.Count(cuenta => cuenta.Rol == Roles.Admin && !cuenta.IsDeleted),
+                TotalProfesores = c.Cuentas.Count(cuenta => cuenta.Rol == Roles.Profesor && !cuenta.IsDeleted),
+                TotalAlumnos = c.Cuentas.Count(cuenta => cuenta.Rol == Roles.Alumno && !cuenta.IsDeleted),
+                TotalCursos = c.Cursos.Count(curso => !curso.IsDeleted)
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task<IEnumerable<ColegioAdminListItemDto>> GetAdminsByColegioAsync(int colegioId, CancellationToken cancellationToken = default)
         => await context.Admins
             .AsNoTracking()

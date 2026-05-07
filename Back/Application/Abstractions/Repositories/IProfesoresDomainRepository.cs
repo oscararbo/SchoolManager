@@ -12,6 +12,8 @@ public interface IProfesoresDomainRepository
     Task<bool> ProfesorImparteTareaAsync(int profesorId, int tareaId, CancellationToken cancellationToken = default);
     Task<bool> CorreoDuplicadoAsync(string correo, CancellationToken cancellationToken = default);
     Task<bool> CorreoDuplicadoExceptAsync(string correo, int exceptProfesorId, CancellationToken cancellationToken = default);
+    Task<bool> DocumentoDuplicadoAsync(string documentoIdentidad, CancellationToken cancellationToken = default);
+    Task<bool> DocumentoDuplicadoExceptAsync(string documentoIdentidad, int exceptProfesorId, CancellationToken cancellationToken = default);
     Task<bool> CursoExisteAsync(int cursoId, CancellationToken cancellationToken = default);
     Task<bool> AsignaturaYaTieneOtroProfesorAsync(int asignaturaId, int profesorId, CancellationToken cancellationToken = default);
     Task<bool> ImparticionExisteAsync(int profesorId, int asignaturaId, int cursoId, CancellationToken cancellationToken = default);
@@ -38,7 +40,7 @@ public interface IProfesoresDomainRepository
     Task<IEnumerable<TareaConNotasDto>> GetTareasConNotasAsync(int asignaturaId, CancellationToken cancellationToken = default);
     Task<ProfesorStatsDto?> GetStatsAsync(int profesorId, CancellationToken cancellationToken = default);
     Task<ProfesorListItemDto> CreateProfesorAsync(string nombre, string correo, string contrasenaHash, string apellidos, string dni, string telefono, string especialidad, CancellationToken cancellationToken = default);
-    Task<ProfesorListItemDto?> UpdateProfesorAsync(int profesorId, string nombre, string correo, string? contrasenaHash, string apellidos, string dni, string telefono, string especialidad, CancellationToken cancellationToken = default);
+    Task<ProfesorListItemDto?> UpdateProfesorAsync(int profesorId, string nombre, string apellidos, string dni, string telefono, string especialidad, CancellationToken cancellationToken = default);
     Task DeleteProfesorAsync(int profesorId, CancellationToken cancellationToken = default);
     Task AsignarImparticionAsync(int profesorId, int asignaturaId, int cursoId, CancellationToken cancellationToken = default);
     Task EliminarImparticionAsync(int profesorId, int asignaturaId, int cursoId, CancellationToken cancellationToken = default);

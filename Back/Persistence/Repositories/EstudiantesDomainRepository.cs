@@ -19,6 +19,14 @@ public class EstudiantesDomainRepository(AppDbContext context, ICurrentSchoolCon
     public Task<bool> CorreoDuplicadoExceptAsync(string correo, int exceptEstudianteId, CancellationToken cancellationToken = default) =>
         context.Cuentas.AnyAsync(c => c.Correo == correo && c.ColegioId == currentSchoolContext.SchoolId && (c.Estudiante == null || c.Estudiante.Id != exceptEstudianteId), cancellationToken);
 
+    public async Task<bool> DocumentoDuplicadoAsync(string documentoIdentidad, CancellationToken cancellationToken = default)
+        => await context.Estudiantes.AnyAsync(e => e.DNI == documentoIdentidad, cancellationToken)
+            || await context.Profesores.AnyAsync(p => p.DNI == documentoIdentidad, cancellationToken);
+
+    public async Task<bool> DocumentoDuplicadoExceptAsync(string documentoIdentidad, int exceptEstudianteId, CancellationToken cancellationToken = default)
+        => await context.Estudiantes.AnyAsync(e => e.DNI == documentoIdentidad && e.Id != exceptEstudianteId, cancellationToken)
+            || await context.Profesores.AnyAsync(p => p.DNI == documentoIdentidad, cancellationToken);
+
     public Task<bool> CursoExisteAsync(int cursoId, CancellationToken cancellationToken = default) =>
         context.Cursos.AnyAsync(c => c.Id == cursoId, cancellationToken);
 
@@ -397,7 +405,7 @@ public class EstudiantesDomainRepository(AppDbContext context, ICurrentSchoolCon
         }
     }
 
-    public async Task<EstudianteListItemDto?> UpdateEstudianteAsync(int estudianteId, string nombre, string correo, int cursoId, string? contrasenaHash, string apellidos, string dni, string telefono, DateOnly fechaNacimiento, CancellationToken cancellationToken = default)
+    public async Task<EstudianteListItemDto?> UpdateEstudianteAsync(int estudianteId, string nombre, int cursoId, string apellidos, string dni, string telefono, DateOnly fechaNacimiento, CancellationToken cancellationToken = default)
     {
         var student = await context.Estudiantes
             .Include(e => e.Cuenta)
@@ -410,11 +418,6 @@ public class EstudiantesDomainRepository(AppDbContext context, ICurrentSchoolCon
         student.Telefono = telefono;
         student.FechaNacimiento = fechaNacimiento;
         student.CursoId = cursoId;
-        if (student.Cuenta is not null)
-        {
-            student.Cuenta.Correo = correo;
-            if (contrasenaHash is not null) student.Cuenta.Contrasena = contrasenaHash;
-        }
 
         await context.SaveChangesAsync(cancellationToken);
         var courseName = await GetCursoNombreAsync(cursoId);

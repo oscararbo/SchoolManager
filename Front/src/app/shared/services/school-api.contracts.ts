@@ -32,6 +32,7 @@ export interface ApiColegioAdminItem {
   correo: string;
   colegioId: number;
   colegio: string;
+  contrasenaTemporal?: string;
 }
 
 export interface ApiCursoItem {
@@ -62,6 +63,7 @@ export interface ApiProfesorListItem {
   telefono: string;
   especialidad: string;
   correo: string;
+  contrasenaTemporal?: string;
   imparticiones: ApiProfesorImparticion[];
 }
 
@@ -73,6 +75,7 @@ export interface ApiEstudianteItem {
   telefono: string;
   fechaNacimiento: string;
   correo: string;
+  contrasenaTemporal?: string;
   cursoId: number;
   curso: string | null;
 }

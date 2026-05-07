@@ -1,8 +1,8 @@
 namespace Back.Api.Application.Abstractions.Repositories;
 
 public sealed record ImportCursoLookup(int Id, string Nombre);
-public sealed record ImportProfesorLookup(int Id, string Correo);
-public sealed record ImportEstudianteLookup(int Id, string Correo, int CursoId);
+public sealed record ImportProfesorLookup(int Id, string Correo, string DocumentoIdentidad);
+public sealed record ImportEstudianteLookup(int Id, string Correo, int CursoId, string DocumentoIdentidad);
 public sealed record ImportAsignaturaLookup(int Id, string Nombre, int CursoId);
 public sealed record ImportImparticionLookup(int ProfesorId, int AsignaturaId, int CursoId);
 public sealed record ImportTareaLookup(int Id, string Nombre, int Trimestre, int AsignaturaId, int ProfesorId);

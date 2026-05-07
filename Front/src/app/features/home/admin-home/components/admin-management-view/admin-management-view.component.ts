@@ -149,6 +149,39 @@ export class AdminManagementViewComponent implements OnInit {
         return agruparErroresCsv(errores);
     });
 
+    csvOmitidosDetalle = computed<string[]>(() => {
+        const result = this.csvResultado();
+        if (!result || (result.omitidos ?? 0) <= 0) {
+            return [];
+        }
+
+        return this.extraerDetalleOmitidos(result);
+    });
+
+    csvOmitidosNoDetallados = computed<number>(() => {
+        const result = this.csvResultado();
+        if (!result || (result.omitidos ?? 0) <= 0) {
+            return 0;
+        }
+
+        return Math.max((result.omitidos ?? 0) - this.csvOmitidosDetalle().length, 0);
+    });
+
+    csvDetallesCreados = computed<string[]>(() => {
+        const result = this.csvResultado();
+        if (!result || !result.detalles?.length) {
+            return [];
+        }
+
+        const omitidos = this.extraerDetalleOmitidos(result);
+        if (omitidos.length === 0) {
+            return result.detalles;
+        }
+
+        const omitidosSet = new Set(omitidos);
+        return result.detalles.filter(det => !omitidosSet.has(det));
+    });
+
     grupoErroresExpandido(key: string): boolean {
         return this.csvErroresExpandidos()[key] ?? false;
     }
@@ -577,8 +610,8 @@ export class AdminManagementViewComponent implements OnInit {
         this.editandoEstudianteId = null;
         this.editCursoForm.reset({ nombre: '' });
         this.editAsignaturaForm.reset({ nombre: '', cursoId: null });
-        this.editProfesorForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', especialidad: '', correo: '', nuevaContrasena: '' });
-        this.editEstudianteForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', fechaNacimiento: '', correo: '', nuevaContrasena: '', cursoId: null });
+        this.editProfesorForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', especialidad: '' });
+        this.editEstudianteForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', fechaNacimiento: '', cursoId: null });
     }
 
     // CRUD: Cursos
@@ -736,13 +769,11 @@ export class AdminManagementViewComponent implements OnInit {
                     apellidos: (this.profesorForm.value.apellidos ?? '').trim(),
                     dni: (this.profesorForm.value.dni ?? '').trim().toUpperCase(),
                     telefono: (this.profesorForm.value.telefono ?? '').trim(),
-                    especialidad: (this.profesorForm.value.especialidad ?? '').trim(),
-                    correo: (this.profesorForm.value.correo ?? '').trim(),
-                    contrasena: this.profesorForm.value.contrasena ?? ''
+                    especialidad: (this.profesorForm.value.especialidad ?? '').trim()
                 });
                 this.profesores.set([...this.profesores(), p]);
-                this.profesorForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', especialidad: '', correo: '', contrasena: '' });
-                this.toast.show(`Profesor "${p.nombre}" creado.`, 'success');
+                this.profesorForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', especialidad: '' });
+                this.toast.show(`Profesor "${p.nombre}" creado. Correo: ${p.correo}. Clave temporal: ${p.contrasenaTemporal ?? 'no disponible'}`, 'success');
                 this.dataChanged.emit();
             } catch (e) {
                 this.mostrarError(e);
@@ -757,9 +788,7 @@ export class AdminManagementViewComponent implements OnInit {
             apellidos: p.apellidos,
             dni: p.dni,
             telefono: p.telefono,
-            especialidad: p.especialidad,
-            correo: p.correo,
-            nuevaContrasena: ''
+            especialidad: p.especialidad
         });
     }
 
@@ -771,9 +800,7 @@ export class AdminManagementViewComponent implements OnInit {
             apellidos: (this.editProfesorForm.value.apellidos ?? '').trim(),
             dni: (this.editProfesorForm.value.dni ?? '').trim().toUpperCase(),
             telefono: (this.editProfesorForm.value.telefono ?? '').trim(),
-            especialidad: (this.editProfesorForm.value.especialidad ?? '').trim(),
-            correo: (this.editProfesorForm.value.correo ?? '').trim(),
-            nuevaContrasena: this.editProfesorForm.value.nuevaContrasena || undefined
+            especialidad: (this.editProfesorForm.value.especialidad ?? '').trim()
         };
 
         await this.runWithLoading('guardarProfesor', async () => {
@@ -826,13 +853,11 @@ export class AdminManagementViewComponent implements OnInit {
                     dni: (this.estudianteForm.value.dni ?? '').trim().toUpperCase(),
                     telefono: (this.estudianteForm.value.telefono ?? '').trim(),
                     fechaNacimiento: (this.estudianteForm.value.fechaNacimiento ?? '').trim(),
-                    correo: (this.estudianteForm.value.correo ?? '').trim(),
-                    contrasena: this.estudianteForm.value.contrasena ?? '',
                     cursoId: Number(this.estudianteForm.value.cursoId)
                 });
                 this.estudiantes.set([...this.estudiantes(), e]);
-                this.estudianteForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', fechaNacimiento: '', correo: '', contrasena: '', cursoId: null });
-                this.toast.show(`Estudiante "${e.nombre}" creado.`, 'success');
+                this.estudianteForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', fechaNacimiento: '', cursoId: null });
+                this.toast.show(`Estudiante "${e.nombre}" creado. Correo: ${e.correo}. Clave temporal: ${e.contrasenaTemporal ?? 'no disponible'}`, 'success');
                 this.dataChanged.emit();
             } catch (e) {
                 this.mostrarError(e);
@@ -848,9 +873,7 @@ export class AdminManagementViewComponent implements OnInit {
             dni: e.dni,
             telefono: e.telefono,
             fechaNacimiento: e.fechaNacimiento,
-            correo: e.correo,
-            cursoId: e.cursoId,
-            nuevaContrasena: ''
+            cursoId: e.cursoId
         });
     }
 
@@ -863,9 +886,7 @@ export class AdminManagementViewComponent implements OnInit {
             dni: (this.editEstudianteForm.value.dni ?? '').trim().toUpperCase(),
             telefono: (this.editEstudianteForm.value.telefono ?? '').trim(),
             fechaNacimiento: (this.editEstudianteForm.value.fechaNacimiento ?? '').trim(),
-            correo: (this.editEstudianteForm.value.correo ?? '').trim(),
-            cursoId: Number(this.editEstudianteForm.value.cursoId),
-            nuevaContrasena: this.editEstudianteForm.value.nuevaContrasena || undefined
+            cursoId: Number(this.editEstudianteForm.value.cursoId)
         };
 
         await this.runWithLoading('guardarEstudiante', async () => {
@@ -1084,15 +1105,8 @@ export class AdminManagementViewComponent implements OnInit {
                 const resultado = await this.api.importarCsv(entidad, file);
                 this.csvResultado.set(resultado);
 
-                if (resultado.errores.length > 0) {
-                    const primerError = resultado.errores[0];
-                    this.toast.show(
-                        `Importacion de ${entidad}: ${resultado.creados} creados, ${resultado.errores.length} errores. ${primerError}`,
-                        'warning'
-                    );
-                } else {
-                    this.toast.show(`Importacion de ${entidad}: ${resultado.creados} creados.`, 'success');
-                }
+                const severity = resultado.errores.length > 0 ? 'warning' : 'success';
+                this.toast.show(this.construirResumenImportacion(entidad, resultado), severity);
 
                 this.invalidateForImport(entidad);
                 await this.cargarTab(this.tabActiva(), true);
@@ -1101,8 +1115,10 @@ export class AdminManagementViewComponent implements OnInit {
                 if (e instanceof CsvImportError) {
                     if (e.result) {
                         this.csvResultado.set(e.result);
+                        this.toast.show(this.construirResumenImportacion(entidad, e.result), 'error');
+                    } else {
+                        this.toast.show(e.message, 'error');
                     }
-                    this.toast.show(e.message, 'error');
                 } else {
                     this.mostrarError(e, `No se pudo importar el CSV de ${entidad}.`);
                 }
@@ -1137,6 +1153,46 @@ export class AdminManagementViewComponent implements OnInit {
 
     private clearCsvSelection(entidad: CsvImportEntity): void {
         this.setCsvFile(entidad, null);
+    }
+
+    private construirResumenImportacion(entidad: CsvImportEntity, result: CsvImportResult): string {
+        const partes = [
+            `Importacion de ${entidad}: ${result.creados} creados`,
+            `${result.omitidos ?? 0} omitidos`,
+            `${result.errores.length} errores`
+        ];
+
+        if (result.errores.length > 0) {
+            partes.push(`Primer error: ${result.errores[0]}`);
+        }
+
+        return partes.join('. ') + '.';
+    }
+
+    private extraerDetalleOmitidos(result: CsvImportResult): string[] {
+        if (!result.detalles?.length || (result.omitidos ?? 0) <= 0) {
+            return [];
+        }
+
+        const detalladosComoOmitidos = result.detalles.filter(det => this.esDetalleDeOmitido(det));
+        if (detalladosComoOmitidos.length > 0) {
+            return detalladosComoOmitidos;
+        }
+
+        if (result.detalles.length <= (result.omitidos ?? 0)) {
+            return result.detalles.map(det => `${det} (omitido por duplicado o existente)`);
+        }
+
+        return result.detalles.slice(0, result.omitidos ?? 0).map(det => `${det} (omitido por duplicado o existente)`);
+    }
+
+    private esDetalleDeOmitido(detalle: string): boolean {
+        const value = detalle.toLowerCase();
+        return value.includes('omitid')
+            || value.includes('ya existe')
+            || value.includes('duplicad')
+            || value.includes('ya esta')
+            || value.includes('ya tiene un profesor asignado');
     }
 
     descargarPlantilla(entidad: CsvImportEntity): void {

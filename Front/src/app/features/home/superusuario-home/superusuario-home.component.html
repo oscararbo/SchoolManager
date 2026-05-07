@@ -38,8 +38,9 @@
                         }
                     </select>
                     <input class="form-control" formControlName="nombre" placeholder="Nombre del administrador" />
-                    <input class="form-control" formControlName="correo" placeholder="admin@colegio.com" />
-                    <input class="form-control" type="password" formControlName="contrasena" placeholder="Contrasena" />
+                    <div class="alert alert-light border small mb-0">
+                        El correo y la contrasena temporal se generan automaticamente (@admin.colegio).
+                    </div>
                     <button class="btn btn-primary" type="submit">Crear admin</button>
                 </form>
             </div>

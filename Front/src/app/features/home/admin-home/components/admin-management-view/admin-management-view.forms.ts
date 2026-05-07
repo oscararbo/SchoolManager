@@ -24,18 +24,14 @@ export function createAdminManagementForms(fb: FormBuilder) {
             apellidos: fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
             dni: fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), dniValidator()]),
             telefono: fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), phoneValidator()]),
-            especialidad: fb.nonNullable.control('', [Validators.required, Validators.maxLength(100)]),
-            correo: fb.nonNullable.control('', [Validators.required, Validators.email, Validators.maxLength(200)]),
-            contrasena: fb.nonNullable.control('', [Validators.required, Validators.minLength(6), Validators.maxLength(200)])
+            especialidad: fb.nonNullable.control('', [Validators.required, Validators.maxLength(100)])
         }),
         editProfesorForm: fb.group({
             nombre: fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
             apellidos: fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
             dni: fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), dniValidator()]),
             telefono: fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), phoneValidator()]),
-            especialidad: fb.nonNullable.control('', [Validators.required, Validators.maxLength(100)]),
-            correo: fb.nonNullable.control('', [Validators.required, Validators.email, Validators.maxLength(200)]),
-            nuevaContrasena: fb.nonNullable.control('', [Validators.minLength(6), Validators.maxLength(200)])
+            especialidad: fb.nonNullable.control('', [Validators.required, Validators.maxLength(100)])
         }),
         estudianteForm: fb.group({
             nombre: fb.nonNullable.control('', [Validators.required, Validators.maxLength(120)]),
@@ -43,8 +39,6 @@ export function createAdminManagementForms(fb: FormBuilder) {
             dni: fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), dniValidator()]),
             telefono: fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), phoneValidator()]),
             fechaNacimiento: fb.nonNullable.control('', [Validators.required, isoDateValidator()]),
-            correo: fb.nonNullable.control('', [Validators.required, Validators.email, Validators.maxLength(200)]),
-            contrasena: fb.nonNullable.control('', [Validators.required, Validators.minLength(6), Validators.maxLength(200)]),
             cursoId: fb.control<number | null>(null, [Validators.required])
         }),
         editEstudianteForm: fb.group({
@@ -53,8 +47,6 @@ export function createAdminManagementForms(fb: FormBuilder) {
             dni: fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), dniValidator()]),
             telefono: fb.nonNullable.control('', [Validators.required, Validators.maxLength(20), phoneValidator()]),
             fechaNacimiento: fb.nonNullable.control('', [Validators.required, isoDateValidator()]),
-            correo: fb.nonNullable.control('', [Validators.required, Validators.email, Validators.maxLength(200)]),
-            nuevaContrasena: fb.nonNullable.control('', [Validators.minLength(6), Validators.maxLength(200)]),
             cursoId: fb.control<number | null>(null, [Validators.required])
         })
     };

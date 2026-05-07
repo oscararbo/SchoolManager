@@ -11,10 +11,10 @@ namespace Back.Tests.Application.UnitTests;
 public class EstudiantesServiceTests
 {
     [Fact]
-    public async Task CreateEstudianteAsync_ReturnsBadRequest_WhenCorreoYaExiste()
+    public async Task CreateEstudianteAsync_ReturnsBadRequest_WhenDniNieYaExiste()
     {
         var estudiantesRepositoryMock = EstudiantesRepositoryMockFactory.CreateDefaultForCreate();
-        estudiantesRepositoryMock.Setup(r => r.CorreoDuplicadoAsync("ana@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        estudiantesRepositoryMock.Setup(r => r.DocumentoDuplicadoAsync("12345678Z", It.IsAny<CancellationToken>())).ReturnsAsync(true);
         var estudiantesService = CreateService(estudiantesRepositoryMock.Object);
 
         var result = await estudiantesService.CreateEstudianteAsync(CreateValidDto(), CancellationToken.None);
@@ -38,14 +38,14 @@ public class EstudiantesServiceTests
     }
 
     [Fact]
-    public void CreateEstudianteRequestDto_IsInvalid_WhenContrasenaTieneMenosDeSeisCaracteresReales()
+    public void CreateEstudianteRequestDto_IsInvalid_WhenDniNieNoEsValido()
     {
         var requestDto = CreateValidDto();
-        requestDto.Contrasena = "     a  ";
+        requestDto.DNI = "123";
 
         var validationResults = ValidateDto(requestDto);
 
-        Assert.Contains(validationResults, r => r.MemberNames.Contains(nameof(CreateEstudianteRequestDto.Contrasena)));
+        Assert.Contains(validationResults, r => r.MemberNames.Contains(nameof(CreateEstudianteRequestDto.DNI)));
     }
 
     [Fact]
@@ -55,7 +55,6 @@ public class EstudiantesServiceTests
         {
             Nombre = "Ana",
             Apellidos = "Garcia",
-            Correo = "ana@test.com",
             CursoId = 1,
             DNI = "12345678Z",
             Telefono = "612345678",
@@ -93,14 +92,12 @@ public class EstudiantesServiceTests
     }
 
     private static EstudiantesService CreateService(Back.Api.Application.Abstractions.Repositories.IEstudiantesDomainRepository repo)
-        => new(repo, new FakePasswordService());
+        => new(repo, new FakePasswordService(), new FakeCurrentSchoolContext());
 
     private static CreateEstudianteRequestDto CreateValidDto() => new()
     {
         Nombre = "Ana",
         Apellidos = "Garcia",
-        Correo = "ana@test.com",
-        Contrasena = "123456",
         CursoId = 1,
         DNI = "12345678Z",
         Telefono = "612345678",
@@ -120,5 +117,13 @@ public class EstudiantesServiceTests
         public string Hash(string plainPassword) => $"hash:{plainPassword}";
 
         public bool Verify(string storedHash, string plainPassword) => storedHash == Hash(plainPassword);
+    }
+
+    private sealed class FakeCurrentSchoolContext : Back.Api.Application.Abstractions.Security.ICurrentSchoolContext
+    {
+        public int? SchoolId => 1;
+        public string? SchoolSlug => "demo";
+        public bool IsSuperUsuario => false;
+        public bool HasSchool => true;
     }
 }

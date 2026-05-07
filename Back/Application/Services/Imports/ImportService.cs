@@ -7,9 +7,8 @@ using System.Text.RegularExpressions;
 
 namespace Back.Api.Application.Services;
 
-public class ImportService(IImportDomainRepository importRepository, IPasswordService passwordService) : IImportService
+public class ImportService(IImportDomainRepository importRepository, IPasswordService passwordService, ICurrentSchoolContext currentSchoolContext) : IImportService
 {
-    private static readonly Regex DniRegex = new(@"^\d{8}[TRWAGMYFPDXBNJZSQVHLCKE]$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly Regex TelefonoRegex = new(@"^[6-9]\d{8}$", RegexOptions.Compiled);
     private sealed record CsvRow(int LineNumber, string[] Columns);
 
@@ -32,7 +31,7 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
             {
                 var nombre = row.Columns[0].Trim();
                 if (!existing.Add(nombre))
-                    skipped.Add(nombre);
+                    skipped.Add($"Linea {row.LineNumber}: '{nombre}' omitido (ya existia).");
                 else
                     created.Add(nombre);
             }
@@ -113,37 +112,52 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
     public async Task<ApplicationResult> ImportarProfesoresAsync(string csvText, CancellationToken cancellationToken = default)
     {
         var created = new List<(string Nombre, string Correo, string ContrasenaHash, string Apellidos, string DNI, string Telefono, string Especialidad)>();
+        var detalles = new List<string>();
         var errors = new List<string>();
-        var emails = (await importRepository.GetProfesoresAsync(cancellationToken))
+        var schoolSlug = CredentialGenerationHelper.NormalizeSchoolSlugForDomain(currentSchoolContext.SchoolSlug, currentSchoolContext.SchoolId);
+        var existingTeachers = await importRepository.GetProfesoresAsync(cancellationToken);
+        var existingStudents = await importRepository.GetEstudiantesAsync(cancellationToken);
+        var emails = existingTeachers
             .Select(p => p.Correo)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var documentos = existingTeachers
+            .Select(p => CredentialGenerationHelper.NormalizeDniNie(p.DocumentoIdentidad))
+            .Concat(existingStudents.Select(e => CredentialGenerationHelper.NormalizeDniNie(e.DocumentoIdentidad)))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var row in ParseCsv(csvText))
         {
-            if (row.Columns.Length < 7)
+            if (row.Columns.Length < 5)
             {
-                errors.Add($"Linea {row.LineNumber}: se esperaban las columnas nombre,apellidos,dni,telefono,especialidad,email,password.");
+                errors.Add($"Linea {row.LineNumber}: se esperaban las columnas nombre,apellidos,dniNie,telefono,especialidad.");
             }
             else
             {
                 var nombre = row.Columns[0].Trim();
                 var apellidos = row.Columns[1].Trim();
-                var dni = row.Columns[2].Trim();
+                var documento = CredentialGenerationHelper.NormalizeDniNie(row.Columns[2]);
                 var telefono = row.Columns[3].Trim();
                 var especialidad = row.Columns[4].Trim();
-                var email = row.Columns[5].Trim().ToLowerInvariant();
-                var password = row.Columns[6].Trim();
 
-                if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+                if (string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(apellidos) || string.IsNullOrWhiteSpace(especialidad))
                     errors.Add($"Linea {row.LineNumber}: datos incompletos para '{nombre}'.");
-                else if (!DniRegex.IsMatch(dni))
-                    errors.Add($"Linea {row.LineNumber}: DNI '{dni}' con formato invalido (debe ser 8 digitos + letra valida).");
+                else if (!CredentialGenerationHelper.IsValidDniNie(documento))
+                    errors.Add($"Linea {row.LineNumber}: documento '{documento}' con formato invalido (DNI/NIE).");
                 else if (!TelefonoRegex.IsMatch(telefono))
                     errors.Add($"Linea {row.LineNumber}: telefono '{telefono}' con formato invalido (debe ser 9 digitos empezando por 6-9).");
-                else if (!emails.Add(email))
-                    errors.Add($"Linea {row.LineNumber}: email duplicado {email}.");
                 else
-                    created.Add((nombre, email, passwordService.Hash(password), apellidos, dni, telefono, especialidad));
+                {
+                    if (!documentos.Add(documento))
+                    {
+                        errors.Add($"Linea {row.LineNumber}: documento duplicado {documento}.");
+                        continue;
+                    }
+
+                    var generatedEmail = GenerateUniqueEmail($"{nombre} {apellidos}", "profesor", schoolSlug, emails);
+                    var generatedPassword = CredentialGenerationHelper.GeneratePassword();
+                    created.Add((nombre, generatedEmail, passwordService.Hash(generatedPassword), apellidos, documento, telefono, especialidad));
+                    detalles.Add($"{nombre}: {generatedEmail} / {generatedPassword}");
+                }
             }
         }
 
@@ -155,51 +169,67 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
         return ApplicationResult.Ok(new CsvImportResultDto
         {
             Creados = created.Count,
-            Errores = errors
+            Errores = errors,
+            Detalles = detalles
         });
     }
 
     public async Task<ApplicationResult> ImportarEstudiantesAsync(string csvText, CancellationToken cancellationToken = default)
     {
         var created = new List<(string Nombre, string Correo, string ContrasenaHash, int CursoId, string Apellidos, string DNI, string Telefono, DateOnly FechaNacimiento)>();
+        var detalles = new List<string>();
         var errors = new List<string>();
+        var schoolSlug = CredentialGenerationHelper.NormalizeSchoolSlugForDomain(currentSchoolContext.SchoolSlug, currentSchoolContext.SchoolId);
         var courses = (await importRepository.GetCursosAsync(cancellationToken))
             .ToDictionary(c => c.Nombre, c => c, StringComparer.OrdinalIgnoreCase);
-        var emails = (await importRepository.GetEstudiantesAsync(cancellationToken))
+        var existingStudents = await importRepository.GetEstudiantesAsync(cancellationToken);
+        var existingTeachers = await importRepository.GetProfesoresAsync(cancellationToken);
+        var emails = existingStudents
             .Select(e => e.Correo)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var documentos = existingStudents
+            .Select(e => CredentialGenerationHelper.NormalizeDniNie(e.DocumentoIdentidad))
+            .Concat(existingTeachers.Select(p => CredentialGenerationHelper.NormalizeDniNie(p.DocumentoIdentidad)))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var row in ParseCsv(csvText))
         {
-            if (row.Columns.Length < 8)
+            if (row.Columns.Length < 6)
             {
-                errors.Add($"Linea {row.LineNumber}: se esperaban las columnas nombre,apellidos,dni,telefono,birthDate,email,password,courseName.");
+                errors.Add($"Linea {row.LineNumber}: se esperaban las columnas nombre,apellidos,dniNie,telefono,birthDate,courseName.");
             }
             else
             {
                 var nombre = row.Columns[0].Trim();
                 var apellidos = row.Columns[1].Trim();
-                var dni = row.Columns[2].Trim();
+                var documento = CredentialGenerationHelper.NormalizeDniNie(row.Columns[2]);
                 var telefono = row.Columns[3].Trim();
                 var birthDateStr = row.Columns[4].Trim();
-                var email = row.Columns[5].Trim().ToLowerInvariant();
-                var password = row.Columns[6].Trim();
-                var courseName = row.Columns[7].Trim();
+                var courseName = row.Columns[5].Trim();
 
                 if (!DateOnly.TryParse(birthDateStr, out var birthDate))
                     errors.Add($"Linea {row.LineNumber}: fecha de nacimiento invalida '{birthDateStr}'.");
-                else if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+                else if (string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(apellidos))
                     errors.Add($"Linea {row.LineNumber}: datos incompletos para '{nombre}'.");
-                else if (!DniRegex.IsMatch(dni))
-                    errors.Add($"Linea {row.LineNumber}: DNI '{dni}' con formato invalido (debe ser 8 digitos + letra valida).");
+                else if (!CredentialGenerationHelper.IsValidDniNie(documento))
+                    errors.Add($"Linea {row.LineNumber}: documento '{documento}' con formato invalido (DNI/NIE).");
                 else if (!TelefonoRegex.IsMatch(telefono))
                     errors.Add($"Linea {row.LineNumber}: telefono '{telefono}' con formato invalido (debe ser 9 digitos empezando por 6-9).");
                 else if (!courses.TryGetValue(courseName, out var course))
                     errors.Add($"Linea {row.LineNumber}: course no encontrado '{courseName}'.");
-                else if (!emails.Add(email))
-                    errors.Add($"Linea {row.LineNumber}: email duplicado {email}.");
                 else
-                    created.Add((nombre, email, passwordService.Hash(password), course.Id, apellidos, dni, telefono, birthDate));
+                {
+                    if (!documentos.Add(documento))
+                    {
+                        errors.Add($"Linea {row.LineNumber}: documento duplicado {documento}.");
+                        continue;
+                    }
+
+                    var generatedEmail = GenerateUniqueEmail($"{nombre} {apellidos}", "alumno", schoolSlug, emails);
+                    var generatedPassword = CredentialGenerationHelper.GeneratePassword();
+                    created.Add((nombre, generatedEmail, passwordService.Hash(generatedPassword), course.Id, apellidos, documento, telefono, birthDate));
+                    detalles.Add($"{nombre}: {generatedEmail} / {generatedPassword}");
+                }
             }
         }
 
@@ -222,8 +252,23 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
         return ApplicationResult.Ok(new CsvImportResultDto
         {
             Creados = created.Count,
-            Errores = errors
+            Errores = errors,
+            Detalles = detalles
         });
+    }
+
+    private static string GenerateUniqueEmail(string fullName, string rolePrefix, string schoolSlug, HashSet<string> existingEmails)
+    {
+        for (var i = 0; i < 2000; i++)
+        {
+            var candidate = CredentialGenerationHelper.BuildGeneratedEmail(fullName, rolePrefix, schoolSlug, i);
+            if (existingEmails.Add(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        throw new InvalidOperationException("No se pudo generar un correo unico para la importacion.");
     }
 
     public async Task<ApplicationResult> ImportarTareasAsync(string csvText, CancellationToken cancellationToken = default)
@@ -294,7 +339,7 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
                     {
                         var taskKey = ToTareaKey(subject.Id, term, tareaNombre);
                         if (!existingTasks.Add(taskKey))
-                            skipped.Add($"{tareaNombre} ({subjectName} - {courseName} T{term})");
+                            skipped.Add($"Linea {row.LineNumber}: '{tareaNombre}' omitida en {subjectName}/{courseName} T{term} (ya existia).");
                         else
                             created.Add((tareaNombre, term, subject.Id, teacher.Id));
                     }
@@ -384,7 +429,7 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
                     {
                         var enrollment = (student.Id, subject.Id);
                         if (!enrollments.Add(enrollment))
-                            skipped.Add($"{studentEmail} -> {subjectName} ({courseName})");
+                            skipped.Add($"Linea {row.LineNumber}: matricula omitida {studentEmail} -> {subjectName} ({courseName}) (ya existia).");
                         else
                             created.Add(enrollment);
                     }
@@ -481,7 +526,7 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
                         var assignment = (teacher.Id, subject.Id, course.Id);
                         if (!combinations.Add(assignment))
                         {
-                            skipped.Add($"{teacherEmail} -> {subjectName} ({courseName})");
+                            skipped.Add($"Linea {row.LineNumber}: imparticion omitida {teacherEmail} -> {subjectName} ({courseName}) (ya existia).");
                         }
                         else
                         {

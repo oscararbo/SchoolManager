@@ -48,7 +48,62 @@
                 <strong>Resultado ({{ csvEntidadActual }}):</strong>
                 {{ csvResultado.creados }} registros creados.
                 @if (csvResultado.omitidos) { {{ csvResultado.omitidos }} omitidos (ya existian). }
-                @if (csvResultado.errores.length > 0) {
+
+                <div class="mt-3 d-flex flex-wrap gap-2">
+                    <button
+                        class="btn btn-sm"
+                        [class.btn-primary]="csvResultFilter === 'todos'"
+                        [class.btn-outline-primary]="csvResultFilter !== 'todos'"
+                        type="button"
+                        (click)="setCsvResultFilter('todos')">
+                        Todos
+                    </button>
+                    <button
+                        class="btn btn-sm"
+                        [class.btn-primary]="csvResultFilter === 'errores'"
+                        [class.btn-outline-primary]="csvResultFilter !== 'errores'"
+                        type="button"
+                        [disabled]="!hasErrores"
+                        (click)="setCsvResultFilter('errores')">
+                        Errores
+                    </button>
+                    <button
+                        class="btn btn-sm"
+                        [class.btn-primary]="csvResultFilter === 'omitidos'"
+                        [class.btn-outline-primary]="csvResultFilter !== 'omitidos'"
+                        type="button"
+                        [disabled]="!hasOmitidos"
+                        (click)="setCsvResultFilter('omitidos')">
+                        Omitidos
+                    </button>
+                    <button
+                        class="btn btn-sm"
+                        [class.btn-primary]="csvResultFilter === 'creados'"
+                        [class.btn-outline-primary]="csvResultFilter !== 'creados'"
+                        type="button"
+                        [disabled]="!hasCreadosDetalle"
+                        (click)="setCsvResultFilter('creados')">
+                        Creados
+                    </button>
+                </div>
+
+                @if (shouldShowOmitidos) {
+                    <div class="mt-2">
+                        <p class="mb-1 fw-semibold">Filas omitidas:</p>
+                        @if (csvOmitidosDetalle.length > 0) {
+                            <ul class="mb-1 small">
+                                @for (omitido of csvOmitidosDetalle; track omitido) {
+                                    <li>{{ omitido }}</li>
+                                }
+                            </ul>
+                        }
+                        @if (csvOmitidosNoDetallados > 0) {
+                            <p class="mb-0 small text-secondary">Y {{ csvOmitidosNoDetallados }} omitidos adicionales.</p>
+                        }
+                    </div>
+                }
+
+                @if (shouldShowErrores) {
                     <div class="mt-2">
                         <p class="mb-2 fw-semibold">Errores detectados:</p>
                         <div class="vstack gap-2">
@@ -75,6 +130,17 @@
                                 </div>
                             }
                         </div>
+                    </div>
+                }
+
+                @if (shouldShowCreados) {
+                    <div class="mt-2">
+                        <p class="mb-1 fw-semibold">Detalle de registros creados:</p>
+                        <ul class="mb-0 small">
+                            @for (detalle of csvDetallesCreados; track detalle) {
+                                <li>{{ detalle }}</li>
+                            }
+                        </ul>
                     </div>
                 }
             </div>

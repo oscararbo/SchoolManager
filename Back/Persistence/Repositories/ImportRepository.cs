@@ -16,12 +16,12 @@ public class ImportDomainRepository(AppDbContext context, ICurrentSchoolContext 
 
     public Task<List<ImportProfesorLookup>> GetProfesoresAsync(CancellationToken cancellationToken = default) => context.Profesores
         .AsNoTracking()
-        .Select(p => new ImportProfesorLookup(p.Id, p.Cuenta!.Correo))
+        .Select(p => new ImportProfesorLookup(p.Id, p.Cuenta!.Correo, p.DNI))
         .ToListAsync(cancellationToken);
 
     public Task<List<ImportEstudianteLookup>> GetEstudiantesAsync(CancellationToken cancellationToken = default) => context.Estudiantes
         .AsNoTracking()
-        .Select(e => new ImportEstudianteLookup(e.Id, e.Cuenta!.Correo, e.CursoId))
+        .Select(e => new ImportEstudianteLookup(e.Id, e.Cuenta!.Correo, e.CursoId, e.DNI))
         .ToListAsync(cancellationToken);
 
     public Task<List<ImportAsignaturaLookup>> GetAsignaturasAsync(CancellationToken cancellationToken = default) => context.Asignaturas

@@ -18,7 +18,7 @@
                     <form [formGroup]="editEstudianteForm">
                         <app-text-input id="editEstudianteNombre" label="Nombre" formControlName="nombre"></app-text-input>
                         <app-text-input id="editEstudianteApellidos" label="Apellidos" formControlName="apellidos"></app-text-input>
-                        <app-text-input id="editEstudianteDni" label="DNI" formControlName="dni" placeholder="12345678Z"></app-text-input>
+                        <app-text-input id="editEstudianteDni" label="DNI/NIE" formControlName="dni" placeholder="12345678Z o X1234567L"></app-text-input>
                         <app-text-input id="editEstudianteTelefono" label="Telefono" type="tel" formControlName="telefono" placeholder="612345678"></app-text-input>
                         <app-date-input
                             class="d-block mb-2"
@@ -27,23 +27,6 @@
                             formControlName="fechaNacimiento"
                             [errorMessage]="controlErrorMessage(editEstudianteForm.get('fechaNacimiento'))">
                         </app-date-input>
-                        <app-text-input
-                            id="editEstudianteCorreo"
-                            type="email"
-                            label="Correo"
-                            formControlName="correo"
-                            [maxLength]="200"
-                            [errorMessage]="controlErrorMessage(editEstudianteForm.get('correo'))">
-                        </app-text-input>
-                        <app-text-input
-                            id="editEstudiantePass"
-                            type="password"
-                            label="Nueva contraseña (opcional)"
-                            formControlName="nuevaContrasena"
-                            placeholder="Dejar en blanco para no cambiar"
-                            [maxLength]="200"
-                            [errorMessage]="controlErrorMessage(editEstudianteForm.get('nuevaContrasena'))">
-                        </app-text-input>
                         <app-select-input
                             id="editEstudianteCurso"
                             label="Curso"
@@ -65,7 +48,7 @@
                     <form [formGroup]="estudianteForm" (ngSubmit)="crearEstudiante.emit()">
                         <app-text-input id="createEstudianteNombre" label="Nombre" formControlName="nombre"></app-text-input>
                         <app-text-input id="createEstudianteApellidos" label="Apellidos" formControlName="apellidos"></app-text-input>
-                        <app-text-input id="createEstudianteDni" label="DNI" formControlName="dni" placeholder="12345678Z"></app-text-input>
+                        <app-text-input id="createEstudianteDni" label="DNI/NIE" formControlName="dni" placeholder="12345678Z o X1234567L"></app-text-input>
                         <app-text-input id="createEstudianteTelefono" label="Telefono" type="tel" formControlName="telefono" placeholder="612345678"></app-text-input>
                         <app-date-input
                             class="d-block mb-2"
@@ -74,22 +57,9 @@
                             formControlName="fechaNacimiento"
                             [errorMessage]="controlErrorMessage(estudianteForm.get('fechaNacimiento'))">
                         </app-date-input>
-                        <app-text-input
-                            id="createEstudianteCorreo"
-                            type="email"
-                            label="Correo"
-                            formControlName="correo"
-                            [maxLength]="200"
-                            [errorMessage]="controlErrorMessage(estudianteForm.get('correo'))">
-                        </app-text-input>
-                        <app-text-input
-                            id="createEstudianteContrasena"
-                            type="password"
-                            label="Contrasena"
-                            formControlName="contrasena"
-                            [maxLength]="200"
-                            [errorMessage]="controlErrorMessage(estudianteForm.get('contrasena'))">
-                        </app-text-input>
+                        <div class="alert alert-light border small mb-2">
+                            El correo y la contrasena temporal se generan automaticamente.
+                        </div>
                         <app-select-input
                             id="createEstudianteCurso"
                             label="Curso"

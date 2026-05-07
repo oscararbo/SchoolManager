@@ -38,9 +38,7 @@ export class SuperusuarioHomeComponent {
 
         this.adminForm = this.fb.group({
             colegioId: [null as number | null, [Validators.required]],
-            nombre: ['', [Validators.required, Validators.maxLength(120)]],
-            correo: ['', [Validators.required, Validators.email, Validators.maxLength(200)]],
-            contrasena: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(200)]]
+            nombre: ['', [Validators.required, Validators.maxLength(120)]]
         });
 
         void this.cargarColegios();
@@ -105,14 +103,12 @@ export class SuperusuarioHomeComponent {
 
         const value = this.adminForm.getRawValue();
         try {
-            await this.api.createAdminColegio(
+            const createdAdmin = await this.api.createAdminColegio(
                 value.colegioId!,
-                (value.nombre ?? '').trim(),
-                (value.correo ?? '').trim(),
-                (value.contrasena ?? '').trim()
+                (value.nombre ?? '').trim()
             );
-            this.adminForm.reset({ colegioId: value.colegioId, nombre: '', correo: '', contrasena: '' });
-            this.mensaje.set('Administrador creado correctamente.');
+            this.adminForm.reset({ colegioId: value.colegioId, nombre: '' });
+            this.mensaje.set(`Administrador creado. Correo: ${createdAdmin.correo}. Clave temporal: ${createdAdmin.contrasenaTemporal ?? 'no disponible'}`);
             if (this.colegioAdminsActivo()?.id === value.colegioId) {
                 await this.cargarAdminsColegio(value.colegioId!);
             }
