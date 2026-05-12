@@ -9,7 +9,8 @@ import {
     AsignaturaCalificacionesTarea,
     ProfesorPanel,
     ProfesorStats,
-    TareaDetalle
+    TareaDetalle,
+    TareaSubmision
 } from './school-api.types';
 import { extractSchoolApiError } from './school-api.error';
 
@@ -77,6 +78,41 @@ export class SchoolApiProfesorService {
     async crearTarea(profesorId: number, nombre: string, trimestre: number, asignaturaId: number): Promise<TareaDetalle> {
         try {
             return await firstValueFrom(this.http.post<TareaDetalle>(`${this.apiUrl}/profesores/${profesorId}/tareas`, { nombre, trimestre, asignaturaId }));
+        } catch (e) {
+            throw extractSchoolApiError(e);
+        }
+    }
+
+    async updateTareaDescripcion(profesorId: number, tareaId: number, descripcion?: string): Promise<TareaDetalle> {
+        try {
+            return await firstValueFrom(this.http.put<TareaDetalle>(`${this.apiUrl}/profesores/${profesorId}/tareas/${tareaId}/descripcion`, { descripcion }));
+        } catch (e) {
+            throw extractSchoolApiError(e);
+        }
+    }
+
+    async uploadTareaSubmision(profesorId: number, tareaId: number, estudianteId: number, archivo: File): Promise<TareaSubmision> {
+        try {
+            const formData = new FormData();
+            formData.append('estudianteId', estudianteId.toString());
+            formData.append('archivo', archivo);
+            return await firstValueFrom(this.http.post<TareaSubmision>(`${this.apiUrl}/profesores/${profesorId}/tareas/${tareaId}/upload`, formData));
+        } catch (e) {
+            throw extractSchoolApiError(e);
+        }
+    }
+
+    async getTareaSubmisiones(profesorId: number, tareaId: number): Promise<TareaSubmision[]> {
+        try {
+            return await firstValueFrom(this.http.get<TareaSubmision[]>(`${this.apiUrl}/profesores/${profesorId}/tareas/${tareaId}/submisions`));
+        } catch (e) {
+            throw extractSchoolApiError(e);
+        }
+    }
+
+    async deleteTareaSubmision(profesorId: number, submisionId: number): Promise<void> {
+        try {
+            await firstValueFrom(this.http.delete<void>(`${this.apiUrl}/profesores/${profesorId}/submisions/${submisionId}`));
         } catch (e) {
             throw extractSchoolApiError(e);
         }

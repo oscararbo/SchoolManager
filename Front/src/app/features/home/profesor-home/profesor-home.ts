@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, Input, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, Input, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
     SchoolApiService,
@@ -8,6 +8,7 @@ import {
     AsignaturaAlumnoResumen,
     AsignaturaAlumno,
     TareaResumen,
+    TareaSubmision,
 } from '../../../shared/services/school-api.service';
 import { ToastService } from '../../../core/services/toast.service';
 
@@ -24,6 +25,8 @@ type ProfesorDetalleView = 'resumen' | 'calificar';
 export class ProfesorHomeComponent implements OnInit {
     @Input({ required: true }) profesorId!: number;
     @Input({ required: true }) profesorNombre!: string;
+    @ViewChild('taskList', { read: ElementRef }) taskListElement?: ElementRef;
+    @ViewChild('panelInferior', { read: ElementRef }) panelInferiorElement?: ElementRef;
 
     cargando = signal(true);
     error = signal<string | null>(null);
@@ -42,6 +45,15 @@ export class ProfesorHomeComponent implements OnInit {
     notaInputs = signal<Record<number, number | null>>({});
     guardandoNota = signal(false);
     alumnosExpandidos = signal(new Set<number>());
+
+    // Descripcion
+    editandoDescripcion = signal(false);
+    nuevaDescripcion = signal('');
+    guardandoDescripcion = signal(false);
+
+    // Submisiones
+    submisiones = signal<TareaSubmision[]>([]);
+    submisionesCargando = signal(false);
 
     private alumnoDetalles = signal<Record<number, AsignaturaAlumno>>({});
     private alumnoTareasByTrimestre = signal<Record<number, Record<number, Array<{ tareaId: number; nombre: string; valor: number | null }>>>>({});
@@ -115,6 +127,16 @@ export class ProfesorHomeComponent implements OnInit {
     async seleccionarTarea(tarea: TareaResumen): Promise<void> {
         this.vistaDetalle.set('calificar');
         this.tareaActiva.set(tarea);
+        this.editandoDescripcion.set(false);
+        this.nuevaDescripcion.set((tarea as any).descripcion ?? '');
+        this.submisiones.set([]);
+
+        // Auto-scroll hacia la tarea seleccionada
+        setTimeout(() => {
+            if (this.taskListElement?.nativeElement) {
+                this.taskListElement.nativeElement.scrollTop = 0;
+            }
+        }, 0);
 
         const asignaturaId = this.asignaturaActivaId();
         if (!asignaturaId) {
@@ -141,6 +163,8 @@ export class ProfesorHomeComponent implements OnInit {
                 this.error.set((e as Error).message);
             }
         }
+        // Load submisiones in parallel (don't block)
+        this.cargarSubmisiones();
     }
 
     mostrarResumen(): void {
@@ -266,6 +290,77 @@ export class ProfesorHomeComponent implements OnInit {
         return n !== null ? n.toFixed(2) : '-';
     }
 
+    formatBytes(bytes: number): string {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    iniciarEdicionDescripcion(): void {
+        this.nuevaDescripcion.set((this.tareaActiva() as any)?.descripcion ?? '');
+        this.editandoDescripcion.set(true);
+    }
+
+    cancelarEdicionDescripcion(): void {
+        this.editandoDescripcion.set(false);
+    }
+
+    async guardarDescripcion(): Promise<void> {
+        const tarea = this.tareaActiva();
+        if (!tarea) return;
+
+        this.guardandoDescripcion.set(true);
+        this.error.set(null);
+        try {
+            const updated = await this.api.updateTareaDescripcion(this.profesorId, tarea.tareaId, this.nuevaDescripcion() || undefined);
+            // Update local cache
+            (this.tareaActiva() as any).descripcion = updated.descripcion;
+            this.editandoDescripcion.set(false);
+            this.toast.show('Descripción guardada.', 'success');
+        } catch (e) {
+            if (!this.isDestroyed) {
+                this.error.set((e as Error).message);
+            }
+        } finally {
+            if (!this.isDestroyed) {
+                this.guardandoDescripcion.set(false);
+            }
+        }
+    }
+
+    async cargarSubmisiones(): Promise<void> {
+        const tarea = this.tareaActiva();
+        if (!tarea) return;
+
+        this.submisionesCargando.set(true);
+        try {
+            const lista = await this.api.getTareaSubmisiones(this.profesorId, tarea.tareaId);
+            this.submisiones.set(lista);
+        } catch (e) {
+            if (!this.isDestroyed) {
+                this.error.set((e as Error).message);
+            }
+        } finally {
+            if (!this.isDestroyed) {
+                this.submisionesCargando.set(false);
+            }
+        }
+    }
+
+    async eliminarSubmision(submisionId: number): Promise<void> {
+        const tarea = this.tareaActiva();
+        if (!tarea) return;
+        try {
+            await this.api.deleteTareaSubmision(this.profesorId, submisionId);
+            this.submisiones.update(list => list.filter(s => s.id !== submisionId));
+            this.toast.show('Submisión eliminada.', 'success');
+        } catch (e) {
+            if (!this.isDestroyed) {
+                this.error.set((e as Error).message);
+            }
+        }
+    }
+
     get statsCards(): Array<{ label: string; value: string; helper: string }> {
         const stats = this.stats();
         if (!stats) {
@@ -312,6 +407,7 @@ export class ProfesorHomeComponent implements OnInit {
             .flatMap(asignatura => asignatura.porTarea.map(tarea => ({
                 ...tarea,
                 asignatura: asignatura.asignatura,
+                asignaturaId: asignatura.asignaturaId,
                 curso: asignatura.curso
             })))
             .sort((a, b) => b.sinNota - a.sinNota || (a.media ?? 99) - (b.media ?? 99))
@@ -320,6 +416,24 @@ export class ProfesorHomeComponent implements OnInit {
 
     porcentaje(valor: number, total: number): number {
         return total > 0 ? Math.round((valor / total) * 100) : 0;
+    }
+
+    async navegarAAsignatura(asignaturaId: number): Promise<void> {
+        await this.cargarAlumnos(asignaturaId);
+        setTimeout(() => {
+            this.panelInferiorElement?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
+    }
+
+    async navegarATarea(asignaturaId: number, tareaId: number): Promise<void> {
+        await this.cargarAlumnos(asignaturaId);
+        const tarea = this.detalleAsignatura()?.tareas.find(t => t.tareaId === tareaId);
+        if (tarea) {
+            await this.seleccionarTarea(tarea);
+        }
+        setTimeout(() => {
+            this.panelInferiorElement?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
     }
 
     async toggleAlumno(alumnoId: number): Promise<void> {

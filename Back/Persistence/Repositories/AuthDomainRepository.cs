@@ -132,4 +132,28 @@ public class AuthDomainRepository(AppDbContext context) : IAuthDomainRepository
 
         return null;
     }
+
+    public Task<Colegio?> GetColegioBySlugAsync(string slug, CancellationToken cancellationToken = default)
+        => context.Colegios.FirstOrDefaultAsync(c => c.Slug == slug, cancellationToken);
+
+    public async Task<bool> UserBelongsToSchoolAsync(int userId, int schoolId, CancellationToken cancellationToken = default)
+    {
+        // Verificar si el usuario es un Admin de ese colegio
+        var isAdmin = await context.Admins
+            .AnyAsync(a => a.Id == userId && a.Cuenta!.ColegioId == schoolId, cancellationToken);
+
+        if (isAdmin) return true;
+
+        // Verificar si el usuario es un Profesor de ese colegio
+        var isProfesor = await context.Profesores
+            .AnyAsync(p => p.Id == userId && p.Cuenta!.ColegioId == schoolId, cancellationToken);
+
+        if (isProfesor) return true;
+
+        // Verificar si el usuario es un Estudiante de ese colegio
+        var isEstudiante = await context.Estudiantes
+            .AnyAsync(e => e.Id == userId && e.Cuenta!.ColegioId == schoolId, cancellationToken);
+
+        return isEstudiante;
+    }
 }

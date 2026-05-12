@@ -2,12 +2,15 @@ using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Common;
 using Back.Api.Application.Dtos;
+using Back.Api.Application.Dtos.SuperUsuario.Requests;
+using Microsoft.AspNetCore.Hosting;
 
 namespace Back.Api.Application.Services;
 
 public class SuperUsuarioService(
     ISuperUsuarioDomainRepository superUsuarioDomain,
-    IPasswordService passwordService) : ISuperUsuarioService
+    IPasswordService passwordService,
+    IWebHostEnvironment hostEnvironment) : ISuperUsuarioService
 {
     public async Task<ApplicationResult> GetColegiosAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await superUsuarioDomain.GetColegiosAsync(cancellationToken));
@@ -78,6 +81,40 @@ public class SuperUsuarioService(
         created.ContrasenaTemporal = generatedPassword;
 
         return ApplicationResult.Created($"/api/superusuario/colegios/{colegioId}/admins/{created.Id}", created);
+    }
+
+    public async Task<ApplicationResult> UpdateColegioImagenAsync(int colegioId, UpdateColegioImagenRequestDto request, CancellationToken cancellationToken = default)
+    {
+        var tipo = (request.TipoImagen ?? string.Empty).Trim().ToLowerInvariant();
+        if (tipo is not ("logo" or "favicon"))
+            return ApplicationResult.BadRequest("Tipo de imagen invalido. Usa 'logo' o 'favicon'.");
+
+        if (request.ImagenArchivo is null || request.ImagenArchivo.Length == 0)
+            return ApplicationResult.BadRequest("Debes adjuntar un archivo de imagen.");
+
+        if (request.ImagenArchivo.Length > 5 * 1024 * 1024)
+            return ApplicationResult.BadRequest("La imagen supera el tamano maximo permitido (5MB).");
+
+        var extension = Path.GetExtension(request.ImagenArchivo.FileName).ToLowerInvariant();
+        var allowedExtensions = new HashSet<string> { ".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp" };
+        if (!allowedExtensions.Contains(extension))
+            return ApplicationResult.BadRequest("Formato no permitido. Usa png, jpg, jpeg, svg, ico o webp.");
+
+        var uploadsRoot = Path.Combine(hostEnvironment.ContentRootPath, "uploads", "colegios", colegioId.ToString());
+        Directory.CreateDirectory(uploadsRoot);
+
+        var fileName = $"{tipo}_{DateTime.UtcNow:yyyyMMddHHmmss}{extension}";
+        var fullPath = Path.Combine(uploadsRoot, fileName);
+        await using (var stream = File.Create(fullPath))
+        {
+            await request.ImagenArchivo.CopyToAsync(stream, cancellationToken);
+        }
+
+        var relativePath = $"/uploads/colegios/{colegioId}/{fileName}";
+        var updated = await superUsuarioDomain.UpdateColegioImagenUrlAsync(colegioId, tipo, relativePath, cancellationToken);
+        return updated is null
+            ? ApplicationResult.NotFound("Colegio no encontrado.")
+            : ApplicationResult.Ok(updated);
     }
 
     private async Task<string> GenerateUniqueEmailAsync(string fullName, string rolePrefix, string schoolSlug, int colegioId, CancellationToken cancellationToken)

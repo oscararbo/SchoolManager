@@ -1,5 +1,6 @@
 using Back.Api.Application.Common;
 using Back.Api.Application.Dtos;
+using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
 namespace Back.Api.Application.Services;
@@ -17,4 +18,8 @@ public interface IEstudiantesService
     Task<ApplicationResult> GetPanelAlumnoAsync(int estudianteId, ClaimsPrincipal user, CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetPanelResumenAsync(int estudianteId, ClaimsPrincipal user, CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetMateriaDetalleAsync(int estudianteId, int asignaturaId, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> SubirSubmisionAsync(int estudianteId, int tareaId, IFormFile archivo, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> GetSubmisionesAsync(int estudianteId, int tareaId, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> DeleteSubmisionAsync(int estudianteId, int submisionId, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> MarcarTareaHechaAsync(int estudianteId, int tareaId, ClaimsPrincipal user, CancellationToken cancellationToken = default);
 }

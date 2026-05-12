@@ -3,11 +3,13 @@ using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Configuration;
 using Back.Api.Application.Dtos;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
 namespace Back.Api.Application.Services;
 
-public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, IPasswordService passwordService, ICurrentSchoolContext currentSchoolContext) : IEstudiantesService
+public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, IPasswordService passwordService, ICurrentSchoolContext currentSchoolContext, IWebHostEnvironment hostEnvironment) : IEstudiantesService
 {
     public async Task<ApplicationResult> GetAllEstudiantesAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await estudiantesDomain.GetAllEstudiantesAsync(cancellationToken));
@@ -161,5 +163,77 @@ public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, 
         if (user.IsInRole(Roles.Admin)) return true;
         var idClaim = user.FindFirstValue("id") ?? user.FindFirstValue(ClaimsIdentity.DefaultNameClaimType);
         return int.TryParse(idClaim, out var usuarioId) && usuarioId == estudianteId;
+    }
+
+    public async Task<ApplicationResult> SubirSubmisionAsync(int estudianteId, int tareaId, IFormFile archivo, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    {
+        if (!UsuarioCoincideConEstudiante(estudianteId, user))
+            return ApplicationResult.Forbidden();
+
+        if (archivo is null || archivo.Length == 0)
+            return ApplicationResult.BadRequest("Debes adjuntar un archivo.");
+
+        if (archivo.Length > 10 * 1024 * 1024)
+            return ApplicationResult.BadRequest("El archivo supera el tamano maximo permitido (10MB).");
+
+        var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png"
+        };
+        var extension = Path.GetExtension(archivo.FileName);
+        if (string.IsNullOrWhiteSpace(extension) || !allowedExtensions.Contains(extension))
+            return ApplicationResult.BadRequest("Tipo de archivo no permitido.");
+
+        if (!await estudiantesDomain.EstudianteMatriculadoEnTareaAsync(estudianteId, tareaId, cancellationToken))
+            return ApplicationResult.BadRequest("El estudiante no tiene acceso a esa tarea.");
+
+        var uploadsRoot = Path.Combine(hostEnvironment.ContentRootPath, "uploads", "tareas", tareaId.ToString());
+        Directory.CreateDirectory(uploadsRoot);
+
+        var safeBaseName = Path.GetFileNameWithoutExtension(archivo.FileName);
+        safeBaseName = string.Concat(safeBaseName.Where(ch => char.IsLetterOrDigit(ch) || ch == '-' || ch == '_'));
+        if (string.IsNullOrWhiteSpace(safeBaseName)) safeBaseName = "archivo";
+
+        var generatedFileName = $"{estudianteId}_{DateTime.UtcNow:yyyyMMddHHmmss}_{safeBaseName}{extension}";
+        var absolutePath = Path.Combine(uploadsRoot, generatedFileName);
+
+        await using (var stream = File.Create(absolutePath))
+        {
+            await archivo.CopyToAsync(stream, cancellationToken);
+        }
+
+        var relativePath = $"/uploads/tareas/{tareaId}/{generatedFileName}";
+        var saved = await estudiantesDomain.UpsertSubmisionEstudianteAsync(estudianteId, tareaId, archivo.FileName, relativePath, archivo.Length, cancellationToken);
+        return ApplicationResult.Ok(saved);
+    }
+
+    public async Task<ApplicationResult> GetSubmisionesAsync(int estudianteId, int tareaId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    {
+        if (!UsuarioCoincideConEstudiante(estudianteId, user))
+            return ApplicationResult.Forbidden();
+
+        var submisiones = await estudiantesDomain.GetSubmisionesEstudianteAsync(estudianteId, tareaId, cancellationToken);
+        return ApplicationResult.Ok(submisiones);
+    }
+
+    public async Task<ApplicationResult> DeleteSubmisionAsync(int estudianteId, int submisionId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    {
+        if (!UsuarioCoincideConEstudiante(estudianteId, user))
+            return ApplicationResult.Forbidden();
+
+        var removed = await estudiantesDomain.DeleteSubmisionEstudianteAsync(estudianteId, submisionId, cancellationToken);
+        return removed ? ApplicationResult.NoContent() : ApplicationResult.NotFound("La submision no existe.");
+    }
+
+    public async Task<ApplicationResult> MarcarTareaHechaAsync(int estudianteId, int tareaId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    {
+        if (!UsuarioCoincideConEstudiante(estudianteId, user))
+            return ApplicationResult.Forbidden();
+
+        if (!await estudiantesDomain.EstudianteMatriculadoEnTareaAsync(estudianteId, tareaId, cancellationToken))
+            return ApplicationResult.BadRequest("El estudiante no tiene acceso a esa tarea.");
+
+        var saved = await estudiantesDomain.MarcarTareaHechaAsync(estudianteId, tareaId, cancellationToken);
+        return ApplicationResult.Ok(saved);
     }
 }

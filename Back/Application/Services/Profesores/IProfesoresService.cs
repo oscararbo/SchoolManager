@@ -1,5 +1,7 @@
 using Back.Api.Application.Common;
 using Back.Api.Application.Dtos;
+using Back.Api.Application.Dtos.Profesores.Requests;
+using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
 namespace Back.Api.Application.Services;
@@ -21,6 +23,10 @@ public interface IProfesoresService
     Task<ApplicationResult> EliminarImparticionAsync(int profesorId, int asignaturaId, int cursoId, ClaimsPrincipal user, CancellationToken cancellationToken = default);
     Task<ApplicationResult> PonerNotaAsync(int profesorId, PonerNotaRequestDto ponerNotaRequestDto, ClaimsPrincipal user, CancellationToken cancellationToken = default);
     Task<ApplicationResult> CrearTareaAsync(int profesorId, CreateTareaRequestDto createTareaRequestDto, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> UpdateTareaDescripcionAsync(int profesorId, int tareaId, UpdateTareaDescripcionRequestDto request, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> SubirTareaSubmisionAsync(int profesorId, int tareaId, UploadTareaSubmisionRequestDto request, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> GetSubmisionesDeTareaAsync(int profesorId, int tareaId, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> DeleteSubmisionAsync(int profesorId, int submisionId, ClaimsPrincipal user, CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetTareasDeAsignaturaAsync(int profesorId, int asignaturaId, ClaimsPrincipal user, CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetTareasConNotasAsync(int asignaturaId, ClaimsPrincipal user, CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetStatsAsync(int profesorId, ClaimsPrincipal user, CancellationToken cancellationToken = default);

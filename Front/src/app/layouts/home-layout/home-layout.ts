@@ -67,8 +67,13 @@ export class HomeLayout implements OnInit {
    * y redirige al login.
    */
   async cerrarSesion(): Promise<void> {
-    await this.schoolApiService.logout();
-    this.router.navigate(['']);
+    try {
+      await this.schoolApiService.logout();
+    } catch (e) {
+      console.error('Error al cerrar sesion:', e);
+    } finally {
+      this.router.navigate(['']);
+    }
   }
 }
 

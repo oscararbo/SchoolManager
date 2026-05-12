@@ -161,7 +161,12 @@ namespace Back.Api.Persistence.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<int?>("RolSistemaId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("RolSistemaId");
 
                     b.HasIndex("ColegioId", "Correo")
                         .IsUnique()
@@ -306,6 +311,82 @@ namespace Back.Api.Persistence.Migrations
                     b.ToTable("Notas");
                 });
 
+            modelBuilder.Entity("Back.Api.Domain.Entities.PermisoSistema", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Clave")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("character varying(180)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Clave")
+                        .IsUnique();
+
+                    b.ToTable("PermisosSistema");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Clave = "colegios.manage",
+                            Descripcion = "Gestion de colegios"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Clave = "usuarios.admin.manage",
+                            Descripcion = "Gestion de administradores"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Clave = "profesores.manage",
+                            Descripcion = "Gestion de profesores"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Clave = "estudiantes.manage",
+                            Descripcion = "Gestion de estudiantes"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Clave = "asignaturas.manage",
+                            Descripcion = "Gestion de asignaturas"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Clave = "notas.manage",
+                            Descripcion = "Gestion de notas"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Clave = "tareas.manage",
+                            Descripcion = "Gestion de tareas"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Clave = "panel.alumno.read",
+                            Descripcion = "Lectura del panel de alumno"
+                        });
+                });
+
             modelBuilder.Entity("Back.Api.Domain.Entities.Profesor", b =>
                 {
                     b.Property<int>("Id")
@@ -426,6 +507,146 @@ namespace Back.Api.Persistence.Migrations
                     b.ToTable("RefreshTokens");
                 });
 
+            modelBuilder.Entity("Back.Api.Domain.Entities.RolSistema", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("RolesSistema");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Nombre = "superusuario"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Nombre = "admin"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Nombre = "profesor"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Nombre = "alumno"
+                        });
+                });
+
+            modelBuilder.Entity("Back.Api.Domain.Entities.RolSistemaPermiso", b =>
+                {
+                    b.Property<int>("RolSistemaId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PermisoSistemaId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("RolSistemaId", "PermisoSistemaId");
+
+                    b.HasIndex("PermisoSistemaId");
+
+                    b.ToTable("RolesSistemaPermisos");
+
+                    b.HasData(
+                        new
+                        {
+                            RolSistemaId = 1,
+                            PermisoSistemaId = 1
+                        },
+                        new
+                        {
+                            RolSistemaId = 1,
+                            PermisoSistemaId = 2
+                        },
+                        new
+                        {
+                            RolSistemaId = 1,
+                            PermisoSistemaId = 3
+                        },
+                        new
+                        {
+                            RolSistemaId = 1,
+                            PermisoSistemaId = 4
+                        },
+                        new
+                        {
+                            RolSistemaId = 1,
+                            PermisoSistemaId = 5
+                        },
+                        new
+                        {
+                            RolSistemaId = 1,
+                            PermisoSistemaId = 6
+                        },
+                        new
+                        {
+                            RolSistemaId = 1,
+                            PermisoSistemaId = 7
+                        },
+                        new
+                        {
+                            RolSistemaId = 1,
+                            PermisoSistemaId = 8
+                        },
+                        new
+                        {
+                            RolSistemaId = 2,
+                            PermisoSistemaId = 3
+                        },
+                        new
+                        {
+                            RolSistemaId = 2,
+                            PermisoSistemaId = 4
+                        },
+                        new
+                        {
+                            RolSistemaId = 2,
+                            PermisoSistemaId = 5
+                        },
+                        new
+                        {
+                            RolSistemaId = 2,
+                            PermisoSistemaId = 6
+                        },
+                        new
+                        {
+                            RolSistemaId = 2,
+                            PermisoSistemaId = 7
+                        },
+                        new
+                        {
+                            RolSistemaId = 3,
+                            PermisoSistemaId = 6
+                        },
+                        new
+                        {
+                            RolSistemaId = 3,
+                            PermisoSistemaId = 7
+                        },
+                        new
+                        {
+                            RolSistemaId = 4,
+                            PermisoSistemaId = 8
+                        });
+                });
+
             modelBuilder.Entity("Back.Api.Domain.Entities.Tarea", b =>
                 {
                     b.Property<int>("Id")
@@ -436,6 +657,9 @@ namespace Back.Api.Persistence.Migrations
 
                     b.Property<int>("AsignaturaId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Descripcion")
+                        .HasColumnType("text");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
@@ -459,6 +683,51 @@ namespace Back.Api.Persistence.Migrations
                     b.HasIndex("ProfesorId");
 
                     b.ToTable("Tareas");
+                });
+
+            modelBuilder.Entity("Back.Api.Domain.Entities.TareaSubmision", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("EstudianteId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("NombreArchivo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RutaArchivo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("TamanoBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("TareaId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EstudianteId");
+
+                    b.HasIndex("TareaId");
+
+                    b.ToTable("TareaSubmisiones");
                 });
 
             modelBuilder.Entity("Back.Api.Domain.Entities.Admin", b =>
@@ -490,7 +759,14 @@ namespace Back.Api.Persistence.Migrations
                         .HasForeignKey("ColegioId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Back.Api.Domain.Entities.RolSistema", "RolSistema")
+                        .WithMany("Cuentas")
+                        .HasForeignKey("RolSistemaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Colegio");
+
+                    b.Navigation("RolSistema");
                 });
 
             modelBuilder.Entity("Back.Api.Domain.Entities.Curso", b =>
@@ -599,6 +875,25 @@ namespace Back.Api.Persistence.Migrations
                     b.Navigation("Profesor");
                 });
 
+            modelBuilder.Entity("Back.Api.Domain.Entities.RolSistemaPermiso", b =>
+                {
+                    b.HasOne("Back.Api.Domain.Entities.PermisoSistema", "PermisoSistema")
+                        .WithMany("RolesPermisos")
+                        .HasForeignKey("PermisoSistemaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Back.Api.Domain.Entities.RolSistema", "RolSistema")
+                        .WithMany("RolesPermisos")
+                        .HasForeignKey("RolSistemaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PermisoSistema");
+
+                    b.Navigation("RolSistema");
+                });
+
             modelBuilder.Entity("Back.Api.Domain.Entities.Tarea", b =>
                 {
                     b.HasOne("Back.Api.Domain.Entities.Asignatura", "Asignatura")
@@ -616,6 +911,25 @@ namespace Back.Api.Persistence.Migrations
                     b.Navigation("Asignatura");
 
                     b.Navigation("Profesor");
+                });
+
+            modelBuilder.Entity("Back.Api.Domain.Entities.TareaSubmision", b =>
+                {
+                    b.HasOne("Back.Api.Domain.Entities.Estudiante", "Estudiante")
+                        .WithMany()
+                        .HasForeignKey("EstudianteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Back.Api.Domain.Entities.Tarea", "Tarea")
+                        .WithMany("Submisiones")
+                        .HasForeignKey("TareaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Estudiante");
+
+                    b.Navigation("Tarea");
                 });
 
             modelBuilder.Entity("Back.Api.Domain.Entities.Asignatura", b =>
@@ -659,6 +973,11 @@ namespace Back.Api.Persistence.Migrations
                     b.Navigation("Notas");
                 });
 
+            modelBuilder.Entity("Back.Api.Domain.Entities.PermisoSistema", b =>
+                {
+                    b.Navigation("RolesPermisos");
+                });
+
             modelBuilder.Entity("Back.Api.Domain.Entities.Profesor", b =>
                 {
                     b.Navigation("ProfesorAsignaturaCursos");
@@ -666,9 +985,18 @@ namespace Back.Api.Persistence.Migrations
                     b.Navigation("Tareas");
                 });
 
+            modelBuilder.Entity("Back.Api.Domain.Entities.RolSistema", b =>
+                {
+                    b.Navigation("Cuentas");
+
+                    b.Navigation("RolesPermisos");
+                });
+
             modelBuilder.Entity("Back.Api.Domain.Entities.Tarea", b =>
                 {
                     b.Navigation("Notas");
+
+                    b.Navigation("Submisiones");
                 });
 #pragma warning restore 612, 618
         }

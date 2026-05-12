@@ -10,10 +10,11 @@ import { SessionService } from './core/services/session.service';
 
 function initializeAuth(authState: AuthStateService, session: SessionService) {
     return async () => {
-    // If session metadata exists but token is missing, it is stale state.
-    // We clear it instead of forcing a refresh request on app bootstrap.
     if (session.getSession() && !session.getToken()) {
-      authState.markExpired('Tu sesion ha caducado. Inicia sesion de nuevo.');
+      const refreshed = await authState.tryRefresh();
+      if (!refreshed) {
+        authState.markExpired('Tu sesion ha caducado. Inicia sesion de nuevo.');
+      }
         }
     };
 }

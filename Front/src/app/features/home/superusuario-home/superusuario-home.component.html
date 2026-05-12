@@ -6,8 +6,14 @@
                 <form [formGroup]="colegioForm" (ngSubmit)="guardarColegio()" class="vstack gap-2">
                     <input class="form-control" formControlName="nombre" placeholder="Nombre del colegio" />
                     <input class="form-control" formControlName="slug" placeholder="slug-del-colegio" />
-                    <input class="form-control" formControlName="logoUrl" placeholder="https://... (logo opcional)" />
-                    <input class="form-control" formControlName="faviconUrl" placeholder="https://... (favicon opcional)" />
+                    <div>
+                        <label class="form-label mb-1">Logo (opcional)</label>
+                        <input class="form-control" type="file" accept=".png,.jpg,.jpeg,.svg,.webp" (change)="onLogoFileChange($event)" />
+                    </div>
+                    <div>
+                        <label class="form-label mb-1">Favicon (opcional)</label>
+                        <input class="form-control" type="file" accept=".png,.jpg,.jpeg,.svg,.ico,.webp" (change)="onFaviconFileChange($event)" />
+                    </div>
                     <input class="form-control form-control-color" formControlName="colorPrimario" type="color" />
                     <textarea class="form-control" formControlName="mensajeLogin" rows="3" placeholder="Mensaje de bienvenida para el login"></textarea>
                     <div class="rounded-3 p-3 text-white" [style.background]="colegioForm.controls.colorPrimario.value || '#1f2937'">

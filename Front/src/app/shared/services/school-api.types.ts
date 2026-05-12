@@ -54,9 +54,21 @@ export interface TareaResumen {
 export interface TareaDetalle {
     id: number;
     nombre: string;
+    descripcion?: string | null;
     trimestre: number;
     asignaturaId: number;
     asignatura: string;
+}
+
+export interface TareaSubmision {
+    id: number;
+    estudianteId: number;
+    estudianteNombre: string;
+    nombreArchivo: string;
+    tamanoBytes: number;
+    fechaCreacion: string;
+    fechaModificacion?: string | null;
+    estadoDisplay: string;
 }
 
 export interface MediasTrimestrales {
@@ -128,6 +140,7 @@ export interface TareaConNotas {
 export interface AlumnoTarea {
     tareaId: number;
     nombre: string;
+    descripcion?: string | null;
     trimestre: number;
     valor: number | null;
 }

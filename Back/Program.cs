@@ -22,7 +22,11 @@ var builder = WebApplication.CreateBuilder(args);
 // Core web API services.
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddApiVersioning(options =>
 {
@@ -113,6 +117,7 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<ICurrentSchoolContext, CurrentSchoolContext>();
+builder.Services.AddScoped<IUserSchoolValidationService, UserSchoolValidationService>();
 builder.Services.AddScoped<IAdminDomainRepository, AdminDomainRepository>();
 builder.Services.AddScoped<ISuperUsuarioDomainRepository, SuperUsuarioDomainRepository>();
 builder.Services.AddScoped<IAuthDomainRepository, AuthDomainRepository>();
@@ -185,6 +190,15 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("Front");
+
+// Serve uploaded files (submissions, colegio images) from /uploads path
+var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
+Directory.CreateDirectory(uploadsPath);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
+    RequestPath = "/uploads"
+});
 if (!app.Environment.IsEnvironment("Testing"))
 {
     app.UseHttpsRedirection();

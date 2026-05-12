@@ -81,9 +81,12 @@
                                     </div>
                                 </div>
 
-                                <div class="vstack gap-3">
+                                <div class="stats-scroll-list">
                                     @for (asignatura of asignaturasStatsOrdenadas; track asignatura.asignaturaId) {
-                                        <article class="border rounded-3 p-3 bg-light-subtle">
+                                        <article class="border rounded-3 p-3 bg-light-subtle insight-clickable mb-3"
+                                            (click)="navegarAAsignatura(asignatura.asignaturaId)"
+                                            role="button"
+                                            [attr.aria-label]="'Ir a ' + asignatura.asignatura">
                                             <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
                                                 <div>
                                                     <div class="fw-semibold">{{ asignatura.asignatura }}</div>
@@ -112,9 +115,12 @@
                         <div class="card shadow-sm border-0 h-100">
                             <div class="card-body">
                                 <h3 class="h6 text-uppercase text-secondary mb-3">Tareas clave</h3>
-                                <div class="vstack gap-2">
+                                <div class="stats-scroll-list">
                                     @for (tarea of tareasClave; track tarea.tareaId) {
-                                        <article class="task-insight-card rounded-3 border p-3">
+                                        <article class="task-insight-card rounded-3 border p-3 mb-2 insight-clickable"
+                                            (click)="navegarATarea(tarea.asignaturaId, tarea.tareaId)"
+                                            role="button"
+                                            [attr.aria-label]="'Ir a tarea ' + tarea.nombre">
                                             <div class="d-flex justify-content-between gap-2 align-items-start mb-2">
                                                 <div>
                                                     <div class="fw-semibold">{{ tarea.nombre }}</div>
@@ -140,7 +146,7 @@
             </div>
         }
 
-        <div class="row g-3">
+        <div class="row g-3" #panelInferior>
             <!-- Left: course/subject selector -->
             <aside class="col-12 col-lg-3">
                 <div class="card shadow-sm border-0 h-100">
@@ -208,7 +214,7 @@
                                     <div class="card-body">
                                         <h3 class="h6 text-uppercase text-secondary mb-3">Tareas</h3>
 
-                                        <div class="vstack gap-2 mb-3 task-list">
+                                        <div class="vstack gap-2 mb-3 task-list" #taskList>
                                             @for (tarea of detalleAsignatura()!.tareas; track tarea.tareaId) {
                                                 <button class="task-chip"
                                                     type="button"
@@ -298,6 +304,55 @@
                                                     } @empty {
                                                         <div class="col-12">
                                                             <div class="text-secondary text-center py-4">Sin alumnos matriculados.</div>
+                                                        </div>
+                                                    }
+                                                </div>
+
+                                                <!-- Descripcion de la tarea -->
+                                                <div class="mt-4 pt-3 border-top">
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <h4 class="h6 mb-0 text-uppercase text-secondary">Descripción</h4>
+                                                        @if (!editandoDescripcion()) {
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="iniciarEdicionDescripcion()">Editar</button>
+                                                        }
+                                                    </div>
+                                                    @if (editandoDescripcion()) {
+                                                        <textarea class="form-control form-control-sm mb-2" rows="3" placeholder="Descripción de la tarea..."
+                                                            [ngModel]="nuevaDescripcion()" (ngModelChange)="nuevaDescripcion.set($event)"></textarea>
+                                                        <div class="d-flex gap-2">
+                                                            <button type="button" class="btn btn-sm btn-success" [disabled]="guardandoDescripcion()" (click)="guardarDescripcion()">
+                                                                {{ guardandoDescripcion() ? 'Guardando...' : 'Guardar' }}
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="cancelarEdicionDescripcion()">Cancelar</button>
+                                                        </div>
+                                                    } @else {
+                                                        @if (nuevaDescripcion()) {
+                                                            <p class="small text-secondary mb-0">{{ nuevaDescripcion() }}</p>
+                                                        } @else {
+                                                            <p class="small text-secondary fst-italic mb-0">Sin descripción. Pulsa "Editar" para añadir una.</p>
+                                                        }
+                                                    }
+                                                </div>
+
+                                                <!-- Submisiones de alumnos -->
+                                                <div class="mt-4 pt-3 border-top">
+                                                    <h4 class="h6 mb-2 text-uppercase text-secondary">Entregas de alumnos</h4>
+                                                    @if (submisionesCargando()) {
+                                                        <div class="placeholder-glow"><span class="placeholder col-8"></span></div>
+                                                    } @else if (submisiones().length === 0) {
+                                                        <p class="small text-secondary fst-italic mb-0">Ningún alumno ha entregado esta tarea todavía.</p>
+                                                    } @else {
+                                                        <div class="vstack gap-2">
+                                                            @for (sub of submisiones(); track sub.id) {
+                                                                <div class="d-flex align-items-center gap-2 border rounded p-2 bg-light">
+                                                                    <div class="flex-grow-1 min-w-0">
+                                                                        <div class="small fw-semibold text-truncate">{{ sub.estudianteNombre }}</div>
+                                                                        <div class="small text-secondary text-truncate">{{ sub.nombreArchivo }} ({{ formatBytes(sub.tamanoBytes) }})</div>
+                                                                    </div>
+                                                                    <span class="badge text-bg-success flex-shrink-0">{{ sub.estadoDisplay }}</span>
+                                                                    <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0 py-0" (click)="eliminarSubmision(sub.id)">✕</button>
+                                                                </div>
+                                                            }
                                                         </div>
                                                     }
                                                 </div>

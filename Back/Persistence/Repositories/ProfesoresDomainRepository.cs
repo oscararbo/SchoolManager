@@ -54,6 +54,10 @@ public class ProfesoresDomainRepository(AppDbContext context, ICurrentSchoolCont
         => context.EstudianteAsignaturas
             .AnyAsync(matricula => matricula.EstudianteId == estudianteId && matricula.AsignaturaId == subjectId, cancellationToken);
 
+    public Task<bool> EstudiantePerteneceAAsignaturaAsync(int estudianteId, int subjectId, CancellationToken cancellationToken = default)
+        => context.EstudianteAsignaturas
+            .AnyAsync(matricula => matricula.EstudianteId == estudianteId && matricula.AsignaturaId == subjectId, cancellationToken);
+
     public Task<bool> ProfesorImparteAlCursoAsync(int profesorId, int subjectId, int cursoId, CancellationToken cancellationToken = default)
         => context.ProfesorAsignaturaCursos
             .AnyAsync(assignment => assignment.ProfesorId == profesorId && assignment.AsignaturaId == subjectId && assignment.CursoId == cursoId, cancellationToken);
@@ -77,7 +81,7 @@ public class ProfesoresDomainRepository(AppDbContext context, ICurrentSchoolCont
         => await context.Tareas
             .AsNoTracking()
             .Where(t => t.Id == tareaId)
-            .Select(t => new TareaResumenDto { TareaId = t.Id, Nombre = t.Nombre, Trimestre = t.Trimestre })
+            .Select(t => new TareaResumenDto { TareaId = t.Id, Nombre = t.Nombre, Descripcion = t.Descripcion, Trimestre = t.Trimestre })
             .FirstOrDefaultAsync(cancellationToken);
 
     public async Task<(int Id, int CursoId)?> GetAsignaturaBasicaAsync(int subjectId, CancellationToken cancellationToken = default)
@@ -288,7 +292,7 @@ public class ProfesoresDomainRepository(AppDbContext context, ICurrentSchoolCont
             .AsNoTracking()
             .Where(t => t.AsignaturaId == subjectId)
             .OrderBy(t => t.Trimestre).ThenBy(t => t.Nombre)
-            .Select(t => new TareaResumenDto { TareaId = t.Id, Nombre = t.Nombre, Trimestre = t.Trimestre })
+            .Select(t => new TareaResumenDto { TareaId = t.Id, Nombre = t.Nombre, Descripcion = t.Descripcion, Trimestre = t.Trimestre })
             .ToListAsync(cancellationToken);
 
     public async Task<List<ProfesorAlumnoResumenRow>> GetAlumnosResumenAsync(int subjectId, CancellationToken cancellationToken = default)
@@ -410,7 +414,7 @@ public class ProfesoresDomainRepository(AppDbContext context, ICurrentSchoolCont
             .AsNoTracking()
             .Where(t => t.AsignaturaId == subjectId && t.ProfesorId == profesorId)
             .OrderBy(t => t.Trimestre).ThenBy(t => t.Nombre)
-            .Select(t => new TareaResumenDto { TareaId = t.Id, Nombre = t.Nombre, Trimestre = t.Trimestre })
+            .Select(t => new TareaResumenDto { TareaId = t.Id, Nombre = t.Nombre, Descripcion = t.Descripcion, Trimestre = t.Trimestre })
             .ToListAsync(cancellationToken);
 
     public async Task<IEnumerable<TareaConNotasDto>> GetTareasConNotasAsync(int subjectId, CancellationToken cancellationToken = default)
@@ -788,7 +792,7 @@ public class ProfesoresDomainRepository(AppDbContext context, ICurrentSchoolCont
         await context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<TareaDetalleDto> CrearTareaAsync(string nombre, int trimestre, int subjectId, int profesorId, CancellationToken cancellationToken = default)
+    public async Task<TareaDetalleDto> CrearTareaAsync(string nombre, string? descripcion, int trimestre, int subjectId, int profesorId, CancellationToken cancellationToken = default)
     {
         var subjectName = await context.Asignaturas
             .AsNoTracking()
@@ -796,11 +800,112 @@ public class ProfesoresDomainRepository(AppDbContext context, ICurrentSchoolCont
             .Select(a => a.Nombre)
             .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
 
-        var task = new Tarea { Nombre = nombre, Trimestre = trimestre, AsignaturaId = subjectId, ProfesorId = profesorId };
+        var task = new Tarea { Nombre = nombre, Descripcion = descripcion, Trimestre = trimestre, AsignaturaId = subjectId, ProfesorId = profesorId };
         context.Tareas.Add(task);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new TareaDetalleDto { Id = task.Id, Nombre = task.Nombre, Trimestre = task.Trimestre, AsignaturaId = task.AsignaturaId, Asignatura = subjectName };
+        return new TareaDetalleDto { Id = task.Id, Nombre = task.Nombre, Descripcion = task.Descripcion, Trimestre = task.Trimestre, AsignaturaId = task.AsignaturaId, Asignatura = subjectName };
+    }
+
+    public async Task<TareaDetalleDto?> UpdateTareaDescripcionAsync(int tareaId, string? descripcion, CancellationToken cancellationToken = default)
+    {
+        var task = await context.Tareas
+            .Include(t => t.Asignatura)
+            .FirstOrDefaultAsync(t => t.Id == tareaId, cancellationToken);
+
+        if (task is null)
+            return null;
+
+        task.Descripcion = descripcion;
+        await context.SaveChangesAsync(cancellationToken);
+
+        return new TareaDetalleDto
+        {
+            Id = task.Id,
+            Nombre = task.Nombre,
+            Descripcion = task.Descripcion,
+            Trimestre = task.Trimestre,
+            AsignaturaId = task.AsignaturaId,
+            Asignatura = task.Asignatura?.Nombre ?? string.Empty
+        };
+    }
+
+    public async Task<TareaSubmisionDto> UpsertTareaSubmisionAsync(int tareaId, int estudianteId, string nombreArchivo, string rutaArchivo, long tamanoBytes, CancellationToken cancellationToken = default)
+    {
+        var existing = await context.TareaSubmisiones
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(s => s.TareaId == tareaId && s.EstudianteId == estudianteId, cancellationToken);
+
+        if (existing is null)
+        {
+            existing = new TareaSubmision
+            {
+                TareaId = tareaId,
+                EstudianteId = estudianteId,
+                NombreArchivo = nombreArchivo,
+                RutaArchivo = rutaArchivo,
+                TamanoBytes = tamanoBytes,
+                FechaCreacion = DateTime.UtcNow
+            };
+            context.TareaSubmisiones.Add(existing);
+        }
+        else
+        {
+            existing.NombreArchivo = nombreArchivo;
+            existing.RutaArchivo = rutaArchivo;
+            existing.TamanoBytes = tamanoBytes;
+            existing.FechaModificacion = DateTime.UtcNow;
+            existing.IsDeleted = false;
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        var estudianteNombre = await context.Estudiantes
+            .AsNoTracking()
+            .Where(e => e.Id == estudianteId)
+            .Select(e => e.Nombre)
+            .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
+
+        return new TareaSubmisionDto
+        {
+            Id = existing.Id,
+            EstudianteId = estudianteId,
+            EstudianteNombre = estudianteNombre,
+            NombreArchivo = existing.NombreArchivo,
+            TamanoBytes = existing.TamanoBytes,
+            FechaCreacion = existing.FechaCreacion,
+            FechaModificacion = existing.FechaModificacion
+        };
+    }
+
+    public async Task<List<TareaSubmisionDto>> GetSubmisionesDeTareaAsync(int tareaId, CancellationToken cancellationToken = default)
+        => await context.TareaSubmisiones
+            .AsNoTracking()
+            .Where(s => s.TareaId == tareaId)
+            .OrderByDescending(s => s.FechaModificacion ?? s.FechaCreacion)
+            .Select(s => new TareaSubmisionDto
+            {
+                Id = s.Id,
+                EstudianteId = s.EstudianteId,
+                EstudianteNombre = s.Estudiante != null ? s.Estudiante.Nombre : string.Empty,
+                NombreArchivo = s.NombreArchivo,
+                TamanoBytes = s.TamanoBytes,
+                FechaCreacion = s.FechaCreacion,
+                FechaModificacion = s.FechaModificacion
+            })
+            .ToListAsync(cancellationToken);
+
+    public async Task<bool> DeleteSubmisionAsync(int submisionId, CancellationToken cancellationToken = default)
+    {
+        var submision = await context.TareaSubmisiones
+            .FirstOrDefaultAsync(s => s.Id == submisionId, cancellationToken);
+
+        if (submision is null)
+            return false;
+
+        submision.IsDeleted = true;
+        await context.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     #endregion

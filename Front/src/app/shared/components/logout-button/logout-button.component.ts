@@ -1,4 +1,4 @@
-import { Component, output } from '@angular/core';
+import { Component, output, signal } from '@angular/core';
 
 @Component({
     selector: 'app-logout-button',
@@ -9,21 +9,21 @@ import { Component, output } from '@angular/core';
 })
 export class LogoutButtonComponent {
     logout = output<void>();
-    mostrandoConfirmacion = false;
+    mostrandoConfirmacion = signal(false);
 
     /** Muestra el panel de confirmacion de cierre de sesion. */
     solicitarCierreSesion(): void {
-        this.mostrandoConfirmacion = true;
+        this.mostrandoConfirmacion.set(true);
     }
 
     /** Oculta el panel de confirmacion sin ejecutar el cierre de sesion. */
     cancelarCierreSesion(): void {
-        this.mostrandoConfirmacion = false;
+        this.mostrandoConfirmacion.set(false);
     }
 
     /** Confirma el cierre de sesion y emite el evento de salida al componente padre. */
     confirmarCierreSesion(): void {
-        this.mostrandoConfirmacion = false;
+        this.mostrandoConfirmacion.set(false);
         this.logout.emit();
     }
 }

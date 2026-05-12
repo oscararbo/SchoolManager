@@ -28,6 +28,8 @@ export class SchoolApiAuthService {
     async logout(): Promise<void> {
         try {
             await firstValueFrom(this.http.post<void>(`${this.apiUrl}/auth/logout`, {}));
+        } catch (e) {
+            console.error('Error en logout request:', e);
         } finally {
             this.sessionService.clearSession();
         }

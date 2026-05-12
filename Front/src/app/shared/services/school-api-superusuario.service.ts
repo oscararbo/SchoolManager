@@ -73,4 +73,16 @@ export class SchoolApiSuperUsuarioService {
             throw extractSchoolApiError(e);
         }
     }
+
+    async uploadColegioImagen(colegioId: number, tipoImagen: 'logo' | 'favicon', archivo: File): Promise<ColegioItem> {
+        try {
+            const formData = new FormData();
+            formData.append('tipoImagen', tipoImagen);
+            formData.append('imagenArchivo', archivo);
+            const response = await firstValueFrom(this.http.post<ApiColegioItem>(`${this.apiUrl}/superusuario/colegios/${colegioId}/imagen`, formData));
+            return mapColegioItem(response);
+        } catch (e) {
+            throw extractSchoolApiError(e);
+        }
+    }
 }

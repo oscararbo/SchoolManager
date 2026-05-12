@@ -190,6 +190,39 @@ public class SuperUsuarioDomainRepository(AppDbContext context) : ISuperUsuarioD
         };
     }
 
+    public async Task<ColegioListItemDto?> UpdateColegioImagenUrlAsync(int colegioId, string tipoImagen, string imageUrl, CancellationToken cancellationToken = default)
+    {
+        var colegio = await context.Colegios.FirstOrDefaultAsync(c => c.Id == colegioId, cancellationToken);
+        if (colegio is null)
+            return null;
+
+        if (tipoImagen == "logo")
+        {
+            colegio.LogoUrl = imageUrl;
+        }
+        else if (tipoImagen == "favicon")
+        {
+            colegio.FaviconUrl = imageUrl;
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return new ColegioListItemDto
+        {
+            Id = colegio.Id,
+            Nombre = colegio.Nombre,
+            Slug = colegio.Slug,
+            LogoUrl = colegio.LogoUrl,
+            FaviconUrl = colegio.FaviconUrl,
+            ColorPrimario = colegio.ColorPrimario,
+            MensajeLogin = colegio.MensajeLogin,
+            TotalAdmins = await context.Cuentas.CountAsync(cuenta => cuenta.ColegioId == colegioId && cuenta.Rol == Roles.Admin, cancellationToken),
+            TotalProfesores = await context.Cuentas.CountAsync(cuenta => cuenta.ColegioId == colegioId && cuenta.Rol == Roles.Profesor, cancellationToken),
+            TotalAlumnos = await context.Cuentas.CountAsync(cuenta => cuenta.ColegioId == colegioId && cuenta.Rol == Roles.Alumno, cancellationToken),
+            TotalCursos = await context.Cursos.CountAsync(curso => curso.ColegioId == colegioId, cancellationToken)
+        };
+    }
+
     private static string? NormalizeOptional(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

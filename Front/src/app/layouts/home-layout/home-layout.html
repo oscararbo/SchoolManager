@@ -80,7 +80,7 @@
                 }
             }
             @default {
-                @defer (when session()!.rol !== 'admin' && session()!.rol !== 'profesor') {
+                @defer (when session()!.rol === 'alumno') {
                     <app-alumno-home
                         [estudianteId]="session()!.id"
                         [nombre]="session()!.nombre">

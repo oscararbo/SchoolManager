@@ -90,5 +90,33 @@ public class EstudiantesController(IEstudiantesService estudiantesService) : Con
     {
         return this.ToActionResult(await estudiantesService.GetMateriaDetalleAsync(id, asignaturaId, User, HttpContext.RequestAborted));
     }
+
+    [HttpPost("{id:int}/tareas/{tareaId:int}/submision")]
+    [Authorize(Policy = AuthorizationPolicies.AlumnoOrAdmin)]
+    public async Task<IActionResult> SubirSubmision(int id, int tareaId, IFormFile archivo)
+    {
+        return this.ToActionResult(await estudiantesService.SubirSubmisionAsync(id, tareaId, archivo, User, HttpContext.RequestAborted));
+    }
+
+    [HttpGet("{id:int}/tareas/{tareaId:int}/submisiones")]
+    [Authorize(Policy = AuthorizationPolicies.AlumnoOrAdmin)]
+    public async Task<IActionResult> GetSubmisiones(int id, int tareaId)
+    {
+        return this.ToActionResult(await estudiantesService.GetSubmisionesAsync(id, tareaId, User, HttpContext.RequestAborted));
+    }
+
+    [HttpDelete("{id:int}/submisiones/{submisionId:int}")]
+    [Authorize(Policy = AuthorizationPolicies.AlumnoOrAdmin)]
+    public async Task<IActionResult> DeleteSubmision(int id, int submisionId)
+    {
+        return this.ToActionResult(await estudiantesService.DeleteSubmisionAsync(id, submisionId, User, HttpContext.RequestAborted));
+    }
+
+    [HttpPost("{id:int}/tareas/{tareaId:int}/marcar-hecha")]
+    [Authorize(Policy = AuthorizationPolicies.AlumnoOrAdmin)]
+    public async Task<IActionResult> MarcarHecha(int id, int tareaId)
+    {
+        return this.ToActionResult(await estudiantesService.MarcarTareaHechaAsync(id, tareaId, User, HttpContext.RequestAborted));
+    }
 }
 

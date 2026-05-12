@@ -21,6 +21,8 @@ export class SuperusuarioHomeComponent {
 
     colegioForm;
     adminForm;
+    logoFile: File | null = null;
+    faviconFile: File | null = null;
 
     private api = inject(SchoolApiService);
     private fb = inject(FormBuilder);
@@ -75,6 +77,7 @@ export class SuperusuarioHomeComponent {
                 (value.mensajeLogin ?? '').trim() || undefined
             ] as const;
 
+            let saved: ColegioItem;
             if (value.id) {
                 const updated = await this.api.updateColegio(value.id, ...payload);
                 this.colegios.update(current => current.map(colegio => colegio.id === updated.id ? updated : colegio).sort((a, b) => a.nombre.localeCompare(b.nombre)));
@@ -82,16 +85,41 @@ export class SuperusuarioHomeComponent {
                     this.colegioAdminsActivo.set(updated);
                 }
                 this.mensaje.set(`Colegio ${updated.nombre} actualizado.`);
+                saved = updated;
             } else {
                 const created = await this.api.createColegio(...payload);
                 this.colegios.update(current => [...current, created].sort((a, b) => a.nombre.localeCompare(b.nombre)));
                 this.mensaje.set(`Colegio ${created.nombre} creado.`);
+                saved = created;
+            }
+
+            if (this.logoFile) {
+                saved = await this.api.uploadColegioImagen(saved.id, 'logo', this.logoFile);
+            }
+
+            if (this.faviconFile) {
+                saved = await this.api.uploadColegioImagen(saved.id, 'favicon', this.faviconFile);
+            }
+
+            this.colegios.update(current => current.map(colegio => colegio.id === saved.id ? saved : colegio).sort((a, b) => a.nombre.localeCompare(b.nombre)));
+            if (this.colegioAdminsActivo()?.id === saved.id) {
+                this.colegioAdminsActivo.set(saved);
             }
 
             this.limpiarFormularioColegio();
         } catch (e) {
             this.error.set((e as Error).message || 'No se pudo guardar el colegio.');
         }
+    }
+
+    onLogoFileChange(event: Event): void {
+        const input = event.target as HTMLInputElement;
+        this.logoFile = input.files && input.files.length > 0 ? input.files[0] : null;
+    }
+
+    onFaviconFileChange(event: Event): void {
+        const input = event.target as HTMLInputElement;
+        this.faviconFile = input.files && input.files.length > 0 ? input.files[0] : null;
     }
 
     async crearAdminColegio(): Promise<void> {
@@ -176,6 +204,8 @@ export class SuperusuarioHomeComponent {
     private limpiarFormularioColegio(): void {
         this.colegioEnEdicionId.set(null);
         this.colegioForm.reset({ id: null, nombre: '', slug: '', logoUrl: '', faviconUrl: '', colorPrimario: '#1f2937', mensajeLogin: '' });
+        this.logoFile = null;
+        this.faviconFile = null;
     }
 
     getDevUrl(colegio: ColegioItem): string {

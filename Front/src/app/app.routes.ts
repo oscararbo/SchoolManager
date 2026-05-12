@@ -13,6 +13,15 @@ export const routes: Routes = [
         loadComponent: () => import('./layouts/home-layout/home-layout').then(m => m.HomeLayout)
     },
     {
+        path: 'school/:schoolSlug/home',
+        canActivate: [authGuard],
+        loadComponent: () => import('./layouts/home-layout/home-layout').then(m => m.HomeLayout)
+    },
+    {
+        path: 'school/:schoolSlug',
+        redirectTo: 'school/:schoolSlug/home'
+    },
+    {
         path: '**',
         redirectTo: ''
     }

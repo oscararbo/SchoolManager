@@ -27,9 +27,13 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=schooldb;Username=postgres;Password=postgres
+      SeedSchool__Nombre: Colegio Principal
+      SeedSchool__Slug: default
       SeedAdmin__Nombre: Administrador
       SeedAdmin__Correo: admin@prueba.com
       SeedAdmin__Contrasena: Prueba1
+      SeedSuperUsuario__Correo: root@schoolmanager.com
+      SeedSuperUsuario__Contrasena: Super123!
     depends_on:
       postgres:
         condition: service_healthy

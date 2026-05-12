@@ -8,6 +8,8 @@ public class Cuenta : ISoftDeletable
     public string Correo { get; set; } = string.Empty;
     public string Contrasena { get; set; } = string.Empty;
     public string Rol { get; set; } = string.Empty;
+    public int? RolSistemaId { get; set; }
+    public RolSistema? RolSistema { get; set; }
     public bool IsDeleted { get; set; }
 
     public Admin? Admin { get; set; }

@@ -33,6 +33,7 @@ import type {
     ProfesorStats,
     TareaConNotas,
     TareaDetalle,
+    TareaSubmision,
     UpdateEstudianteData,
     UpdateProfesorData
 } from './school-api.types';
@@ -42,6 +43,7 @@ export type {
     ProfesorPanel,
     TareaResumen,
     TareaDetalle,
+    TareaSubmision,
     MediasTrimestrales,
     AsignaturaAlumnoNota,
     AsignaturaAlumno,
@@ -103,6 +105,7 @@ export class SchoolApiService {
     getAdminsByColegio(colegioId: number): Promise<ColegioAdminItem[]> { return this.superUsuario.getAdminsByColegio(colegioId); }
     createColegio(nombre: string, slug: string, logoUrl?: string, faviconUrl?: string, colorPrimario?: string, mensajeLogin?: string): Promise<ColegioItem> { return this.superUsuario.createColegio(nombre, slug, logoUrl, faviconUrl, colorPrimario, mensajeLogin); }
     updateColegio(id: number, nombre: string, slug: string, logoUrl?: string, faviconUrl?: string, colorPrimario?: string, mensajeLogin?: string): Promise<ColegioItem> { return this.superUsuario.updateColegio(id, nombre, slug, logoUrl, faviconUrl, colorPrimario, mensajeLogin); }
+    uploadColegioImagen(colegioId: number, tipoImagen: 'logo' | 'favicon', archivo: File): Promise<ColegioItem> { return this.superUsuario.uploadColegioImagen(colegioId, tipoImagen, archivo); }
     deleteColegio(id: number): Promise<void> { return this.superUsuario.deleteColegio(id); }
     createAdminColegio(colegioId: number, nombre: string): Promise<ColegioAdminItem> { return this.superUsuario.createAdminColegio(colegioId, nombre); }
 
@@ -115,11 +118,19 @@ export class SchoolApiService {
     getCalificacionesDeTarea(profesorId: number, asignaturaId: number, tareaId: number): Promise<AsignaturaCalificacionesTarea> { return this.profesor.getCalificacionesDeTarea(profesorId, asignaturaId, tareaId); }
     ponerNota(profesorId: number, estudianteId: number, tareaId: number, valor: number): Promise<void> { return this.profesor.ponerNota(profesorId, estudianteId, tareaId, valor); }
     crearTarea(profesorId: number, nombre: string, trimestre: number, asignaturaId: number): Promise<TareaDetalle> { return this.profesor.crearTarea(profesorId, nombre, trimestre, asignaturaId); }
+    updateTareaDescripcion(profesorId: number, tareaId: number, descripcion?: string): Promise<TareaDetalle> { return this.profesor.updateTareaDescripcion(profesorId, tareaId, descripcion); }
+    uploadTareaSubmision(profesorId: number, tareaId: number, estudianteId: number, archivo: File): Promise<TareaSubmision> { return this.profesor.uploadTareaSubmision(profesorId, tareaId, estudianteId, archivo); }
+    getTareaSubmisiones(profesorId: number, tareaId: number): Promise<TareaSubmision[]> { return this.profesor.getTareaSubmisiones(profesorId, tareaId); }
+    deleteTareaSubmision(profesorId: number, submisionId: number): Promise<void> { return this.profesor.deleteTareaSubmision(profesorId, submisionId); }
 
     // Alumno panel
     getPanelAlumno(estudianteId: number): Promise<AlumnoPanel> { return this.alumno.getPanelAlumno(estudianteId); }
     getPanelAlumnoResumen(estudianteId: number): Promise<AlumnoPanelResumen> { return this.alumno.getPanelAlumnoResumen(estudianteId); }
     getMateriaDetalle(estudianteId: number, asignaturaId: number): Promise<AlumnoMateriaDetalle> { return this.alumno.getMateriaDetalle(estudianteId, asignaturaId); }
+    subirSubmisionAlumno(estudianteId: number, tareaId: number, archivo: File): Promise<TareaSubmision> { return this.alumno.subirSubmision(estudianteId, tareaId, archivo); }
+    getSubmisionesAlumno(estudianteId: number, tareaId: number): Promise<TareaSubmision[]> { return this.alumno.getSubmisiones(estudianteId, tareaId); }
+    deleteSubmisionAlumno(estudianteId: number, submisionId: number): Promise<void> { return this.alumno.deleteSubmision(estudianteId, submisionId); }
+    marcarTareaHechaAlumno(estudianteId: number, tareaId: number): Promise<TareaSubmision> { return this.alumno.marcarHecha(estudianteId, tareaId); }
 
     // Admin
     getAdminStats(): Promise<AdminStats> { return this.admin.getAdminStats(); }

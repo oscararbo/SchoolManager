@@ -3,11 +3,13 @@ using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Configuration;
 using Back.Api.Application.Dtos;
+using Back.Api.Application.Dtos.Profesores.Requests;
+using Microsoft.AspNetCore.Hosting;
 using System.Security.Claims;
 
 namespace Back.Api.Application.Services;
 
-public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPasswordService passwordService, ICurrentSchoolContext currentSchoolContext) : IProfesoresService
+public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPasswordService passwordService, ICurrentSchoolContext currentSchoolContext, IWebHostEnvironment hostEnvironment) : IProfesoresService
 {
     public async Task<ApplicationResult> GetAllProfesoresAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await profesoresDomain.GetAllProfesoresAsync(cancellationToken));
@@ -182,8 +184,106 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         if (await profesoresDomain.TareaDuplicadaAsync(createTareaRequestDto.AsignaturaId, createTareaRequestDto.Trimestre, normalizedName, cancellationToken))
             return ApplicationResult.BadRequest($"Ya existe una task con el nombre '{normalizedName}' en este trimestre para esta subject.");
 
-        var task = await profesoresDomain.CrearTareaAsync(normalizedName, createTareaRequestDto.Trimestre, createTareaRequestDto.AsignaturaId, profesorId, cancellationToken);
+        var normalizedDescripcion = string.IsNullOrWhiteSpace(createTareaRequestDto.Descripcion)
+            ? null
+            : createTareaRequestDto.Descripcion.Trim();
+        var task = await profesoresDomain.CrearTareaAsync(normalizedName, normalizedDescripcion, createTareaRequestDto.Trimestre, createTareaRequestDto.AsignaturaId, profesorId, cancellationToken);
         return ApplicationResult.Created($"/api/profesores/{profesorId}/tasks/{task.Id}", task);
+    }
+
+    public async Task<ApplicationResult> UpdateTareaDescripcionAsync(int profesorId, int tareaId, UpdateTareaDescripcionRequestDto request, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    {
+        if (!UsuarioCoincideConProfesor(profesorId, user))
+            return ApplicationResult.Forbidden();
+
+        if (!await profesoresDomain.ProfesorImparteTareaAsync(profesorId, tareaId, cancellationToken))
+            return ApplicationResult.BadRequest("El teacher no tiene acceso a esa task.");
+
+        var descripcion = string.IsNullOrWhiteSpace(request.Descripcion) ? null : request.Descripcion.Trim();
+        var updated = await profesoresDomain.UpdateTareaDescripcionAsync(tareaId, descripcion, cancellationToken);
+        return updated is null
+            ? ApplicationResult.NotFound("La task no existe.")
+            : ApplicationResult.Ok(updated);
+    }
+
+    public async Task<ApplicationResult> SubirTareaSubmisionAsync(int profesorId, int tareaId, UploadTareaSubmisionRequestDto request, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    {
+        if (!UsuarioCoincideConProfesor(profesorId, user))
+            return ApplicationResult.Forbidden();
+
+        if (!await profesoresDomain.ProfesorImparteTareaAsync(profesorId, tareaId, cancellationToken))
+            return ApplicationResult.BadRequest("El teacher no tiene acceso a esa task.");
+
+        if (request.Archivo is null || request.Archivo.Length == 0)
+            return ApplicationResult.BadRequest("Debes adjuntar un archivo.");
+
+        if (request.Archivo.Length > 10 * 1024 * 1024)
+            return ApplicationResult.BadRequest("El archivo supera el tamano maximo permitido (10MB).");
+
+        var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png"
+        };
+
+        var extension = Path.GetExtension(request.Archivo.FileName);
+        if (string.IsNullOrWhiteSpace(extension) || !allowedExtensions.Contains(extension))
+            return ApplicationResult.BadRequest("Tipo de archivo no permitido.");
+
+        var tarea = await profesoresDomain.GetTareaInfoAsync(tareaId, cancellationToken);
+        if (tarea is null)
+            return ApplicationResult.NotFound("La task no existe.");
+
+        if (!await profesoresDomain.EstudiantePerteneceAAsignaturaAsync(request.EstudianteId, tarea.Value.AsignaturaId, cancellationToken))
+            return ApplicationResult.BadRequest("El estudiante no pertenece a la asignatura de la task.");
+
+        var uploadsRoot = Path.Combine(hostEnvironment.ContentRootPath, "uploads", "tareas", tareaId.ToString());
+        Directory.CreateDirectory(uploadsRoot);
+
+        var safeBaseName = Path.GetFileNameWithoutExtension(request.Archivo.FileName);
+        safeBaseName = string.Concat(safeBaseName.Where(ch => char.IsLetterOrDigit(ch) || ch == '-' || ch == '_'));
+        if (string.IsNullOrWhiteSpace(safeBaseName)) safeBaseName = "archivo";
+
+        var generatedFileName = $"{request.EstudianteId}_{DateTime.UtcNow:yyyyMMddHHmmss}_{safeBaseName}{extension}";
+        var absolutePath = Path.Combine(uploadsRoot, generatedFileName);
+
+        await using (var stream = File.Create(absolutePath))
+        {
+            await request.Archivo.CopyToAsync(stream, cancellationToken);
+        }
+
+        var relativePath = $"/uploads/tareas/{tareaId}/{generatedFileName}";
+        var saved = await profesoresDomain.UpsertTareaSubmisionAsync(
+            tareaId,
+            request.EstudianteId,
+            request.Archivo.FileName,
+            relativePath,
+            request.Archivo.Length,
+            cancellationToken);
+
+        return ApplicationResult.Ok(saved);
+    }
+
+    public async Task<ApplicationResult> GetSubmisionesDeTareaAsync(int profesorId, int tareaId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    {
+        if (!UsuarioCoincideConProfesor(profesorId, user))
+            return ApplicationResult.Forbidden();
+
+        if (!await profesoresDomain.ProfesorImparteTareaAsync(profesorId, tareaId, cancellationToken))
+            return ApplicationResult.BadRequest("El teacher no tiene acceso a esa task.");
+
+        var submisiones = await profesoresDomain.GetSubmisionesDeTareaAsync(tareaId, cancellationToken);
+        return ApplicationResult.Ok(submisiones);
+    }
+
+    public async Task<ApplicationResult> DeleteSubmisionAsync(int profesorId, int submisionId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    {
+        if (!UsuarioCoincideConProfesor(profesorId, user))
+            return ApplicationResult.Forbidden();
+
+        var removed = await profesoresDomain.DeleteSubmisionAsync(submisionId, cancellationToken);
+        return removed
+            ? ApplicationResult.NoContent()
+            : ApplicationResult.NotFound("La submision no existe.");
     }
 
     public async Task<ApplicationResult> GetTareasDeAsignaturaAsync(int profesorId, int asignaturaId, ClaimsPrincipal user, CancellationToken cancellationToken = default)

@@ -14,4 +14,5 @@ public interface ISuperUsuarioDomainRepository
     Task<bool> DeleteColegioAsync(int colegioId, CancellationToken cancellationToken = default);
     Task<ColegioAdminListItemDto> CreateAdminColegioAsync(int colegioId, string nombre, string correo, string contrasenaHash, CancellationToken cancellationToken = default);
     Task<bool> ColegioCorreoDuplicadoAsync(int colegioId, string correo, CancellationToken cancellationToken = default);
+    Task<ColegioListItemDto?> UpdateColegioImagenUrlAsync(int colegioId, string tipoImagen, string imageUrl, CancellationToken cancellationToken = default);
 }

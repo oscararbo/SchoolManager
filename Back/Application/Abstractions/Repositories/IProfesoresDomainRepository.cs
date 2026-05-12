@@ -18,6 +18,7 @@ public interface IProfesoresDomainRepository
     Task<bool> AsignaturaYaTieneOtroProfesorAsync(int asignaturaId, int profesorId, CancellationToken cancellationToken = default);
     Task<bool> ImparticionExisteAsync(int profesorId, int asignaturaId, int cursoId, CancellationToken cancellationToken = default);
     Task<bool> EstudianteMatriculadoAsync(int estudianteId, int asignaturaId, CancellationToken cancellationToken = default);
+    Task<bool> EstudiantePerteneceAAsignaturaAsync(int estudianteId, int asignaturaId, CancellationToken cancellationToken = default);
     Task<bool> ProfesorImparteAlCursoAsync(int profesorId, int asignaturaId, int cursoId, CancellationToken cancellationToken = default);
     Task<bool> TareaDuplicadaAsync(int asignaturaId, int trimestre, string nombre, CancellationToken cancellationToken = default);
     Task<AsignaturaInfoDto?> GetAsignaturaInfoAsync(int asignaturaId, CancellationToken cancellationToken = default);
@@ -45,5 +46,9 @@ public interface IProfesoresDomainRepository
     Task AsignarImparticionAsync(int profesorId, int asignaturaId, int cursoId, CancellationToken cancellationToken = default);
     Task EliminarImparticionAsync(int profesorId, int asignaturaId, int cursoId, CancellationToken cancellationToken = default);
     Task SetNotaAsync(int estudianteId, int tareaId, decimal valor, CancellationToken cancellationToken = default);
-    Task<TareaDetalleDto> CrearTareaAsync(string nombre, int trimestre, int asignaturaId, int profesorId, CancellationToken cancellationToken = default);
+    Task<TareaDetalleDto> CrearTareaAsync(string nombre, string? descripcion, int trimestre, int asignaturaId, int profesorId, CancellationToken cancellationToken = default);
+    Task<TareaDetalleDto?> UpdateTareaDescripcionAsync(int tareaId, string? descripcion, CancellationToken cancellationToken = default);
+    Task<TareaSubmisionDto> UpsertTareaSubmisionAsync(int tareaId, int estudianteId, string nombreArchivo, string rutaArchivo, long tamanoBytes, CancellationToken cancellationToken = default);
+    Task<List<TareaSubmisionDto>> GetSubmisionesDeTareaAsync(int tareaId, CancellationToken cancellationToken = default);
+    Task<bool> DeleteSubmisionAsync(int submisionId, CancellationToken cancellationToken = default);
 }

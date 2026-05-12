@@ -9,6 +9,9 @@ public class CreateTareaRequestDto
     [MaxLength(120)]
     public string Nombre { get; set; } = string.Empty;
 
+    [MaxLength(2000)]
+    public string? Descripcion { get; set; }
+
     [Range(1, 3)]
     public int Trimestre { get; set; }
 

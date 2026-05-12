@@ -1,4 +1,5 @@
 using Back.Api.Domain.Entities;
+using Back.Api.Application.Configuration;
 using Back.Api.Application.Abstractions.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -9,6 +10,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentSchool
 {
     public DbSet<Colegio> Colegios => Set<Colegio>();
     public DbSet<Cuenta> Cuentas => Set<Cuenta>();
+    public DbSet<RolSistema> RolesSistema => Set<RolSistema>();
+    public DbSet<PermisoSistema> PermisosSistema => Set<PermisoSistema>();
+    public DbSet<RolSistemaPermiso> RolesSistemaPermisos => Set<RolSistemaPermiso>();
     public DbSet<Curso> Cursos => Set<Curso>();
     public DbSet<Estudiante> Estudiantes => Set<Estudiante>();
     public DbSet<Profesor> Profesores => Set<Profesor>();
@@ -18,6 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentSchool
     public DbSet<ProfesorAsignaturaCurso> ProfesorAsignaturaCursos => Set<ProfesorAsignaturaCurso>();
     public DbSet<Nota> Notas => Set<Nota>();
     public DbSet<Tarea> Tareas => Set<Tarea>();
+    public DbSet<TareaSubmision> TareaSubmisiones => Set<TareaSubmision>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     private int? CurrentSchoolId => currentSchoolContext.IsSuperUsuario ? null : currentSchoolContext.SchoolId;
@@ -35,6 +40,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentSchool
         ConfigureSoftDelete<ProfesorAsignaturaCurso>(modelBuilder);
         ConfigureSoftDelete<Nota>(modelBuilder);
         ConfigureSoftDelete<Tarea>(modelBuilder);
+        ConfigureSoftDelete<TareaSubmision>(modelBuilder);
         ConfigureSoftDelete<RefreshToken>(modelBuilder);
 
         modelBuilder.Entity<Cuenta>()
@@ -52,6 +58,27 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentSchool
             .WithMany(colegio => colegio.Cuentas)
             .HasForeignKey(c => c.ColegioId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Cuenta>()
+            .HasOne(c => c.RolSistema)
+            .WithMany(r => r.Cuentas)
+            .HasForeignKey(c => c.RolSistemaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<RolSistemaPermiso>()
+            .HasKey(rp => new { rp.RolSistemaId, rp.PermisoSistemaId });
+
+        modelBuilder.Entity<RolSistemaPermiso>()
+            .HasOne(rp => rp.RolSistema)
+            .WithMany(r => r.RolesPermisos)
+            .HasForeignKey(rp => rp.RolSistemaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<RolSistemaPermiso>()
+            .HasOne(rp => rp.PermisoSistema)
+            .WithMany(p => p.RolesPermisos)
+            .HasForeignKey(rp => rp.PermisoSistemaId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Curso>()
             .HasOne(c => c.Colegio)
@@ -168,6 +195,46 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentSchool
         modelBuilder.Entity<Cuenta>().Property(c => c.Correo).HasMaxLength(255);
         modelBuilder.Entity<Cuenta>().Property(c => c.Rol).HasMaxLength(32);
         modelBuilder.Entity<Cuenta>().Property(c => c.ColegioId).HasDefaultValue(1);
+
+        modelBuilder.Entity<RolSistema>().Property(r => r.Nombre).HasMaxLength(32);
+        modelBuilder.Entity<RolSistema>().HasIndex(r => r.Nombre).IsUnique();
+        modelBuilder.Entity<PermisoSistema>().Property(p => p.Clave).HasMaxLength(64);
+        modelBuilder.Entity<PermisoSistema>().Property(p => p.Descripcion).HasMaxLength(180);
+        modelBuilder.Entity<PermisoSistema>().HasIndex(p => p.Clave).IsUnique();
+        modelBuilder.Entity<RolSistema>().HasData(
+            new RolSistema { Id = 1, Nombre = Roles.SuperUsuario },
+            new RolSistema { Id = 2, Nombre = Roles.Admin },
+            new RolSistema { Id = 3, Nombre = Roles.Profesor },
+            new RolSistema { Id = 4, Nombre = Roles.Alumno }
+        );
+        modelBuilder.Entity<PermisoSistema>().HasData(
+            new PermisoSistema { Id = 1, Clave = "colegios.manage", Descripcion = "Gestion de colegios" },
+            new PermisoSistema { Id = 2, Clave = "usuarios.admin.manage", Descripcion = "Gestion de administradores" },
+            new PermisoSistema { Id = 3, Clave = "profesores.manage", Descripcion = "Gestion de profesores" },
+            new PermisoSistema { Id = 4, Clave = "estudiantes.manage", Descripcion = "Gestion de estudiantes" },
+            new PermisoSistema { Id = 5, Clave = "asignaturas.manage", Descripcion = "Gestion de asignaturas" },
+            new PermisoSistema { Id = 6, Clave = "notas.manage", Descripcion = "Gestion de notas" },
+            new PermisoSistema { Id = 7, Clave = "tareas.manage", Descripcion = "Gestion de tareas" },
+            new PermisoSistema { Id = 8, Clave = "panel.alumno.read", Descripcion = "Lectura del panel de alumno" }
+        );
+        modelBuilder.Entity<RolSistemaPermiso>().HasData(
+            new RolSistemaPermiso { RolSistemaId = 1, PermisoSistemaId = 1 },
+            new RolSistemaPermiso { RolSistemaId = 1, PermisoSistemaId = 2 },
+            new RolSistemaPermiso { RolSistemaId = 1, PermisoSistemaId = 3 },
+            new RolSistemaPermiso { RolSistemaId = 1, PermisoSistemaId = 4 },
+            new RolSistemaPermiso { RolSistemaId = 1, PermisoSistemaId = 5 },
+            new RolSistemaPermiso { RolSistemaId = 1, PermisoSistemaId = 6 },
+            new RolSistemaPermiso { RolSistemaId = 1, PermisoSistemaId = 7 },
+            new RolSistemaPermiso { RolSistemaId = 1, PermisoSistemaId = 8 },
+            new RolSistemaPermiso { RolSistemaId = 2, PermisoSistemaId = 3 },
+            new RolSistemaPermiso { RolSistemaId = 2, PermisoSistemaId = 4 },
+            new RolSistemaPermiso { RolSistemaId = 2, PermisoSistemaId = 5 },
+            new RolSistemaPermiso { RolSistemaId = 2, PermisoSistemaId = 6 },
+            new RolSistemaPermiso { RolSistemaId = 2, PermisoSistemaId = 7 },
+            new RolSistemaPermiso { RolSistemaId = 3, PermisoSistemaId = 6 },
+            new RolSistemaPermiso { RolSistemaId = 3, PermisoSistemaId = 7 },
+            new RolSistemaPermiso { RolSistemaId = 4, PermisoSistemaId = 8 }
+        );
 
         modelBuilder.Entity<Profesor>().Property(p => p.Nombre).HasMaxLength(150);
         modelBuilder.Entity<Profesor>().Property(p => p.Apellidos).HasMaxLength(150).IsRequired();

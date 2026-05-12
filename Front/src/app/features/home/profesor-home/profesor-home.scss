@@ -7,7 +7,7 @@
 }
 
 .task-list {
-    max-height: 360px;
+    max-height: 280px;
     overflow-y: auto;
 }
 
@@ -17,12 +17,13 @@
     align-items: center;
     gap: 12px;
     width: 100%;
-    padding: 12px 14px;
+    padding: 10px 12px;
     border: 1px solid #dbe3f0;
-    border-radius: 12px;
+    border-radius: 10px;
     background: #f8fafc;
     text-align: left;
     transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    font-size: 0.875rem;
 }
 
 .task-chip:hover {
@@ -64,6 +65,27 @@
     min-height: 320px;
     display: grid;
     place-items: center;
+}
+
+.task-insight-card {
+    background: #ffffff;
+}
+
+.stats-scroll-list {
+    max-height: min(44vh, 480px);
+    overflow-y: auto;
+    padding-right: 4px;
+    scrollbar-width: thin;
+}
+
+.insight-clickable {
+    cursor: pointer;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+
+    &:hover {
+        background-color: #eef4ff !important;
+        box-shadow: 0 0 0 2px #93c5fd;
+    }
 }
 
 @media (max-width: 991.98px) {

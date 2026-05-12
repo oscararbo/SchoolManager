@@ -1,4 +1,5 @@
 using Back.Api.Application.Dtos;
+using Back.Api.Application.Dtos.Profesores.Requests;
 using Back.Api.Application.Configuration;
 using Back.Api.Application.Services;
 using Back.Api.Presentation.Http;
@@ -117,6 +118,34 @@ public class ProfesoresController(IProfesoresService profesoresService) : Contro
     public async Task<IActionResult> CrearTarea(int profesorId, CreateTareaRequestDto createTareaRequestDto)
     {
         return this.ToActionResult(await profesoresService.CrearTareaAsync(profesorId, createTareaRequestDto, User, HttpContext.RequestAborted));
+    }
+
+    [HttpPut("{profesorId:int}/tareas/{tareaId:int}/descripcion")]
+    [Authorize(Policy = AuthorizationPolicies.ProfesorOrAdmin)]
+    public async Task<IActionResult> UpdateTareaDescripcion(int profesorId, int tareaId, UpdateTareaDescripcionRequestDto request)
+    {
+        return this.ToActionResult(await profesoresService.UpdateTareaDescripcionAsync(profesorId, tareaId, request, User, HttpContext.RequestAborted));
+    }
+
+    [HttpPost("{profesorId:int}/tareas/{tareaId:int}/upload")]
+    [Authorize(Policy = AuthorizationPolicies.ProfesorOrAdmin)]
+    public async Task<IActionResult> UploadTareaSubmision(int profesorId, int tareaId, [FromForm] UploadTareaSubmisionRequestDto request)
+    {
+        return this.ToActionResult(await profesoresService.SubirTareaSubmisionAsync(profesorId, tareaId, request, User, HttpContext.RequestAborted));
+    }
+
+    [HttpGet("{profesorId:int}/tareas/{tareaId:int}/submisions")]
+    [Authorize(Policy = AuthorizationPolicies.ProfesorOrAdmin)]
+    public async Task<IActionResult> GetSubmisionsDeTarea(int profesorId, int tareaId)
+    {
+        return this.ToActionResult(await profesoresService.GetSubmisionesDeTareaAsync(profesorId, tareaId, User, HttpContext.RequestAborted));
+    }
+
+    [HttpDelete("{profesorId:int}/submisions/{submisionId:int}")]
+    [Authorize(Policy = AuthorizationPolicies.ProfesorOrAdmin)]
+    public async Task<IActionResult> DeleteSubmision(int profesorId, int submisionId)
+    {
+        return this.ToActionResult(await profesoresService.DeleteSubmisionAsync(profesorId, submisionId, User, HttpContext.RequestAborted));
     }
 
     [HttpGet("{profesorId:int}/asignaturas/{asignaturaId:int}/tareas")]

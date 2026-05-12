@@ -4,6 +4,7 @@ import { emailValidator } from '../../../core/validators/auth.validators';
 import { Router } from '@angular/router';
 import { SchoolApiService } from '../../../shared/services/school-api.service';
 import { SessionService } from '../../../core/services/session.service';
+import { TenantService } from '../../../core/services/tenant.service';
 import { TextInputComponent } from '../../../shared/components/text-input/text-input.component';
 
 interface LoginNavigationState {
@@ -27,6 +28,7 @@ export class Login implements OnInit {
     private formBuilder = inject(FormBuilder);
     private schoolApiService = inject(SchoolApiService);
     private sessionService = inject(SessionService);
+    private tenantService = inject(TenantService);
 
     constructor() {
         this.formLogin = this.formBuilder.group({
@@ -112,7 +114,8 @@ export class Login implements OnInit {
                 curso: data.curso
             });
 
-            this.router.navigate(['/home']);
+            const schoolSlug = this.tenantService.getSchoolSlug();
+            this.router.navigate(['/school', schoolSlug, 'home']);
         } catch (error) {
             this.errorMessage.set((error as Error).message || 'No se pudo iniciar sesion.');
         } finally {

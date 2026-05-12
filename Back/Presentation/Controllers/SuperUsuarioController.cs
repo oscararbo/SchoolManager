@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Back.Api.Application.Configuration;
 using Back.Api.Application.Dtos;
+using Back.Api.Application.Dtos.SuperUsuario.Requests;
 using Back.Api.Application.Services;
 using Back.Api.Presentation.Http;
 using Microsoft.AspNetCore.Authorization;
@@ -47,4 +48,9 @@ public class SuperUsuarioController(ISuperUsuarioService superUsuarioService) : 
     [HttpPost("colegios/{colegioId:int}/admins")]
     public async Task<IActionResult> CreateAdminColegio(int colegioId, CreateAdminColegioRequestDto request)
         => this.ToActionResult(await superUsuarioService.CreateAdminColegioAsync(colegioId, request, HttpContext.RequestAborted));
+
+    [Authorize(Policy = AuthorizationPolicies.SuperUsuarioOnly)]
+    [HttpPost("colegios/{colegioId:int}/imagen")]
+    public async Task<IActionResult> UpdateColegioImagen(int colegioId, [FromForm] UpdateColegioImagenRequestDto request)
+        => this.ToActionResult(await superUsuarioService.UpdateColegioImagenAsync(colegioId, request, HttpContext.RequestAborted));
 }

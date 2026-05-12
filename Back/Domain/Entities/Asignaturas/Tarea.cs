@@ -4,6 +4,7 @@ public class Tarea : ISoftDeletable
 {
     public int Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
+    public string? Descripcion { get; set; }
     public bool IsDeleted { get; set; }
     public int Trimestre { get; set; }
     public int AsignaturaId { get; set; }
@@ -11,4 +12,5 @@ public class Tarea : ISoftDeletable
     public int ProfesorId { get; set; }
     public Profesor? Profesor { get; set; }
     public ICollection<Nota> Notas { get; set; } = new List<Nota>();
+    public ICollection<TareaSubmision> Submisiones { get; set; } = new List<TareaSubmision>();
 }
