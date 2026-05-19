@@ -17,7 +17,6 @@
     </app-weekly-events-calendar>
 </div>
 
-<!-- Modal: add personal event -->
 @if (showForm()) {
     <div class="form-overlay" (click)="cerrarFormulario()">
         <div class="form-panel" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
@@ -32,7 +31,6 @@
                     <div class="alert alert-danger py-2 small mb-3">{{ formError() }}</div>
                 }
 
-                <!-- Title -->
                 <div class="mb-3">
                     <label class="form-label form-label-sm fw-semibold">Titulo *</label>
                     <input type="text" class="form-control form-control-sm"
@@ -40,7 +38,6 @@
                         placeholder="Ej: Estudiar para el examen" maxlength="80" autofocus>
                 </div>
 
-                <!-- Description -->
                 <div class="mb-3">
                     <label class="form-label form-label-sm fw-semibold">Descripcion</label>
                     <textarea class="form-control form-control-sm"
@@ -48,7 +45,6 @@
                         rows="2" placeholder="Opcional" maxlength="200"></textarea>
                 </div>
 
-                <!-- Date + Location -->
                 <div class="row g-2 mb-3">
                     <div class="col-6">
                         <label class="form-label form-label-sm fw-semibold">Fecha</label>
@@ -64,7 +60,6 @@
                     </div>
                 </div>
 
-                <!-- Start + End time -->
                 <div class="row g-2 mb-3">
                     <div class="col-6">
                         <label class="form-label form-label-sm fw-semibold">Hora inicio</label>
@@ -78,7 +73,6 @@
                     </div>
                 </div>
 
-                <!-- Color picker -->
                 <div class="mb-3">
                     <label class="form-label form-label-sm fw-semibold d-block">Color</label>
                     <div class="color-picker-row">
@@ -93,7 +87,6 @@
                     </div>
                 </div>
 
-                <!-- Repeat weekly -->
                 <div class="mb-4">
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="repeatWeekly"
@@ -102,7 +95,6 @@
                     </div>
                 </div>
 
-                <!-- Actions -->
                 <div class="d-flex gap-2 justify-content-end">
                     <button type="button" class="btn btn-sm btn-outline-secondary" (click)="cerrarFormulario()">Cancelar</button>
                     <button type="submit" class="btn btn-sm btn-primary">Guardar evento</button>

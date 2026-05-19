@@ -2,7 +2,6 @@
     display: block;
 }
 
-// ── Modal overlay ───────────────────────────────────────────────────────────
 .form-overlay {
     position: fixed;
     inset: 0;
@@ -41,7 +40,6 @@
     padding: 1rem 1.25rem 1.25rem;
 }
 
-// ── Color picker ────────────────────────────────────────────────────────────
 .color-picker-row {
     display: flex;
     gap: 0.5rem;
@@ -66,7 +64,6 @@
     }
 }
 
-// ── Animation ───────────────────────────────────────────────────────────────
 @keyframes slideUp {
     from { opacity: 0; transform: translateY(20px); }
     to   { opacity: 1; transform: translateY(0); }

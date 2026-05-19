@@ -1,26 +1,23 @@
 <section class="cal-shell">
-    <!-- TOOLBAR -->
     <header class="cal-toolbar">
         <div class="toolbar-info">
             <span class="h6 mb-0">Calendario semanal</span>
             <span class="small text-secondary">{{ weekLabel() }}</span>
         </div>
         <div class="toolbar-actions">
-            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="goToPreviousWeek()">&#8592; Anterior</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="goToNextWeek()">Siguiente &#8594;</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="goToPreviousWeek()">← Anterior</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="goToNextWeek()">Siguiente →</button>
             <input class="form-control form-control-sm cal-date-picker" type="date" [value]="selectedWeekInputValue()"
                 (change)="onWeekDateSelected($any($event.target).value)">
             <button type="button" class="btn btn-sm btn-primary" (click)="goToTodayContext()">Hoy</button>
         </div>
     </header>
 
-    <!-- LEGEND -->
     <div class="cal-legend">
         <span class="legend-item"><span class="legend-dot admin"></span> Horario de clase</span>
         <span class="legend-item"><span class="legend-dot personal"></span> Evento personal</span>
     </div>
 
-    <!-- DAYS HEADER (above scroll, sticky) -->
     <div class="cal-days-header">
         <div class="time-gutter-hdr"></div>
         @for (day of days(); track day.isoDate) {
@@ -35,37 +32,27 @@
         }
     </div>
 
-    <!-- SCROLLABLE TIME GRID -->
     <div class="cal-scroll-area">
         <div class="cal-grid-inner" [style.height.px]="totalGridHeight">
-
-            <!-- Time labels column -->
             <div class="time-col">
                 @for (hour of hours; track hour) {
                     <div class="time-slot" [style.height.px]="HOUR_HEIGHT">{{ formatHour(hour) }}</div>
                 }
             </div>
 
-            <!-- Day columns -->
             @for (day of days(); track day.isoDate) {
                 <div class="day-col"
                     [class.is-today]="isToday(day)"
                     [class.is-focused]="isFocusedDay(day)"
                     [style.height.px]="totalGridHeight">
-
-                    <!-- Hour grid lines -->
                     @for (hour of hours; track hour) {
                         <div class="hour-line" [style.top.px]="(hour - GRID_START_HOUR) * HOUR_HEIGHT"></div>
                     }
-
-                    <!-- Current time indicator -->
                     @if (isToday(day)) {
                         @if (getCurrentTimeTop(); as nowTop) {
                             <div class="now-line" [style.top]="nowTop"></div>
                         }
                     }
-
-                    <!-- Events -->
                     @for (event of allEventsByDay(day.dayOfWeek); track event.id) {
                         <div class="event-block"
                             [class.type-admin]="event.type === 'admin'"
