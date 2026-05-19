@@ -1,0 +1,114 @@
+<div class="vstack gap-3">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h3 class="h5 mb-0">Tu Horario</h3>
+            <p class="small text-secondary mb-0">Semana laboral · scroll de horas</p>
+        </div>
+        <button type="button" class="btn btn-sm btn-primary" (click)="abrirFormulario()">
+            + Nuevo evento
+        </button>
+    </div>
+
+    <app-weekly-events-calendar
+        [adminEvents]="adminEvents"
+        [personalEvents]="personalEvents()"
+        (requestAddEvent)="abrirFormulario($event.dayOfWeek)"
+        (requestDeletePersonalEvent)="eliminarEventoPersonal($event)">
+    </app-weekly-events-calendar>
+</div>
+
+<!-- Modal: add personal event -->
+@if (showForm()) {
+    <div class="form-overlay" (click)="cerrarFormulario()">
+        <div class="form-panel" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+
+            <header class="form-panel-header">
+                <h5 class="mb-0">Nuevo evento personal</h5>
+                <button type="button" class="btn-close" (click)="cerrarFormulario()" aria-label="Cerrar"></button>
+            </header>
+
+            <form class="form-panel-body" (ngSubmit)="guardarEvento()">
+                @if (formError()) {
+                    <div class="alert alert-danger py-2 small mb-3">{{ formError() }}</div>
+                }
+
+                <!-- Title -->
+                <div class="mb-3">
+                    <label class="form-label form-label-sm fw-semibold">Titulo *</label>
+                    <input type="text" class="form-control form-control-sm"
+                        [(ngModel)]="formTitle" name="title"
+                        placeholder="Ej: Estudiar para el examen" maxlength="80" autofocus>
+                </div>
+
+                <!-- Description -->
+                <div class="mb-3">
+                    <label class="form-label form-label-sm fw-semibold">Descripcion</label>
+                    <textarea class="form-control form-control-sm"
+                        [(ngModel)]="formDescription" name="description"
+                        rows="2" placeholder="Opcional" maxlength="200"></textarea>
+                </div>
+
+                <!-- Date + Location -->
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label form-label-sm fw-semibold">Fecha</label>
+                        <input type="date" class="form-control form-control-sm"
+                            [(ngModel)]="formDate" name="eventDate">
+                        <div class="form-text">Dia detectado: {{ getSelectedDateDayLabel() }}</div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label form-label-sm fw-semibold">Lugar</label>
+                        <input type="text" class="form-control form-control-sm"
+                            [(ngModel)]="formLocation" name="location"
+                            placeholder="Ej: Biblioteca" maxlength="60">
+                    </div>
+                </div>
+
+                <!-- Start + End time -->
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label form-label-sm fw-semibold">Hora inicio</label>
+                        <input type="time" class="form-control form-control-sm"
+                            [(ngModel)]="formStartTime" name="startTime">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label form-label-sm fw-semibold">Hora fin</label>
+                        <input type="time" class="form-control form-control-sm"
+                            [(ngModel)]="formEndTime" name="endTime">
+                    </div>
+                </div>
+
+                <!-- Color picker -->
+                <div class="mb-3">
+                    <label class="form-label form-label-sm fw-semibold d-block">Color</label>
+                    <div class="color-picker-row">
+                        @for (color of availableColors; track color.value) {
+                            <button type="button"
+                                class="color-btn"
+                                [class.selected]="formColor === color.value"
+                                [style.background]="color.bg"
+                                [title]="color.label"
+                                (click)="formColor = color.value"></button>
+                        }
+                    </div>
+                </div>
+
+                <!-- Repeat weekly -->
+                <div class="mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="repeatWeekly"
+                            [(ngModel)]="formRepeatWeekly" name="repeatWeekly">
+                        <label class="form-check-label small" for="repeatWeekly">Repetir cada semana</label>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="d-flex gap-2 justify-content-end">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="cerrarFormulario()">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-primary">Guardar evento</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+}

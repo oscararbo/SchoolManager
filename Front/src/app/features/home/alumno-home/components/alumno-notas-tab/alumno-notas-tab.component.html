@@ -1,0 +1,73 @@
+<div class="vstack gap-3">
+    <div>
+        <h3 class="h5 mb-3">Resumen por Asignatura</h3>
+        @if ((panel?.materias?.length ?? 0) > 0) {
+            <div class="vstack gap-2 resumen-scroll-panel pe-1">
+                @for (materia of panel!.materias; track materia.asignaturaId) {
+                    <article class="subject-card border rounded-3 p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h4 class="h6 mb-1">{{ materia.asignatura }}</h4>
+                                <p class="text-secondary small mb-0">Prof: {{ materia.profesor ?? 'Pendiente' }}</p>
+                            </div>
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-primary"
+                                (click)="onToggleExpandir(materia.asignaturaId)">
+                                {{ estaExpandida(materia.asignaturaId) ? 'Ocultar' : 'Ver detalles' }}
+                            </button>
+                        </div>
+
+                        @if (estaExpandida(materia.asignaturaId)) {
+                            @if (materiaDetalleCargando(materia.asignaturaId)) {
+                                <div class="placeholder-glow">
+                                    <span class="placeholder col-8 mb-2"></span>
+                                    <span class="placeholder col-12"></span>
+                                </div>
+                            } @else if (materiaDetalle(materia.asignaturaId); as det) {
+                                <div class="row g-2 mb-3">
+                                    <div class="col-4">
+                                        <small class="text-secondary d-block">T1</small>
+                                        <span class="h6">{{ formatNota(det.medias.t1) }}</span>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-secondary d-block">T2</small>
+                                        <span class="h6">{{ formatNota(det.medias.t2) }}</span>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-secondary d-block">T3</small>
+                                        <span class="h6">{{ formatNota(det.medias.t3) }}</span>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mt-2">
+                                    @for (trimestre of [1, 2, 3]; track trimestre) {
+                                        @if (tieneTareasEnTrimestre(materia.asignaturaId, trimestre)) {
+                                            <div class="col-12">
+                                                <div class="trimester-card rounded-3 border p-3 bg-light">
+                                                    <h5 class="h6 mb-2">Trimestre {{ trimestre }}</h5>
+                                                    <div class="vstack gap-2">
+                                                        @for (tarea of tareasPorTrimestre(materia.asignaturaId, trimestre); track tarea.tareaId) {
+                                                            <div class="task-result-row">
+                                                                <span class="small">{{ tarea.nombre }}</span>
+                                                                <span class="badge" [class.text-bg-success]="tarea.valor !== null && tarea.valor >= 5" [class.text-bg-danger]="tarea.valor !== null && tarea.valor < 5" [class.text-bg-secondary]="tarea.valor === null">
+                                                                    {{ tarea.valor === null ? 'Pendiente' : formatNota(tarea.valor) }}
+                                                                </span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            }
+                        }
+                    </article>
+                }
+            </div>
+        } @else {
+            <div class="alert alert-info">No tienes asignaturas asignadas aun.</div>
+        }
+    </div>
+</div>

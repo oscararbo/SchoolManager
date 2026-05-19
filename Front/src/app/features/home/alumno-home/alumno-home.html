@@ -59,203 +59,48 @@
             } @else if (error()) {
                 <div class="alert alert-danger mb-0">{{ error() }}</div>
             } @else {
-                <!-- Sección: Notas -->
                 @if (seccionActiva() === 'notas') {
-                    <div class="vstack gap-3">
-                        <div>
-                            <h3 class="h5 mb-3">Resumen por Asignatura</h3>
-                            @if ((panel()?.materias?.length ?? 0) > 0) {
-                                    <div class="vstack gap-2 resumen-scroll-panel pe-1">
-                                        @for (materia of panel()!.materias; track materia.asignaturaId) {
-                                            <article class="subject-card border rounded-3 p-3">
-                                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                                    <div>
-                                                        <h4 class="h6 mb-1">{{ materia.asignatura }}</h4>
-                                                        <p class="text-secondary small mb-0">Prof: {{ materia.profesor ?? 'Pendiente' }}</p>
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        class="btn btn-sm btn-outline-primary"
-                                                        (click)="toggleExpandir(materia.asignaturaId)">
-                                                        {{ estaExpandida(materia.asignaturaId) ? 'Ocultar' : 'Ver detalles' }}
-                                                    </button>
-                                                </div>
-
-                                                @if (estaExpandida(materia.asignaturaId)) {
-                                                    @if (materiaDetalleCargando(materia.asignaturaId)) {
-                                                        <div class="placeholder-glow">
-                                                            <span class="placeholder col-8 mb-2"></span>
-                                                            <span class="placeholder col-12"></span>
-                                                        </div>
-                                                    } @else if (materiaDetalle(materia.asignaturaId); as det) {
-                                                        <div class="row g-2 mb-3">
-                                                            <div class="col-4">
-                                                                <small class="text-secondary d-block">T1</small>
-                                                                <span class="h6">{{ formatNota(det.medias.t1) }}</span>
-                                                            </div>
-                                                            <div class="col-4">
-                                                                <small class="text-secondary d-block">T2</small>
-                                                                <span class="h6">{{ formatNota(det.medias.t2) }}</span>
-                                                            </div>
-                                                            <div class="col-4">
-                                                                <small class="text-secondary d-block">T3</small>
-                                                                <span class="h6">{{ formatNota(det.medias.t3) }}</span>
-                                                            </div>
-                                                        </div>
-
-                                                        <div class="row g-3 mt-2">
-                                                            @for (trimestre of [1, 2, 3]; track trimestre) {
-                                                                @if (tieneTareasEnTrimestre(materia.asignaturaId, trimestre)) {
-                                                                    <div class="col-12">
-                                                                        <div class="trimester-card rounded-3 border p-3 bg-light">
-                                                                            <h5 class="h6 mb-2">Trimestre {{ trimestre }}</h5>
-                                                                            <div class="vstack gap-2">
-                                                                                @for (tarea of tareasPorTrimestre(materia.asignaturaId, trimestre); track tarea.tareaId) {
-                                                                                    <div class="task-result-row">
-                                                                                        <span class="small">{{ tarea.nombre }}</span>
-                                                                                        <span class="badge" [class.text-bg-success]="tarea.valor !== null && tarea.valor >= 5" [class.text-bg-danger]="tarea.valor !== null && tarea.valor < 5" [class.text-bg-secondary]="tarea.valor === null">
-                                                                                            {{ tarea.valor === null ? 'Pendiente' : formatNota(tarea.valor) }}
-                                                                                        </span>
-                                                                                    </div>
-                                                                                }
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                }
-                                                            }
-                                                        </div>
-                                                    }
-                                                }
-                                            </article>
-                                        }
-                                    </div>
-                            } @else {
-                                <div class="alert alert-info">No tienes asignaturas asignadas aún.</div>
-                            }
-                        </div>
-                    </div>
+                    <app-alumno-notas-tab
+                        [panel]="panel()"
+                        [estaExpandida]="estaExpandida.bind(this)"
+                        [materiaDetalleCargando]="materiaDetalleCargando.bind(this)"
+                        [materiaDetalle]="materiaDetalle.bind(this)"
+                        [formatNota]="formatNota.bind(this)"
+                        [tieneTareasEnTrimestre]="tieneTareasEnTrimestre.bind(this)"
+                        [tareasPorTrimestre]="tareasPorTrimestre.bind(this)"
+                        (toggleExpandir)="toggleExpandir($event)">
+                    </app-alumno-notas-tab>
                 }
 
-                <!-- Sección: Tareas -->
                 @if (seccionActiva() === 'tareas') {
-                    <div class="vstack gap-3">
-                        <div>
-                            <h3 class="h5 mb-3">Tareas por Hacer</h3>
-                            @if ((panel()?.materias?.length ?? 0) > 0) {
-                                    @if (hayTareasPendientes()) {
-                                    <div class="vstack gap-3">
-                                        @for (materia of panel()!.materias; track materia.asignaturaId) {
-                                            @if (materiaDetalleCargando(materia.asignaturaId)) {
-                                                <div class="placeholder-glow border rounded-3 p-3 bg-light">
-                                                    <span class="placeholder col-5 mb-2"></span>
-                                                    <span class="placeholder col-10"></span>
-                                                </div>
-                                            } @else if (materiaDetalle(materia.asignaturaId)) {
-                                                @for (trimestre of [1, 2, 3]; track trimestre) {
-                                                    @if (tieneTareasPendientesEnTrimestre(materia.asignaturaId, trimestre)) {
-                                                        @for (tarea of tareasPendientesPorTrimestre(materia.asignaturaId, trimestre); track tarea.tareaId) {
-                                                            <article class="task-card border rounded-3 p-3" [class.expanded]="tareaExpandida() === tarea.tareaId">
-                                                                <div class="d-flex justify-content-between align-items-start mb-2" (click)="cambiarTarea(tarea.tareaId)">
-                                                                    <div>
-                                                                        <h5 class="h6 mb-1">{{ tarea.nombre }}</h5>
-                                                                        <p class="text-secondary small mb-0">{{ materia.asignatura }} • T{{ trimestre }}</p>
-                                                                    </div>
-                                                                    <span class="badge" [class.text-bg-success]="tarea.valor !== null && tarea.valor >= 5" [class.text-bg-danger]="tarea.valor !== null && tarea.valor < 5" [class.text-bg-secondary]="tarea.valor === null">
-                                                                        {{ tarea.valor === null ? 'Pendiente' : formatNota(tarea.valor) }}
-                                                                    </span>
-                                                                </div>
-                                                                @if (tareaExpandida() === tarea.tareaId) {
-                                                                    <div class="mt-3 pt-3 border-top">
-                                                                        @if (tarea.descripcion) {
-                                                                            <div class="alert alert-light border mb-3">
-                                                                                <strong class="d-block mb-1 small">Descripcion:</strong>
-                                                                                <span class="small">{{ tarea.descripcion }}</span>
-                                                                            </div>
-                                                                        }
-                                                                        @if (submisionError()) {
-                                                                            <div class="alert alert-danger mb-2 small py-2">{{ submisionError() }}</div>
-                                                                        }
-                                                                        @if (submisionCargando(tarea.tareaId)) {
-                                                                            <div class="placeholder-glow mb-2"><span class="placeholder col-8"></span></div>
-                                                                        } @else if (tareasMarcadasHechas()[tarea.tareaId]) {
-                                                                            <div class="mb-3">
-                                                                                <div class="d-flex align-items-center gap-2 border rounded p-2 bg-success-subtle">
-                                                                                    <span class="small flex-grow-1 text-success fw-semibold">✓ Marcada como hecha</span>
-                                                                                </div>
-                                                                            </div>
-                                                                        } @else if (getSubmisiones(tarea.tareaId).length > 0) {
-                                                                            <div class="mb-3">
-                                                                                <p class="small fw-semibold mb-1">Entrega actual:</p>
-                                                                                @for (sub of getSubmisiones(tarea.tareaId); track sub.id) {
-                                                                                    <div class="d-flex align-items-center gap-2 border rounded p-2 bg-light">
-                                                                                        <span class="small flex-grow-1">{{ sub.nombreArchivo }} <span class="text-secondary">({{ formatBytes(sub.tamanoBytes) }})</span></span>
-                                                                                        <span class="badge text-bg-success">{{ sub.estadoDisplay }}</span>
-                                                                                        <button type="button" class="btn btn-sm btn-outline-danger py-0" (click)="eliminarSubmision(tarea.tareaId, sub.id)">✕</button>
-                                                                                    </div>
-                                                                                }
-                                                                            </div>
-                                                                        }
-                                                                        @if (!tareasMarcadasHechas()[tarea.tareaId]) {
-                                                                            <div class="d-flex flex-wrap gap-2 mb-3">
-                                                                                <button
-                                                                                    type="button"
-                                                                                    class="btn btn-sm btn-outline-success"
-                                                                                    (click)="marcarTareaComoHecha(tarea.tareaId)">
-                                                                                    Marcar como hecha
-                                                                                </button>
-                                                                            </div>
-                                                                        }
-                                                                        <div class="form-group">
-                                                                            <label class="form-label small fw-semibold">{{ getSubmisiones(tarea.tareaId).length > 0 ? 'Reemplazar entrega:' : 'Enviar archivo:' }}</label>
-                                                                            <input type="file" class="form-control form-control-sm"
-                                                                                accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
-                                                                                [disabled]="subiendoArchivoTarea(tarea.tareaId)"
-                                                                                (change)="onArchivoSeleccionado(tarea.tareaId, $event)">
-                                                                            @if (subiendoArchivoTarea(tarea.tareaId)) {
-                                                                                <div class="form-text text-primary">Subiendo archivo...</div>
-                                                                            }
-                                                                        </div>
-                                                                    </div>
-                                                                }
-                                                            </article>
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    </div>
-                                    } @else {
-                                        <div class="alert alert-success mb-0">No tienes tareas pendientes.</div>
-                                    }
-                            } @else {
-                                <div class="alert alert-info">No tienes tareas asignadas aún.</div>
-                            }
-                        </div>
-                    </div>
+                    <app-alumno-tareas-tab
+                        [panel]="panel()"
+                        [hayTareasPendientes]="hayTareasPendientes.bind(this)"
+                        [materiaDetalleCargando]="materiaDetalleCargando.bind(this)"
+                        [materiaDetalle]="materiaDetalle.bind(this)"
+                        [tieneTareasPendientesEnTrimestre]="tieneTareasPendientesEnTrimestre.bind(this)"
+                        [tareasPendientesPorTrimestre]="tareasPendientesPorTrimestre.bind(this)"
+                        [tareaExpandida]="tareaExpandida()"
+                        [formatNota]="formatNota.bind(this)"
+                        [submisionError]="submisionError()"
+                        [submisionCargando]="submisionCargando.bind(this)"
+                        [tareasMarcadasHechas]="tareasMarcadasHechas()"
+                        [getSubmisiones]="getSubmisiones.bind(this)"
+                        [formatBytes]="formatBytes.bind(this)"
+                        [subiendoArchivoTarea]="subiendoArchivoTarea.bind(this)"
+                        (cambiarTarea)="cambiarTarea($event)"
+                        (eliminarSubmision)="eliminarSubmision($event.tareaId, $event.submisionId)"
+                        (marcarTareaComoHecha)="marcarTareaComoHecha($event)"
+                        (archivoSeleccionado)="onArchivoSeleccionado($event.tareaId, $event.event)">
+                    </app-alumno-tareas-tab>
                 }
 
-                <!-- Sección: Horarios -->
                 @if (seccionActiva() === 'horarios') {
-                    <div class="vstack gap-3">
-                        <div>
-                            <h3 class="h5 mb-3">Tu Horario</h3>
-                            <div class="alert alert-warning">
-                                <p class="mb-0">Horarios próximamente disponibles</p>
-                            </div>
-                        </div>
-                    </div>
+                    <app-alumno-horarios-tab [panel]="panel()"></app-alumno-horarios-tab>
                 }
 
-                <!-- Sección: Incidencias -->
                 @if (seccionActiva() === 'incidencias') {
-                    <div class="vstack gap-3">
-                        <div>
-                            <h3 class="h5 mb-3">Incidencias</h3>
-                            <div class="alert alert-warning">
-                                <p class="mb-0">Centro de incidencias próximamente disponible</p>
-                            </div>
-                        </div>
-                    </div>
+                    <app-alumno-incidencias-tab></app-alumno-incidencias-tab>
                 }
             }
         </main>

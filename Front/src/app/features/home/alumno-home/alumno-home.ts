@@ -6,13 +6,17 @@ import {
     AlumnoMateriaDetalle,
     TareaSubmision
 } from '../../../shared/services/school-api.service';
+import { AlumnoNotasTabComponent } from './components/alumno-notas-tab/alumno-notas-tab.component';
+import { AlumnoTareasTabComponent } from './components/alumno-tareas-tab/alumno-tareas-tab.component';
+import { AlumnoHorariosTabComponent } from './components/alumno-horarios-tab/alumno-horarios-tab.component';
+import { AlumnoIncidenciasTabComponent } from './components/alumno-incidencias-tab/alumno-incidencias-tab.component';
 
 type AlumnoSection = 'notas' | 'tareas' | 'horarios' | 'incidencias';
 
 @Component({
     selector: 'app-alumno-home',
     standalone: true,
-    imports: [],
+    imports: [AlumnoNotasTabComponent, AlumnoTareasTabComponent, AlumnoHorariosTabComponent, AlumnoIncidenciasTabComponent],
     templateUrl: './alumno-home.html',
     styleUrl: './alumno-home.scss',
     changeDetection: ChangeDetectionStrategy.OnPush

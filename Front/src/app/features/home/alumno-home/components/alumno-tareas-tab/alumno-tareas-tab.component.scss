@@ -1,0 +1,28 @@
+.task-card {
+    background: #f9fafb;
+    transition: all 0.2s ease;
+    cursor: pointer;
+
+    &:hover {
+        border-color: #3b82f6;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+    }
+
+    &.expanded {
+        border-color: #3b82f6;
+        background: #eff6ff;
+    }
+
+    .badge {
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+
+    .text-bg-success {
+        background-color: #10b981 !important;
+    }
+
+    .text-bg-danger {
+        background-color: #ef4444 !important;
+    }
+}
