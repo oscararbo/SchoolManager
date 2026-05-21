@@ -69,7 +69,6 @@ export class AdminStatsViewComponent implements OnInit, AfterViewInit {
 
     cursosCompararIds = signal<number[]>([]);
 
-    private cursosFallback = signal<string[]>([]);
     private vistaChartsVisible = signal(false);
     chartsRenderizados = signal(false);
 
@@ -94,14 +93,10 @@ export class AdminStatsViewComponent implements OnInit, AfterViewInit {
 
     statsChartData = computed(() => {
         const current = this.stats();
-        const labelsFromStats = current?.porCurso.map(x => x.curso) ?? [];
-        const labels = labelsFromStats.length > 0 ? labelsFromStats : this.cursosFallback();
-        const estudiantes = labelsFromStats.length > 0
-            ? (current?.porCurso.map(x => x.estudiantes) ?? [])
-            : labels.map(() => 0);
-        const asignaturas = labelsFromStats.length > 0
-            ? (current?.porCurso.map(x => x.asignaturas) ?? [])
-            : labels.map(() => 0);
+        const cursos = this.cursosOrdenados();
+        const labels = cursos.map(curso => curso.curso);
+        const estudiantes = cursos.map(curso => curso.totalEstudiantes);
+        const asignaturas = cursos.map(curso => curso.totalAsignaturas);
 
         return {
             labels,
@@ -219,6 +214,24 @@ export class AdminStatsViewComponent implements OnInit, AfterViewInit {
             return [] as Array<{ label: string; value: string; helper: string }>;
         }
 
+        const asignaturaDestacada = [...curso.asignaturas]
+            .sort((left, right) => {
+                if (right.porcentajeAprobados !== left.porcentajeAprobados) {
+                    return right.porcentajeAprobados - left.porcentajeAprobados;
+                }
+                return (right.media ?? 0) - (left.media ?? 0);
+            })
+            .at(0) ?? null;
+
+        const asignaturaAVigilar = [...curso.asignaturas]
+            .sort((left, right) => {
+                if (right.porcentajeSuspensos !== left.porcentajeSuspensos) {
+                    return right.porcentajeSuspensos - left.porcentajeSuspensos;
+                }
+                return (left.media ?? 0) - (right.media ?? 0);
+            })
+            .at(0) ?? null;
+
         return [
             {
                 label: 'Media del curso',
@@ -232,16 +245,16 @@ export class AdminStatsViewComponent implements OnInit, AfterViewInit {
             },
             {
                 label: 'Asignatura destacada',
-                value: curso.asignaturaConMejorMedia?.asignatura ?? '-',
-                helper: curso.asignaturaConMejorMedia
-                    ? `Media ${this.formatNota(curso.asignaturaConMejorMedia.media)} · ${curso.asignaturaConMejorMedia.porcentajeAprobados.toFixed(2)}% aprobados`
+                value: asignaturaDestacada?.asignatura ?? '-',
+                helper: asignaturaDestacada
+                    ? `Media ${this.formatNota(asignaturaDestacada.media)} · ${asignaturaDestacada.porcentajeAprobados.toFixed(2)}% aprobados`
                     : 'Todavia no hay notas cerradas.'
             },
             {
                 label: 'Asignatura a vigilar',
-                value: curso.asignaturaConPeorMedia?.asignatura ?? '-',
-                helper: curso.asignaturaConPeorMedia
-                    ? `${curso.asignaturaConPeorMedia.porcentajeSuspensos.toFixed(2)}% suspensos y media ${this.formatNota(curso.asignaturaConPeorMedia.media)}`
+                value: asignaturaAVigilar?.asignatura ?? '-',
+                helper: asignaturaAVigilar
+                    ? `${asignaturaAVigilar.porcentajeSuspensos.toFixed(2)}% suspensos y media ${this.formatNota(asignaturaAVigilar.media)}`
                     : 'Sin datos suficientes.'
             }
         ];
@@ -370,7 +383,6 @@ export class AdminStatsViewComponent implements OnInit, AfterViewInit {
                 this.api.getAdminCursosStatsSelector()
             ]);
 
-            await this.prepararFallbackCursos(stats);
             this.stats.set(stats);
             this.cursosSelector.set(selector);
 
@@ -395,20 +407,6 @@ export class AdminStatsViewComponent implements OnInit, AfterViewInit {
 
     private programarRenderCharts(): void {
         queueMicrotask(() => this.renderStatsCharts());
-    }
-
-    private async prepararFallbackCursos(stats: AdminStats): Promise<void> {
-        if (stats.porCurso.length > 0 || stats.totalCursos === 0) {
-            this.cursosFallback.set([]);
-            return;
-        }
-
-        try {
-            const cursos = await this.api.getCursos();
-            this.cursosFallback.set(cursos.map(curso => curso.nombre));
-        } catch {
-            this.cursosFallback.set([]);
-        }
     }
 
     private renderStatsCharts(): void {

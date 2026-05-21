@@ -301,6 +301,19 @@ export interface AdminAsignaturaRendimiento {
     porcentajeSuspensos: number;
 }
 
+export interface AdminCursoResumenKpi {
+    curso: string;
+    mediaGlobalCurso: number | null;
+    porcentajeAprobados: number;
+    porcentajeSuspensos: number;
+}
+
+export interface AdminAsignaturaResumenKpi {
+    asignatura: string;
+    curso: string;
+    media: number | null;
+}
+
 export interface AdminStats {
     totalCursos: number;
     totalAsignaturas: number;
@@ -309,12 +322,10 @@ export interface AdminStats {
     totalMatriculas: number;
     totalTareas: number;
     mediaGlobal: number | null;
-    cursoConMejorMedia: AdminCursoRendimiento | null;
-    cursoConPeorMedia: AdminCursoRendimiento | null;
-    asignaturaConMejorMedia: AdminAsignaturaRendimiento | null;
-    asignaturaConPeorMedia: AdminAsignaturaRendimiento | null;
-    porCurso: AdminCursoStats[];
-    rendimientoPorCurso: AdminCursoRendimiento[];
+    cursoConMejorMedia: AdminCursoResumenKpi | null;
+    cursoConPeorMedia: AdminCursoResumenKpi | null;
+    asignaturaConMejorMedia: AdminAsignaturaResumenKpi | null;
+    asignaturaConPeorMedia: AdminAsignaturaResumenKpi | null;
     rendimientoPorAsignatura: AdminAsignaturaRendimiento[];
 }
 

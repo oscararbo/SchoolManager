@@ -10,11 +10,9 @@ public record AdminStatsDto
     public int TotalMatriculas { get; init; }
     public int TotalTareas { get; init; }
     public double? MediaGlobal { get; init; }
-    public CursoRendimientoDto? CursoConMejorMedia { get; init; }
-    public CursoRendimientoDto? CursoConPeorMedia { get; init; }
-    public AsignaturaRendimientoDto? AsignaturaConMejorMedia { get; init; }
-    public AsignaturaRendimientoDto? AsignaturaConPeorMedia { get; init; }
-    public IEnumerable<CursoStatsItemDto> PorCurso { get; init; } = [];
-    public IEnumerable<CursoRendimientoDto> RendimientoPorCurso { get; init; } = [];
+    public CursoResumenKpiDto? CursoConMejorMedia { get; init; }
+    public CursoResumenKpiDto? CursoConPeorMedia { get; init; }
+    public AsignaturaResumenKpiDto? AsignaturaConMejorMedia { get; init; }
+    public AsignaturaResumenKpiDto? AsignaturaConPeorMedia { get; init; }
     public IEnumerable<AsignaturaRendimientoDto> RendimientoPorAsignatura { get; init; } = [];
 }
