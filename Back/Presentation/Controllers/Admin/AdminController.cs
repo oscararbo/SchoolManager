@@ -20,30 +20,6 @@ public class AdminController(IAdminService adminService) : ControllerBase
         return this.ToActionResult(await adminService.GetAllAdminsAsync(HttpContext.RequestAborted));
     }
 
-    [HttpGet("stats")]
-    public async Task<IActionResult> GetStats()
-    {
-        return this.ToActionResult(await adminService.GetStatsAsync(HttpContext.RequestAborted));
-    }
-
-    [HttpGet("stats/cursos")]
-    public async Task<IActionResult> GetCursosStatsSelector()
-    {
-        return this.ToActionResult(await adminService.GetCursosStatsSelectorAsync(HttpContext.RequestAborted));
-    }
-
-    [HttpGet("stats/cursos/{cursoId:int}")]
-    public async Task<IActionResult> GetStatsByCurso(int cursoId)
-    {
-        return this.ToActionResult(await adminService.GetStatsByCursoAsync(cursoId, HttpContext.RequestAborted));
-    }
-
-    [HttpPost("stats/cursos/comparar")]
-    public async Task<IActionResult> CompareCursos(CompararCursosRequestDto compararCursosRequestDto)
-    {
-        return this.ToActionResult(await adminService.CompareCursosAsync(compararCursosRequestDto.CursoIds, HttpContext.RequestAborted));
-    }
-
     [HttpGet("matriculas")]
     public async Task<IActionResult> GetMatriculas()
     {

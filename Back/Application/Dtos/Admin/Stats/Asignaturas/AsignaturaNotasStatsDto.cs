@@ -9,5 +9,7 @@ public record AsignaturaNotasStatsDto
     public int Aprobados { get; init; }
     public int Suspensos { get; init; }
     public int SinNota { get; init; }
+    public double PorcentajeAprobados { get; init; }
+    public double PorcentajeSuspensos { get; init; }
     public double? Media { get; init; }
 }

@@ -275,6 +275,32 @@ export interface AdminCursoStats {
     asignaturas: number;
 }
 
+export interface AdminCursoRendimiento {
+    cursoId: number;
+    curso: string;
+    mediaGlobalCurso: number | null;
+    totalAlumnos: number;
+    aprobados: number;
+    suspensos: number;
+    sinNota: number;
+    porcentajeAprobados: number;
+    porcentajeSuspensos: number;
+}
+
+export interface AdminAsignaturaRendimiento {
+    asignaturaId: number;
+    asignatura: string;
+    cursoId: number;
+    curso: string;
+    media: number | null;
+    totalAlumnos: number;
+    aprobados: number;
+    suspensos: number;
+    sinNota: number;
+    porcentajeAprobados: number;
+    porcentajeSuspensos: number;
+}
+
 export interface AdminStats {
     totalCursos: number;
     totalAsignaturas: number;
@@ -282,7 +308,14 @@ export interface AdminStats {
     totalEstudiantes: number;
     totalMatriculas: number;
     totalTareas: number;
+    mediaGlobal: number | null;
+    cursoConMejorMedia: AdminCursoRendimiento | null;
+    cursoConPeorMedia: AdminCursoRendimiento | null;
+    asignaturaConMejorMedia: AdminAsignaturaRendimiento | null;
+    asignaturaConPeorMedia: AdminAsignaturaRendimiento | null;
     porCurso: AdminCursoStats[];
+    rendimientoPorCurso: AdminCursoRendimiento[];
+    rendimientoPorAsignatura: AdminAsignaturaRendimiento[];
 }
 
 export interface AdminAsignaturaNotasStats {
@@ -292,6 +325,8 @@ export interface AdminAsignaturaNotasStats {
     aprobados: number;
     suspensos: number;
     sinNota: number;
+    porcentajeAprobados: number;
+    porcentajeSuspensos: number;
     media: number | null;
 }
 
@@ -310,6 +345,10 @@ export interface AdminCursoNotasStats {
     aprobados: number;
     suspensos: number;
     sinNota: number;
+    porcentajeAprobados: number;
+    porcentajeSuspensos: number;
+    asignaturaConMejorMedia: AdminAsignaturaNotasStats | null;
+    asignaturaConPeorMedia: AdminAsignaturaNotasStats | null;
     asignaturas: AdminAsignaturaNotasStats[];
 }
 
@@ -321,6 +360,8 @@ export interface AdminCursoComparacionItem {
     aprobados: number;
     suspensos: number;
     sinNota: number;
+    porcentajeAprobados: number;
+    porcentajeSuspensos: number;
 }
 
 export interface AdminComparacionCursos {

@@ -52,6 +52,123 @@
     <div class="vstack gap-4 mt-4">
         <app-admin-stats-cards class="d-block" [stats]="stats()!"></app-admin-stats-cards>
 
+        <div class="row g-3">
+            @for (card of resumenGlobalCards(); track card.label) {
+                <div class="col-12 col-md-6 col-xl">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <small class="text-secondary text-uppercase d-block mb-2">{{ card.label }}</small>
+                            <div class="h5 mb-2 text-truncate" [title]="card.value">{{ card.value }}</div>
+                            <p class="text-secondary small mb-0">{{ card.helper }}</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body vstack gap-3">
+                <div>
+                    <h6 class="card-title mb-1">Ranking Mejores/Peores 5</h6>
+                    <p class="text-secondary small mb-0">Asignaturas con mejor/peor media, y con mayor porcentaje de aprobados o suspensos segun corresponda.</p>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-12 col-xl-6">
+                        <div class="table-responsive ranking-table-wrap">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th colspan="3">Mejores 5 por media</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (item of rankingAsignaturas().topMedia; track trackByAsignaturaRendimiento($index, item)) {
+                                        <tr>
+                                            <td>{{ item.asignatura }}</td>
+                                            <td>{{ item.curso }}</td>
+                                            <td class="text-end fw-semibold">{{ formatNota(item.media) }}</td>
+                                        </tr>
+                                    } @empty {
+                                        <tr><td colspan="3" class="text-secondary">Sin datos.</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-xl-6">
+                        <div class="table-responsive ranking-table-wrap">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th colspan="3">Peores 5 por media</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (item of rankingAsignaturas().bottomMedia; track trackByAsignaturaRendimiento($index, item)) {
+                                        <tr>
+                                            <td>{{ item.asignatura }}</td>
+                                            <td>{{ item.curso }}</td>
+                                            <td class="text-end fw-semibold">{{ formatNota(item.media) }}</td>
+                                        </tr>
+                                    } @empty {
+                                        <tr><td colspan="3" class="text-secondary">Sin datos.</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-xl-6">
+                        <div class="table-responsive ranking-table-wrap">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th colspan="3">Mejores 5 por % aprobados</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (item of rankingAsignaturas().bottomSuspensosPct; track trackByAsignaturaRendimiento($index, item)) {
+                                        <tr>
+                                            <td>{{ item.asignatura }}</td>
+                                            <td>{{ item.curso }}</td>
+                                            <td class="text-end fw-semibold text-success">{{ formatPct(100 - item.porcentajeSuspensos) }}</td>
+                                        </tr>
+                                    } @empty {
+                                        <tr><td colspan="3" class="text-secondary">Sin datos.</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-xl-6">
+                        <div class="table-responsive ranking-table-wrap">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th colspan="3">Peores 5 por % suspensos</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (item of rankingAsignaturas().topSuspensosPct; track trackByAsignaturaRendimiento($index, item)) {
+                                        <tr>
+                                            <td>{{ item.asignatura }}</td>
+                                            <td>{{ item.curso }}</td>
+                                            <td class="text-end fw-semibold text-danger">{{ formatPct(item.porcentajeSuspensos) }}</td>
+                                        </tr>
+                                    } @empty {
+                                        <tr><td colspan="3" class="text-secondary">Sin datos.</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         @if (statsTieneDatosGraficables()) {
             <div class="row g-3">
                 <div class="col-12 col-xl-8">
@@ -232,6 +349,8 @@
                                         <th>Aprobados</th>
                                         <th>Suspensos</th>
                                         <th>Sin nota</th>
+                                        <th>% Aprobados</th>
+                                        <th>% Suspensos</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -242,6 +361,8 @@
                                             <td>{{ asignatura.aprobados }}</td>
                                             <td>{{ asignatura.suspensos }}</td>
                                             <td>{{ asignatura.sinNota }}</td>
+                                            <td>{{ formatPct(asignatura.porcentajeAprobados) }}</td>
+                                            <td>{{ formatPct(asignatura.porcentajeSuspensos) }}</td>
                                         </tr>
                                     }
                                 </tbody>
@@ -286,6 +407,7 @@
                                                 <th>Curso</th>
                                                 <th>Media</th>
                                                 <th>Aprobados</th>
+                                                <th>Suspensos</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -293,7 +415,8 @@
                                                 <tr>
                                                     <td>{{ curso.curso }}</td>
                                                     <td>{{ formatNota(curso.mediaGlobalCurso) }}</td>
-                                                    <td>{{ porcentajeAprobado(curso.aprobados, curso.aprobados + curso.suspensos) }}%</td>
+                                                    <td>{{ formatPct(curso.porcentajeAprobados) }}</td>
+                                                    <td>{{ formatPct(curso.porcentajeSuspensos) }}</td>
                                                 </tr>
                                             }
                                         </tbody>
@@ -324,6 +447,8 @@
                                         <span class="badge text-bg-success">{{ asignatura.aprobados }} aprobados</span>
                                         <span class="badge text-bg-danger">{{ asignatura.suspensos }} suspensos</span>
                                         <span class="badge text-bg-secondary">{{ asignatura.sinNota }} sin nota</span>
+                                        <span class="badge text-bg-light border">{{ formatPct(asignatura.porcentajeAprobados) }} aprobados</span>
+                                        <span class="badge text-bg-light border">{{ formatPct(asignatura.porcentajeSuspensos) }} suspensos</span>
                                     </div>
                                     <div class="progress" role="progressbar" [attr.aria-valuenow]="porcentajeAprobado(asignatura.aprobados, asignatura.totalAlumnos)" aria-valuemin="0" aria-valuemax="100">
                                         <div class="progress-bar bg-success" [style.width.%]="porcentajeAprobado(asignatura.aprobados, asignatura.totalAlumnos)"></div>

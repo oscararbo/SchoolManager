@@ -14,38 +14,6 @@ public class AdminService(
     public async Task<ApplicationResult> GetAllAdminsAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await adminDomain.GetAllAdminsAsync(cancellationToken));
 
-    public async Task<ApplicationResult> GetStatsAsync(CancellationToken cancellationToken = default)
-        => ApplicationResult.Ok(await adminDomain.GetStatsAsync(cancellationToken));
-
-    public async Task<ApplicationResult> GetCursosStatsSelectorAsync(CancellationToken cancellationToken = default)
-        => ApplicationResult.Ok(await adminDomain.GetCursosStatsSelectorAsync(cancellationToken));
-
-    public async Task<ApplicationResult> GetStatsByCursoAsync(int cursoId, CancellationToken cancellationToken = default)
-    {
-        var courseStats = await adminDomain.GetStatsByCursoAsync(cursoId, cancellationToken);
-        if (courseStats is null)
-            return ApplicationResult.NotFound("El curso no existe.");
-
-        return ApplicationResult.Ok(courseStats);
-    }
-
-    public async Task<ApplicationResult> CompareCursosAsync(IEnumerable<int> cursoIds, CancellationToken cancellationToken = default)
-    {
-        var ids = cursoIds
-            .Where(id => id > 0)
-            .Distinct()
-            .Take(6)
-            .ToList();
-
-        if (ids.Count < 2)
-            return ApplicationResult.BadRequest("Selecciona al menos 2 cursos para comparar.");
-
-        return ApplicationResult.Ok(new ComparacionCursosResponseDto
-        {
-            Cursos = (await adminDomain.CompareCursosAsync(ids, cancellationToken)).ToList()
-        });
-    }
-
     public async Task<ApplicationResult> GetMatriculasAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await adminDomain.GetMatriculasAsync(cancellationToken));
 

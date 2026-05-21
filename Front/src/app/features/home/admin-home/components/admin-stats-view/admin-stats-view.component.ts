@@ -1,6 +1,7 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import {
     SchoolApiService,
+    AdminAsignaturaRendimiento,
     AdminStats,
     AdminCursoNotasStats,
     AdminCursoStatsSelector,
@@ -134,11 +135,81 @@ export class AdminStatsViewComponent implements OnInit, AfterViewInit {
         return {
             labels: data.map(c => c.curso),
             medias: data.map(c => c.mediaGlobalCurso ?? 0),
-            aprobadosPct: data.map(c => {
-                const evaluados = c.aprobados + c.suspensos;
-                return evaluados > 0 ? Math.round((c.aprobados / evaluados) * 100) : 0;
-            }),
+            aprobadosPct: data.map(c => c.porcentajeAprobados),
             alumnos: data.map(c => c.totalAlumnos)
+        };
+    });
+
+    resumenGlobalCards = computed(() => {
+        const current = this.stats();
+        if (!current) {
+            return [] as Array<{ label: string; value: string; helper: string }>;
+        }
+
+        return [
+            {
+                label: 'Media global del centro',
+                value: this.formatNota(current.mediaGlobal),
+                helper: 'Media agregada de notas finales con 3 trimestres cerrados.'
+            },
+            {
+                label: 'Curso con mejor media',
+                value: current.cursoConMejorMedia?.curso ?? '-',
+                helper: current.cursoConMejorMedia
+                    ? `Media ${this.formatNota(current.cursoConMejorMedia.mediaGlobalCurso)} · ${current.cursoConMejorMedia.porcentajeAprobados}% aprobados`
+                    : 'Sin datos de cursos evaluados.'
+            },
+            {
+                label: 'Curso con peor media',
+                value: current.cursoConPeorMedia?.curso ?? '-',
+                helper: current.cursoConPeorMedia
+                    ? `Media ${this.formatNota(current.cursoConPeorMedia.mediaGlobalCurso)} · ${current.cursoConPeorMedia.porcentajeSuspensos}% suspensos`
+                    : 'Sin datos de cursos evaluados.'
+            },
+            {
+                label: 'Asignatura con mejor media',
+                value: current.asignaturaConMejorMedia?.asignatura ?? '-',
+                helper: current.asignaturaConMejorMedia
+                    ? `${current.asignaturaConMejorMedia.curso} · Media ${this.formatNota(current.asignaturaConMejorMedia.media)}`
+                    : 'Sin datos de asignaturas evaluadas.'
+            },
+            {
+                label: 'Asignatura con peor media',
+                value: current.asignaturaConPeorMedia?.asignatura ?? '-',
+                helper: current.asignaturaConPeorMedia
+                    ? `${current.asignaturaConPeorMedia.curso} · Media ${this.formatNota(current.asignaturaConPeorMedia.media)}`
+                    : 'Sin datos de asignaturas evaluadas.'
+            }
+        ];
+    });
+
+    rankingAsignaturas = computed(() => {
+        const current = this.stats();
+        if (!current) {
+            return {
+                topMedia: [] as AdminAsignaturaRendimiento[],
+                bottomMedia: [] as AdminAsignaturaRendimiento[],
+                topSuspensosPct: [] as AdminAsignaturaRendimiento[],
+                bottomSuspensosPct: [] as AdminAsignaturaRendimiento[]
+            };
+        }
+
+        const conMedia = [...current.rendimientoPorAsignatura].filter(asignatura => asignatura.media !== null);
+        const conSuspensosPct = [...current.rendimientoPorAsignatura];
+
+        return {
+            topMedia: conMedia
+                .sort((left, right) => (right.media ?? 0) - (left.media ?? 0))
+                .slice(0, 5),
+            bottomMedia: conMedia
+                .sort((left, right) => (left.media ?? 0) - (right.media ?? 0))
+                .slice(0, 5),
+            topSuspensosPct: conSuspensosPct
+                .sort((left, right) => right.porcentajeSuspensos - left.porcentajeSuspensos)
+                .slice(0, 5),
+            bottomSuspensosPct: conSuspensosPct
+                .sort((left, right) => left.porcentajeSuspensos - right.porcentajeSuspensos)
+                .slice(0, 5)
         };
     });
 
@@ -148,14 +219,6 @@ export class AdminStatsViewComponent implements OnInit, AfterViewInit {
             return [] as Array<{ label: string; value: string; helper: string }>;
         }
 
-        const evaluados = curso.aprobados + curso.suspensos;
-        const tasaAprobado = evaluados > 0 ? Math.round((curso.aprobados / evaluados) * 100) : 0;
-        const asignaturaRiesgo = [...curso.asignaturas]
-            .sort((a, b) => b.suspensos - a.suspensos || (a.media ?? 99) - (b.media ?? 99))[0];
-        const asignaturaMejor = [...curso.asignaturas]
-            .filter(a => a.media !== null)
-            .sort((a, b) => (b.media ?? 0) - (a.media ?? 0))[0];
-
         return [
             {
                 label: 'Media del curso',
@@ -164,18 +227,22 @@ export class AdminStatsViewComponent implements OnInit, AfterViewInit {
             },
             {
                 label: 'Tasa de aprobado',
-                value: `${tasaAprobado}%`,
+                value: `${curso.porcentajeAprobados.toFixed(2)}%`,
                 helper: `${curso.aprobados} aprobados y ${curso.suspensos} suspensos con nota cerrada.`
             },
             {
                 label: 'Asignatura destacada',
-                value: asignaturaMejor?.asignatura ?? '-',
-                helper: asignaturaMejor ? `Media ${this.formatNota(asignaturaMejor.media)}` : 'Todavia no hay notas cerradas.'
+                value: curso.asignaturaConMejorMedia?.asignatura ?? '-',
+                helper: curso.asignaturaConMejorMedia
+                    ? `Media ${this.formatNota(curso.asignaturaConMejorMedia.media)} · ${curso.asignaturaConMejorMedia.porcentajeAprobados.toFixed(2)}% aprobados`
+                    : 'Todavia no hay notas cerradas.'
             },
             {
                 label: 'Asignatura a vigilar',
-                value: asignaturaRiesgo?.asignatura ?? '-',
-                helper: asignaturaRiesgo ? `${asignaturaRiesgo.suspensos} suspensos y media ${this.formatNota(asignaturaRiesgo.media)}` : 'Sin datos suficientes.'
+                value: curso.asignaturaConPeorMedia?.asignatura ?? '-',
+                helper: curso.asignaturaConPeorMedia
+                    ? `${curso.asignaturaConPeorMedia.porcentajeSuspensos.toFixed(2)}% suspensos y media ${this.formatNota(curso.asignaturaConPeorMedia.media)}`
+                    : 'Sin datos suficientes.'
             }
         ];
     });
@@ -281,6 +348,14 @@ export class AdminStatsViewComponent implements OnInit, AfterViewInit {
 
     porcentajeAprobado(aprobados: number, total: number): number {
         return total > 0 ? Math.round((aprobados / total) * 100) : 0;
+    }
+
+    formatPct(valor: number): string {
+        return `${valor.toFixed(2)}%`;
+    }
+
+    trackByAsignaturaRendimiento(_: number, item: AdminAsignaturaRendimiento): number {
+        return item.asignaturaId;
     }
 
     formatNota(valor: number | null): string {

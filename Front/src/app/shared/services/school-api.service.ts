@@ -6,6 +6,8 @@ import { SchoolApiProfesorService } from './school-api-profesor.service';
 import { SchoolApiSuperUsuarioService } from './school-api-superusuario.service';
 import type {
     AdminComparacionCursos,
+    AdminCursoRendimiento,
+    AdminAsignaturaRendimiento,
     AdminCursoNotasStats,
     AdminCursoStatsSelector,
     AdminImparticionListItem,
@@ -77,6 +79,8 @@ export type {
     AdminCursoNotasStats,
     AdminCursoComparacionItem,
     AdminComparacionCursos,
+    AdminCursoRendimiento,
+    AdminAsignaturaRendimiento,
     AdminMatriculaAsignaturaItem,
     AdminMatriculaListItem,
     AdminImparticionListItem,

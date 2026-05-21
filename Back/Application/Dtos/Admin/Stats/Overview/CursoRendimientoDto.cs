@@ -1,7 +1,6 @@
 namespace Back.Api.Application.Dtos;
 
-
-public record CursoNotasStatsResponseDto
+public record CursoRendimientoDto
 {
     public int CursoId { get; init; }
     public string Curso { get; init; } = "";
@@ -12,7 +11,4 @@ public record CursoNotasStatsResponseDto
     public int SinNota { get; init; }
     public double PorcentajeAprobados { get; init; }
     public double PorcentajeSuspensos { get; init; }
-    public AsignaturaNotasStatsDto? AsignaturaConMejorMedia { get; init; }
-    public AsignaturaNotasStatsDto? AsignaturaConPeorMedia { get; init; }
-    public IEnumerable<AsignaturaNotasStatsDto> Asignaturas { get; init; } = [];
 }

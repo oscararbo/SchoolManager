@@ -8,10 +8,6 @@ public interface IAdminService
 {
     Task<ApplicationResult> GetAllAdminsAsync(CancellationToken cancellationToken = default);
     Task<ApplicationResult> CreateAdminAsync(CreateAdminRequestDto createAdminRequestDto, ClaimsPrincipal user, CancellationToken cancellationToken = default);
-    Task<ApplicationResult> GetStatsAsync(CancellationToken cancellationToken = default);
-    Task<ApplicationResult> GetCursosStatsSelectorAsync(CancellationToken cancellationToken = default);
-    Task<ApplicationResult> GetStatsByCursoAsync(int cursoId, CancellationToken cancellationToken = default);
-    Task<ApplicationResult> CompareCursosAsync(IEnumerable<int> cursoIds, CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetMatriculasAsync(CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetImparticionesAsync(CancellationToken cancellationToken = default);
 }

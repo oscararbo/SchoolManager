@@ -126,3 +126,13 @@
     grid-template-columns: 2.2fr 1fr 1fr 1fr;
     gap: 10px;
 }
+
+.ranking-table-wrap {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.ranking-table-wrap th {
+    background: #f8fafc;
+}

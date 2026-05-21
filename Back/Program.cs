@@ -119,6 +119,7 @@ builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<ICurrentSchoolContext, CurrentSchoolContext>();
 builder.Services.AddScoped<IUserSchoolValidationService, UserSchoolValidationService>();
 builder.Services.AddScoped<IAdminDomainRepository, AdminDomainRepository>();
+builder.Services.AddScoped<IAdminStatsDomainRepository, AdminStatsDomainRepository>();
 builder.Services.AddScoped<ISuperUsuarioDomainRepository, SuperUsuarioDomainRepository>();
 builder.Services.AddScoped<IAuthDomainRepository, AuthDomainRepository>();
 builder.Services.AddScoped<IProfesoresDomainRepository, ProfesoresDomainRepository>();
@@ -128,6 +129,7 @@ builder.Services.AddScoped<IEstudiantesDomainRepository, EstudiantesDomainReposi
 builder.Services.AddScoped<IImportDomainRepository, ImportDomainRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IAdminStatsService, AdminStatsService>();
 builder.Services.AddScoped<ISuperUsuarioService, SuperUsuarioService>();
 builder.Services.AddScoped<IProfesoresService, ProfesoresService>();
 builder.Services.AddScoped<IEstudiantesService, EstudiantesService>();
