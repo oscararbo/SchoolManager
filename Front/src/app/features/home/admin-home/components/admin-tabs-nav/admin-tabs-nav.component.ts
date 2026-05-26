@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 
-export type AdminTab = 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matriculas' | 'imparticiones' | 'importar';
+export type AdminTab = 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matriculas' | 'imparticiones' | 'horarios' | 'importar';
 
 @Component({
     selector: 'app-admin-tabs-nav',
@@ -20,6 +20,7 @@ export class AdminTabsNavComponent {
         { key: 'estudiantes', label: 'Estudiantes' },
         { key: 'matriculas', label: 'Matriculas' },
         { key: 'imparticiones', label: 'Imparticiones' },
+        { key: 'horarios', label: 'Horarios' },
         { key: 'importar', label: 'Importar CSV', iconClass: 'bi bi-upload me-1' }
     ];
 

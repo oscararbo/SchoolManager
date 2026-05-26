@@ -46,6 +46,21 @@
     flex-shrink: 0;
 }
 
+.cal-subject-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    padding: 0.35rem 1rem;
+    background: #fff;
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+}
+
+.subject-item {
+    font-size: 0.7rem;
+    color: #475569;
+}
+
 .legend-item {
     display: flex;
     align-items: center;
@@ -62,6 +77,13 @@
 
     &.admin  { background: #2563eb; }
     &.personal { background: #9333ea; border: 1px dashed #7c3aed; }
+    &.c-blue { background: #2563eb; }
+    &.c-green { background: #16a34a; }
+    &.c-orange { background: #ea580c; }
+    &.c-pink { background: #db2777; }
+    &.c-slate { background: #475569; }
+    &.c-purple { background: #9333ea; }
+    &.c-red { background: #dc2626; }
 }
 
 .cal-days-header {
@@ -218,7 +240,7 @@
 .event-block {
     position: absolute;
     left: 2px;
-    right: 2px;
+    width: calc(100% - 4px);
     border-radius: 5px;
     padding: 2px 5px 2px 6px;
     overflow: hidden;

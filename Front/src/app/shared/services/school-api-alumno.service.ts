@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AlumnoMateriaDetalle, AlumnoPanel, AlumnoPanelResumen, TareaSubmision } from './school-api.types';
+import { AlumnoHorarioClase, AlumnoMateriaDetalle, AlumnoPanel, AlumnoPanelResumen, TareaSubmision } from './school-api.types';
 import { extractSchoolApiError } from './school-api.error';
 
 @Injectable({ providedIn: 'root' })
@@ -21,6 +21,14 @@ export class SchoolApiAlumnoService {
     async getPanelAlumnoResumen(estudianteId: number): Promise<AlumnoPanelResumen> {
         try {
             return await firstValueFrom(this.http.get<AlumnoPanelResumen>(`${this.apiUrl}/estudiantes/${estudianteId}/panel-resumen`));
+        } catch (e) {
+            throw extractSchoolApiError(e);
+        }
+    }
+
+    async getHorarioAlumno(estudianteId: number): Promise<AlumnoHorarioClase[]> {
+        try {
+            return await firstValueFrom(this.http.get<AlumnoHorarioClase[]>(`${this.apiUrl}/estudiantes/${estudianteId}/horario`));
         } catch (e) {
             throw extractSchoolApiError(e);
         }

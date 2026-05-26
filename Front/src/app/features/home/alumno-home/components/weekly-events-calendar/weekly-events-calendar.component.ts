@@ -14,6 +14,11 @@ export interface CalendarEvent {
     repeatWeekly?: boolean;
 }
 
+export interface SubjectColorLegendItem {
+    label: string;
+    colorClass: CalendarEvent['colorClass'];
+}
+
 /** Alias for backwards compatibility */
 export type WeeklyCalendarEvent = CalendarEvent;
 
@@ -26,6 +31,11 @@ interface WeekDayCell {
     isoDate: string;
 }
 
+interface PositionedCalendarEvent extends CalendarEvent {
+    left: string;
+    width: string;
+}
+
 @Component({
     selector: 'app-weekly-events-calendar',
     standalone: true,
@@ -36,6 +46,7 @@ interface WeekDayCell {
 })
 export class WeeklyEventsCalendarComponent {
     @Input() adminEvents: CalendarEvent[] = [];
+    @Input() adminSubjectLegend: SubjectColorLegendItem[] = [];
     @Input() personalEvents: CalendarEvent[] = [];
     @Output() readonly requestAddEvent = new EventEmitter<{ dayOfWeek: 1 | 2 | 3 | 4 | 5 }>();
     @Output() readonly requestDeletePersonalEvent = new EventEmitter<string>();
@@ -51,6 +62,7 @@ export class WeeklyEventsCalendarComponent {
 
     private readonly focusedDate = signal<Date>(this.getDefaultFocusDate());
     readonly weekStart = signal<Date>(this.getDisplayWeekStartForNow());
+    readonly viewMode = signal<'week' | 'day'>('week');
 
     readonly days = computed<WeekDayCell[]>(() => {
         const start = this.weekStart();
@@ -77,13 +89,112 @@ export class WeeklyEventsCalendarComponent {
         return `${fmt.format(start)} - ${fmt.format(end)}`;
     });
 
+    readonly dayLabel = computed(() => {
+        const focused = this.focusedDate();
+        const fmt = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: '2-digit', month: 'short' });
+        return fmt.format(focused);
+    });
+
+    readonly periodLabel = computed(() => this.viewMode() === 'week' ? this.weekLabel() : this.dayLabel());
+
+    readonly visibleDays = computed<WeekDayCell[]>(() => {
+        const all = this.days();
+        if (this.viewMode() === 'week') {
+            return all;
+        }
+
+        const focusedIso = this.toIsoDate(this.focusedDate());
+        const focused = all.find(day => day.isoDate === focusedIso);
+        return focused ? [focused] : [all[0]];
+    });
+
     readonly selectedWeekInputValue = computed(() => this.toIsoDate(this.weekStart()));
+    readonly selectedDayInputValue = computed(() => this.toIsoDate(this.focusedDate()));
 
     allEventsByDay(dayOfWeek: 1 | 2 | 3 | 4 | 5): CalendarEvent[] {
         return [
             ...this.adminEvents.filter(e => e.dayOfWeek === dayOfWeek),
             ...this.personalEvents.filter(e => e.dayOfWeek === dayOfWeek)
         ].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    }
+
+    getPositionedEvents(dayOfWeek: 1 | 2 | 3 | 4 | 5): PositionedCalendarEvent[] {
+        const events = this.allEventsByDay(dayOfWeek)
+            .map(event => ({
+                ...event,
+                _start: this.toMinutes(event.startTime),
+                _end: this.toMinutes(event.endTime),
+                _column: 0,
+                _columns: 1,
+            }))
+            .sort((a, b) => a._start - b._start || a._end - b._end || a.title.localeCompare(b.title));
+
+        if (events.length === 0) {
+            return [];
+        }
+
+        const clusters: Array<typeof events> = [];
+        let currentCluster: typeof events = [];
+        let currentClusterEnd = -1;
+
+        for (const event of events) {
+            if (currentCluster.length === 0 || event._start < currentClusterEnd) {
+                currentCluster.push(event);
+                currentClusterEnd = Math.max(currentClusterEnd, event._end);
+                continue;
+            }
+
+            clusters.push(currentCluster);
+            currentCluster = [event];
+            currentClusterEnd = event._end;
+        }
+
+        if (currentCluster.length > 0) {
+            clusters.push(currentCluster);
+        }
+
+        const positioned: PositionedCalendarEvent[] = [];
+
+        for (const cluster of clusters) {
+            const columnEndTimes: number[] = [];
+
+            for (const event of cluster) {
+                let columnIndex = columnEndTimes.findIndex(endTime => endTime <= event._start);
+                if (columnIndex < 0) {
+                    columnIndex = columnEndTimes.length;
+                    columnEndTimes.push(event._end);
+                } else {
+                    columnEndTimes[columnIndex] = event._end;
+                }
+
+                event._column = columnIndex;
+            }
+
+            const totalColumns = Math.max(1, columnEndTimes.length);
+            for (const event of cluster) {
+                event._columns = totalColumns;
+                const leftPercent = (event._column / totalColumns) * 100;
+                const widthPercent = 100 / totalColumns;
+
+                positioned.push({
+                    id: event.id,
+                    title: event.title,
+                    subtitle: event.subtitle,
+                    description: event.description,
+                    dayOfWeek: event.dayOfWeek,
+                    startTime: event.startTime,
+                    endTime: event.endTime,
+                    location: event.location,
+                    colorClass: event.colorClass,
+                    type: event.type,
+                    repeatWeekly: event.repeatWeekly,
+                    left: `calc(${leftPercent}% + 2px)`,
+                    width: `calc(${widthPercent}% - 4px)`
+                });
+            }
+        }
+
+        return positioned;
     }
 
     getEventTop(event: CalendarEvent): string {
@@ -120,11 +231,25 @@ export class WeeklyEventsCalendarComponent {
     }
 
     goToPreviousWeek(): void {
+        if (this.viewMode() === 'day') {
+            const previous = this.addWeekdays(this.focusedDate(), -1);
+            this.focusedDate.set(previous);
+            this.weekStart.set(this.getWeekStart(previous));
+            return;
+        }
+
         this.weekStart.set(this.addDays(this.weekStart(), -7));
         this.focusedDate.set(this.addDays(this.focusedDate(), -7));
     }
 
     goToNextWeek(): void {
+        if (this.viewMode() === 'day') {
+            const next = this.addWeekdays(this.focusedDate(), 1);
+            this.focusedDate.set(next);
+            this.weekStart.set(this.getWeekStart(next));
+            return;
+        }
+
         this.weekStart.set(this.addDays(this.weekStart(), 7));
         this.focusedDate.set(this.addDays(this.focusedDate(), 7));
     }
@@ -139,6 +264,31 @@ export class WeeklyEventsCalendarComponent {
         const adjusted = this.adjustDateToWeekday(this.parseIsoDate(value));
         this.focusedDate.set(adjusted);
         this.weekStart.set(this.getWeekStart(adjusted));
+    }
+
+    onDayDateSelected(value: string): void {
+        if (!value) return;
+        const adjusted = this.adjustDateToWeekday(this.parseIsoDate(value));
+        this.focusedDate.set(adjusted);
+        this.weekStart.set(this.getWeekStart(adjusted));
+    }
+
+    onDatePickerChanged(value: string): void {
+        if (this.viewMode() === 'week') {
+            this.onWeekDateSelected(value);
+            return;
+        }
+
+        this.onDayDateSelected(value);
+    }
+
+    setWeekView(): void {
+        this.viewMode.set('week');
+    }
+
+    setDayView(): void {
+        this.viewMode.set('day');
+        this.focusedDate.set(this.adjustDateToWeekday(this.focusedDate()));
     }
 
     isFocusedDay(day: WeekDayCell): boolean {
@@ -194,6 +344,22 @@ export class WeeklyEventsCalendarComponent {
         return clone;
     }
 
+    private addWeekdays(date: Date, amount: number): Date {
+        const step = amount >= 0 ? 1 : -1;
+        let remaining = Math.abs(amount);
+        let current = this.startOfDay(date);
+
+        while (remaining > 0) {
+            current = this.addDays(current, step);
+            const day = current.getDay();
+            if (day !== 0 && day !== 6) {
+                remaining--;
+            }
+        }
+
+        return current;
+    }
+
     private toIsoDate(date: Date): string {
         const year = date.getFullYear();
         const month = `${date.getMonth() + 1}`.padStart(2, '0');
@@ -204,5 +370,10 @@ export class WeeklyEventsCalendarComponent {
     private parseIsoDate(value: string): Date {
         const [year, month, day] = value.split('-').map(Number);
         return this.startOfDay(new Date(year, month - 1, day));
+    }
+
+    private toMinutes(value: string): number {
+        const [hours, minutes] = value.split(':').map(Number);
+        return (hours * 60) + minutes;
     }
 }

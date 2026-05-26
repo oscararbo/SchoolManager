@@ -10,4 +10,5 @@ public class Asignatura : ISoftDeletable
     public ICollection<EstudianteAsignatura> EstudianteAsignaturas { get; set; } = new List<EstudianteAsignatura>();
     public ICollection<ProfesorAsignaturaCurso> ProfesorAsignaturaCursos { get; set; } = new List<ProfesorAsignaturaCurso>();
     public ICollection<Tarea> Tareas { get; set; } = new List<Tarea>();
+    public ICollection<HorarioAsignatura> Horarios { get; set; } = new List<HorarioAsignatura>();
 }

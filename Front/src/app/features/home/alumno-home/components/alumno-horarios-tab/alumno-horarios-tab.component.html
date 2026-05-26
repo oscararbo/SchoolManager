@@ -2,15 +2,24 @@
     <div class="d-flex justify-content-between align-items-center">
         <div>
             <h3 class="h5 mb-0">Tu Horario</h3>
-            <p class="small text-secondary mb-0">Semana laboral · scroll de horas</p>
+            <p class="small text-secondary mb-0">Semana laboral · vista semanal o de un solo dia</p>
         </div>
         <button type="button" class="btn btn-sm btn-primary" (click)="abrirFormulario()">
             + Nuevo evento
         </button>
     </div>
 
+    @if (loadingSchedule()) {
+        <div class="alert alert-info py-2 mb-0" role="status">Cargando horario de clases...</div>
+    }
+
+    @if (scheduleError()) {
+        <div class="alert alert-warning py-2 mb-0" role="alert">{{ scheduleError() }}</div>
+    }
+
     <app-weekly-events-calendar
-        [adminEvents]="adminEvents"
+        [adminEvents]="adminEvents()"
+        [adminSubjectLegend]="adminSubjectLegend()"
         [personalEvents]="personalEvents()"
         (requestAddEvent)="abrirFormulario($event.dayOfWeek)"
         (requestDeletePersonalEvent)="eliminarEventoPersonal($event)">

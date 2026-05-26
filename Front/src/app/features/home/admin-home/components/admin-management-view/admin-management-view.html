@@ -294,6 +294,128 @@
         </app-admin-imparticiones-tab>
     }
 
+    <!-- HORARIOS -->
+    @if (tabActiva() === 'horarios') {
+        <div class="row g-3">
+            <div class="col-12 col-lg-5">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        @if (editandoHorarioId !== null) {
+                            <h5 class="card-title">Editar horario</h5>
+                        } @else {
+                            <h5 class="card-title">Nuevo horario</h5>
+                        }
+
+                        <div class="mb-2">
+                            <label class="form-label">Asignatura</label>
+                            <select class="form-select" [ngModel]="horarioAsignaturaId()" (ngModelChange)="horarioAsignaturaId.set($event)">
+                                <option [ngValue]="null">Selecciona una asignatura</option>
+                                @for (a of asignaturas(); track a.id) {
+                                    <option [ngValue]="a.id">{{ a.nombre }} ({{ a.curso.nombre }})</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label">Dia</label>
+                            <select class="form-select" [ngModel]="horarioDiaSemana()" (ngModelChange)="horarioDiaSemana.set($event)">
+                                <option [ngValue]="1">Lunes</option>
+                                <option [ngValue]="2">Martes</option>
+                                <option [ngValue]="3">Miercoles</option>
+                                <option [ngValue]="4">Jueves</option>
+                                <option [ngValue]="5">Viernes</option>
+                            </select>
+                        </div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <label class="form-label">Hora inicio</label>
+                                <input class="form-control" type="time" [ngModel]="horarioHoraInicio()" (ngModelChange)="horarioHoraInicio.set($event)">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Hora fin</label>
+                                <input class="form-control" type="time" [ngModel]="horarioHoraFin()" (ngModelChange)="horarioHoraFin.set($event)">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Aula</label>
+                            <input class="form-control" type="text" maxlength="80" [ngModel]="horarioAula()" (ngModelChange)="horarioAula.set($event)">
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            @if (editandoHorarioId !== null) {
+                                <button class="btn btn-success" type="button" (click)="guardarHorario()" [disabled]="estaCargando('guardarHorario')">
+                                    {{ estaCargando('guardarHorario') ? 'Guardando...' : 'Guardar' }}
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" (click)="editandoHorarioId = null; resetHorarioForm()">Cancelar</button>
+                            } @else {
+                                <button class="btn btn-primary" type="button" (click)="crearHorario()" [disabled]="estaCargando('crearHorario')">
+                                    {{ estaCargando('crearHorario') ? 'Creando...' : 'Crear horario' }}
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-7">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                            <h5 class="card-title mb-0">Horarios ({{ horariosVista().length }})</h5>
+                            <select class="form-select form-select-sm" style="max-width:180px" [ngModel]="filtroHorariosCursoId()" (ngModelChange)="filtroHorariosCursoId.set($event)">
+                                <option [ngValue]="null">Todos los cursos</option>
+                                @for (c of cursos(); track c.id) { <option [ngValue]="c.id">{{ c.nombre }}</option> }
+                            </select>
+                        </div>
+
+                        <div class="table-responsive list-scroll-body">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead>
+                                    <tr><th>Asignatura</th><th>Curso</th><th>Dia</th><th>Horario</th><th>Aula</th><th></th></tr>
+                                </thead>
+                                <tbody>
+                                    @if (cargandoListaHorarios()) {
+                                        @for (_ of [1, 2, 3, 4, 5]; track $index) {
+                                            <tr class="placeholder-glow" aria-hidden="true">
+                                                <td><span class="placeholder col-8"></span></td>
+                                                <td><span class="placeholder col-6"></span></td>
+                                                <td><span class="placeholder col-6"></span></td>
+                                                <td><span class="placeholder col-7"></span></td>
+                                                <td><span class="placeholder col-6"></span></td>
+                                                <td><span class="placeholder col-6"></span></td>
+                                            </tr>
+                                        }
+                                    } @else {
+                                        @for (h of horariosVista(); track h.horarioId) {
+                                            <tr>
+                                                <td>{{ h.asignatura }}</td>
+                                                <td>{{ h.curso }}</td>
+                                                <td>{{ diaSemanaLabel(h.diaSemana) }}</td>
+                                                <td>{{ h.horaInicio }} - {{ h.horaFin }}</td>
+                                                <td>{{ h.aula || '-' }}</td>
+                                                <td class="text-end pe-2">
+                                                    <button class="btn btn-xs btn-outline-primary me-1" type="button" (click)="iniciarEditarHorario(h)">Editar</button>
+                                                    <button class="btn btn-xs btn-outline-danger" type="button"
+                                                        [disabled]="estaCargando('eliminarHorario')"
+                                                        (click)="eliminarHorario(h.horarioId, h.asignatura, h.diaSemana, h.horaInicio)">
+                                                        {{ estaCargando('eliminarHorario') ? 'Eliminando...' : 'Eliminar' }}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                        @if (horariosVista().length === 0) { <tr><td colspan="6" class="text-secondary">Sin horarios.</td></tr> }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
     <!-- IMPORTAR CSV -->
     @if (tabActiva() === 'importar') {
         <app-admin-importar-csv-tab

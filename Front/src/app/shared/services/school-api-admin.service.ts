@@ -17,6 +17,7 @@ import {
 import {
     AdminComparacionCursos,
     AdminCursoNotasStats,
+    AdminHorarioAsignaturaItem,
     AdminCursoStatsSelector,
     AdminImparticionListItem,
     AdminMatriculaListItem,
@@ -93,6 +94,38 @@ export class SchoolApiAdminService {
     async getAdminImparticiones(): Promise<AdminImparticionListItem[]> {
         try {
             return await firstValueFrom(this.http.get<AdminImparticionListItem[]>(`${this.apiUrl}/admin/imparticiones`));
+        } catch (e) {
+            throw extractSchoolApiError(e);
+        }
+    }
+
+    async getAdminHorarios(): Promise<AdminHorarioAsignaturaItem[]> {
+        try {
+            return await firstValueFrom(this.http.get<AdminHorarioAsignaturaItem[]>(`${this.apiUrl}/admin/horarios`));
+        } catch (e) {
+            throw extractSchoolApiError(e);
+        }
+    }
+
+    async createAdminHorario(data: { asignaturaId: number; diaSemana: number; horaInicio: string; horaFin: string; aula?: string | null }): Promise<AdminHorarioAsignaturaItem> {
+        try {
+            return await firstValueFrom(this.http.post<AdminHorarioAsignaturaItem>(`${this.apiUrl}/admin/horarios`, data));
+        } catch (e) {
+            throw extractSchoolApiError(e);
+        }
+    }
+
+    async updateAdminHorario(horarioId: number, data: { asignaturaId: number; diaSemana: number; horaInicio: string; horaFin: string; aula?: string | null }): Promise<AdminHorarioAsignaturaItem> {
+        try {
+            return await firstValueFrom(this.http.put<AdminHorarioAsignaturaItem>(`${this.apiUrl}/admin/horarios/${horarioId}`, data));
+        } catch (e) {
+            throw extractSchoolApiError(e);
+        }
+    }
+
+    async deleteAdminHorario(horarioId: number): Promise<void> {
+        try {
+            await firstValueFrom(this.http.delete<void>(`${this.apiUrl}/admin/horarios/${horarioId}`));
         } catch (e) {
             throw extractSchoolApiError(e);
         }

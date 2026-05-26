@@ -8,6 +8,7 @@ import type {
     AdminComparacionCursos,
     AdminCursoRendimiento,
     AdminAsignaturaRendimiento,
+    AdminHorarioAsignaturaItem,
     AdminTop5Stats,
     AdminTop5AsignaturaItem,
     AdminCursoNotasStats,
@@ -15,6 +16,7 @@ import type {
     AdminImparticionListItem,
     AdminMatriculaListItem,
     AdminStats,
+    AlumnoHorarioClase,
     AlumnoMateriaDetalle,
     AlumnoPanel,
     AlumnoPanelResumen,
@@ -61,6 +63,7 @@ export type {
     AlumnoTarea,
     AlumnoMateria,
     AlumnoPanel,
+    AlumnoHorarioClase,
     AlumnoMateriaResumen,
     AlumnoPanelResumen,
     AlumnoMateriaDetalle,
@@ -83,6 +86,7 @@ export type {
     AdminComparacionCursos,
     AdminCursoRendimiento,
     AdminAsignaturaRendimiento,
+    AdminHorarioAsignaturaItem,
     AdminTop5Stats,
     AdminTop5AsignaturaItem,
     AdminMatriculaAsignaturaItem,
@@ -134,6 +138,7 @@ export class SchoolApiService {
     // Alumno panel
     getPanelAlumno(estudianteId: number): Promise<AlumnoPanel> { return this.alumno.getPanelAlumno(estudianteId); }
     getPanelAlumnoResumen(estudianteId: number): Promise<AlumnoPanelResumen> { return this.alumno.getPanelAlumnoResumen(estudianteId); }
+    getHorarioAlumno(estudianteId: number): Promise<AlumnoHorarioClase[]> { return this.alumno.getHorarioAlumno(estudianteId); }
     getMateriaDetalle(estudianteId: number, asignaturaId: number): Promise<AlumnoMateriaDetalle> { return this.alumno.getMateriaDetalle(estudianteId, asignaturaId); }
     subirSubmisionAlumno(estudianteId: number, tareaId: number, archivo: File): Promise<TareaSubmision> { return this.alumno.subirSubmision(estudianteId, tareaId, archivo); }
     getSubmisionesAlumno(estudianteId: number, tareaId: number): Promise<TareaSubmision[]> { return this.alumno.getSubmisiones(estudianteId, tareaId); }
@@ -148,6 +153,14 @@ export class SchoolApiService {
     compararCursos(cursoIds: number[]): Promise<AdminComparacionCursos> { return this.admin.compararCursos(cursoIds); }
     getAdminMatriculas(): Promise<AdminMatriculaListItem[]> { return this.admin.getAdminMatriculas(); }
     getAdminImparticiones(): Promise<AdminImparticionListItem[]> { return this.admin.getAdminImparticiones(); }
+    getAdminHorarios(): Promise<AdminHorarioAsignaturaItem[]> { return this.admin.getAdminHorarios(); }
+    createAdminHorario(asignaturaId: number, diaSemana: number, horaInicio: string, horaFin: string, aula?: string | null): Promise<AdminHorarioAsignaturaItem> {
+        return this.admin.createAdminHorario({ asignaturaId, diaSemana, horaInicio, horaFin, aula });
+    }
+    updateAdminHorario(horarioId: number, asignaturaId: number, diaSemana: number, horaInicio: string, horaFin: string, aula?: string | null): Promise<AdminHorarioAsignaturaItem> {
+        return this.admin.updateAdminHorario(horarioId, { asignaturaId, diaSemana, horaInicio, horaFin, aula });
+    }
+    deleteAdminHorario(horarioId: number): Promise<void> { return this.admin.deleteAdminHorario(horarioId); }
     getCursos(): Promise<CursoItem[]> { return this.admin.getCursos(); }
     createCurso(nombre: string): Promise<CursoItem> { return this.admin.createCurso(nombre); }
     updateCurso(id: number, nombre: string): Promise<CursoItem> { return this.admin.updateCurso(id, nombre); }

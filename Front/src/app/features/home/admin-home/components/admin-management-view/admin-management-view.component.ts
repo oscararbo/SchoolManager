@@ -4,7 +4,7 @@ import {
     SchoolApiService,
     CursoItem, AsignaturaItem, ProfesorListItem, EstudianteItem,
     UpdateProfesorData, UpdateEstudianteData, CsvImportResult, CsvImportEntity, CsvImportError,
-    AdminMatriculaListItem, AdminImparticionListItem, TareaConNotas
+    AdminMatriculaListItem, AdminImparticionListItem, AdminHorarioAsignaturaItem, TareaConNotas
 } from '../../../../../shared/services/school-api.service';
 import { ToastService } from '../../../../../core/services/toast.service';
 import { ConfirmDialogComponent } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
@@ -27,7 +27,7 @@ import {
     type CsvErrorGroup
 } from './admin-management-view.csv';
 
-type AdminTab = 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matriculas' | 'imparticiones' | 'importar';
+type AdminTab = 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matriculas' | 'imparticiones' | 'horarios' | 'importar';
 
 @Component({
     selector: 'app-admin-management-view',
@@ -66,13 +66,15 @@ export class AdminManagementViewComponent implements OnInit {
         estudiantes: boolean;
         matriculas: boolean;
         imparticiones: boolean;
+        horarios: boolean;
     }>({
         cursos: false,
         asignaturas: false,
         profesores: false,
         estudiantes: false,
         matriculas: false,
-        imparticiones: false
+        imparticiones: false,
+        horarios: false
     });
 
     cursos = signal<CursoItem[]>([]);
@@ -81,6 +83,7 @@ export class AdminManagementViewComponent implements OnInit {
     estudiantes = signal<EstudianteItem[]>([]);
     matriculas = signal<AdminMatriculaListItem[]>([]);
     imparticiones = signal<AdminImparticionListItem[]>([]);
+    horarios = signal<AdminHorarioAsignaturaItem[]>([]);
 
     private readonly busquedaCursosInput$ = new Subject<string>();
     private readonly busquedaAsignaturasInput$ = new Subject<string>();
@@ -118,6 +121,15 @@ export class AdminManagementViewComponent implements OnInit {
     imparticionAsignaturaId = signal<number | null>(null);
     imparticionCursoId = signal<number | null>(null);
     filtroImparticionesCursoId = signal<number | null>(null);
+
+    // Horarios Management
+    editandoHorarioId: number | null = null;
+    horarioAsignaturaId = signal<number | null>(null);
+    horarioDiaSemana = signal<number>(1);
+    horarioHoraInicio = signal('08:30');
+    horarioHoraFin = signal('09:25');
+    horarioAula = signal('');
+    filtroHorariosCursoId = signal<number | null>(null);
 
     // Task Management
     mostrarModalTareas = signal(false);
@@ -265,6 +277,10 @@ export class AdminManagementViewComponent implements OnInit {
         return this.estaCargando('cargarImparticiones') || (this.tabBootstrapping() && !this.resourcesLoaded().imparticiones);
     }
 
+    cargandoListaHorarios(): boolean {
+        return this.estaCargando('cargarHorarios') || (this.tabBootstrapping() && !this.resourcesLoaded().horarios);
+    }
+
     // Forms
     private readonly forms: AdminManagementForms = createAdminManagementForms(this.fb);
     readonly cursoForm = this.forms.cursoForm;
@@ -343,6 +359,17 @@ export class AdminManagementViewComponent implements OnInit {
         return this.imparticiones()
             .filter(x => !cursoFiltro || x.cursoId === cursoFiltro)
             .sort((a, b) => a.curso.localeCompare(b.curso) || a.asignatura.localeCompare(b.asignatura));
+    });
+
+    horariosVista = computed<AdminHorarioAsignaturaItem[]>(() => {
+        const cursoFiltroRaw = this.filtroHorariosCursoId();
+        const cursoFiltro = cursoFiltroRaw ? Number(cursoFiltroRaw) : null;
+        return this.horarios()
+            .filter(horario => !cursoFiltro || horario.cursoId === cursoFiltro)
+            .sort((a, b) => a.curso.localeCompare(b.curso)
+                || a.asignatura.localeCompare(b.asignatura)
+                || a.diaSemana - b.diaSemana
+                || a.horaInicio.localeCompare(b.horaInicio));
     });
 
     ngOnInit(): void {
@@ -446,14 +473,36 @@ export class AdminManagementViewComponent implements OnInit {
                 case 'importar':
                     // No carga listas hasta que se necesiten en otras pestañas.
                     break;
+                case 'horarios':
+                    await Promise.all([
+                        this.cargarCursos(force),
+                        this.cargarAsignaturas(force),
+                        this.cargarHorarios(force)
+                    ]);
+                    break;
             }
         } finally {
             this.tabBootstrapping.set(false);
         }
     }
 
-    private setResourceLoaded(resource: 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matriculas' | 'imparticiones', loaded: boolean): void {
+    private setResourceLoaded(resource: 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matriculas' | 'imparticiones' | 'horarios', loaded: boolean): void {
         this.resourcesLoaded.update(current => ({ ...current, [resource]: loaded }));
+    }
+
+    private async cargarHorarios(force = false): Promise<void> {
+        if (!force && this.resourcesLoaded().horarios) {
+            return;
+        }
+
+        await this.runWithLoading('cargarHorarios', async () => {
+            try {
+                this.horarios.set(await this.api.getAdminHorarios());
+                this.setResourceLoaded('horarios', true);
+            } catch (e) {
+                this.mostrarError(e, 'No se pudieron cargar los horarios.');
+            }
+        });
     }
 
     private async cargarMatriculas(force = false): Promise<void> {
@@ -554,6 +603,7 @@ export class AdminManagementViewComponent implements OnInit {
             this.setResourceLoaded('profesores', false);
             this.setResourceLoaded('matriculas', false);
             this.setResourceLoaded('imparticiones', false);
+            this.setResourceLoaded('horarios', false);
             return;
         }
 
@@ -561,6 +611,7 @@ export class AdminManagementViewComponent implements OnInit {
             this.setResourceLoaded('asignaturas', false);
             this.setResourceLoaded('matriculas', false);
             this.setResourceLoaded('imparticiones', false);
+            this.setResourceLoaded('horarios', false);
             return;
         }
 
@@ -608,10 +659,12 @@ export class AdminManagementViewComponent implements OnInit {
         this.editandoAsignaturaId = null;
         this.editandoProfesorId = null;
         this.editandoEstudianteId = null;
+        this.editandoHorarioId = null;
         this.editCursoForm.reset({ nombre: '' });
         this.editAsignaturaForm.reset({ nombre: '', cursoId: null });
         this.editProfesorForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', especialidad: '' });
         this.editEstudianteForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', fechaNacimiento: '', cursoId: null });
+        this.resetHorarioForm();
     }
 
     // CRUD: Cursos
@@ -678,6 +731,7 @@ export class AdminManagementViewComponent implements OnInit {
                 this.setResourceLoaded('estudiantes', false);
                 this.setResourceLoaded('matriculas', false);
                 this.setResourceLoaded('imparticiones', false);
+                this.setResourceLoaded('horarios', false);
                 await this.cargarTab(this.tabActiva(), true);
                 this.dataChanged.emit();
             } catch (e) {
@@ -747,6 +801,7 @@ export class AdminManagementViewComponent implements OnInit {
                 this.setResourceLoaded('asignaturas', false);
                 this.setResourceLoaded('matriculas', false);
                 this.setResourceLoaded('imparticiones', false);
+                this.setResourceLoaded('horarios', false);
                 await this.cargarTab(this.tabActiva(), true);
                 this.dataChanged.emit();
             } catch (e) {
@@ -1066,6 +1121,107 @@ export class AdminManagementViewComponent implements OnInit {
                 this.mostrarError(e);
             }
         });
+    }
+
+    // Horarios
+    async crearHorario(): Promise<void> {
+        const asignaturaId = Number(this.horarioAsignaturaId());
+        const diaSemana = Number(this.horarioDiaSemana());
+        const horaInicio = this.horarioHoraInicio().trim();
+        const horaFin = this.horarioHoraFin().trim();
+        const aula = this.horarioAula().trim();
+
+        if (!asignaturaId || !horaInicio || !horaFin) {
+            this.toast.show('Selecciona asignatura y horas de inicio/fin.', 'warning');
+            return;
+        }
+
+        await this.runWithLoading('crearHorario', async () => {
+            try {
+                const created = await this.api.createAdminHorario(asignaturaId, diaSemana, horaInicio, horaFin, aula || null);
+                this.horarios.update(list => [...list, created]);
+                this.resetHorarioForm();
+                this.toast.show('Horario creado.', 'success');
+            } catch (e) {
+                this.mostrarError(e);
+            }
+        });
+    }
+
+    iniciarEditarHorario(horario: AdminHorarioAsignaturaItem): void {
+        this.editandoHorarioId = horario.horarioId;
+        this.horarioAsignaturaId.set(horario.asignaturaId);
+        this.horarioDiaSemana.set(horario.diaSemana);
+        this.horarioHoraInicio.set(horario.horaInicio);
+        this.horarioHoraFin.set(horario.horaFin);
+        this.horarioAula.set(horario.aula ?? '');
+    }
+
+    async guardarHorario(): Promise<void> {
+        if (!this.editandoHorarioId) {
+            return;
+        }
+
+        const asignaturaId = Number(this.horarioAsignaturaId());
+        const diaSemana = Number(this.horarioDiaSemana());
+        const horaInicio = this.horarioHoraInicio().trim();
+        const horaFin = this.horarioHoraFin().trim();
+        const aula = this.horarioAula().trim();
+
+        if (!asignaturaId || !horaInicio || !horaFin) {
+            this.toast.show('Selecciona asignatura y horas de inicio/fin.', 'warning');
+            return;
+        }
+
+        await this.runWithLoading('guardarHorario', async () => {
+            try {
+                const updated = await this.api.updateAdminHorario(this.editandoHorarioId!, asignaturaId, diaSemana, horaInicio, horaFin, aula || null);
+                this.horarios.update(list => list.map(item => item.horarioId === updated.horarioId ? updated : item));
+                this.editandoHorarioId = null;
+                this.resetHorarioForm();
+                this.toast.show('Horario actualizado.', 'success');
+            } catch (e) {
+                this.mostrarError(e);
+            }
+        });
+    }
+
+    async eliminarHorario(horarioId: number, asignatura: string, diaSemana: number, horaInicio: string): Promise<void> {
+        const confirmado = await this.confirmDialog.show(
+            'Eliminar horario',
+            `¿Eliminar el horario de "${asignatura}" del dia ${this.diaSemanaLabel(diaSemana)} a las ${horaInicio}?`
+        );
+        if (!confirmado) return;
+
+        await this.runWithLoading('eliminarHorario', async () => {
+            try {
+                await this.api.deleteAdminHorario(horarioId);
+                this.horarios.update(list => list.filter(item => item.horarioId !== horarioId));
+                this.toast.show('Horario eliminado.', 'success');
+            } catch (e) {
+                this.mostrarError(e);
+            }
+        });
+    }
+
+    resetHorarioForm(): void {
+        this.horarioAsignaturaId.set(null);
+        this.horarioDiaSemana.set(1);
+        this.horarioHoraInicio.set('08:30');
+        this.horarioHoraFin.set('09:25');
+        this.horarioAula.set('');
+    }
+
+    diaSemanaLabel(diaSemana: number): string {
+        const labels: Record<number, string> = {
+            1: 'Lunes',
+            2: 'Martes',
+            3: 'Miercoles',
+            4: 'Jueves',
+            5: 'Viernes'
+        };
+
+        return labels[diaSemana] ?? 'N/A';
     }
 
     // CSV Import

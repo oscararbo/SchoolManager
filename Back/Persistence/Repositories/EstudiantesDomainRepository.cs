@@ -81,6 +81,54 @@ public class EstudiantesDomainRepository(AppDbContext context, ICurrentSchoolCon
         };
     }
 
+    public async Task<List<AlumnoHorarioClaseDto>?> GetHorarioAlumnoAsync(int estudianteId, CancellationToken cancellationToken = default)
+    {
+        var student = await context.Estudiantes
+            .AsNoTracking()
+            .Where(e => e.Id == estudianteId)
+            .Select(e => new { e.CursoId })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (student is null)
+            return null;
+
+        var rawSchedule = await (
+            from ea in context.EstudianteAsignaturas.AsNoTracking()
+            join h in context.HorariosAsignaturas.AsNoTracking()
+                on ea.AsignaturaId equals h.AsignaturaId
+            where ea.EstudianteId == estudianteId
+            select new
+            {
+                HorarioId = h.Id,
+                AsignaturaId = ea.AsignaturaId,
+                Asignatura = ea.Asignatura!.Nombre,
+                Profesor = ea.Asignatura.ProfesorAsignaturaCursos
+                    .Where(pac => pac.CursoId == student.CursoId)
+                    .Select(pac => pac.Profesor!.Nombre)
+                    .FirstOrDefault(),
+                DiaSemana = h.DiaSemana,
+                HoraInicio = h.HoraInicio,
+                HoraFin = h.HoraFin,
+                Aula = h.Aula
+            })
+            .OrderBy(h => h.DiaSemana)
+            .ThenBy(h => h.HoraInicio)
+            .ThenBy(h => h.Asignatura)
+            .ToListAsync(cancellationToken);
+
+        return rawSchedule.Select(item => new AlumnoHorarioClaseDto
+        {
+            HorarioId = item.HorarioId,
+            AsignaturaId = item.AsignaturaId,
+            Asignatura = item.Asignatura,
+            Profesor = item.Profesor,
+            DiaSemana = item.DiaSemana,
+            HoraInicio = item.HoraInicio.ToString("HH:mm"),
+            HoraFin = item.HoraFin.ToString("HH:mm"),
+            Aula = item.Aula
+        }).ToList();
+    }
+
     public async Task<AlumnoMateriaDetalleDto?> GetMateriaDetalleAsync(int estudianteId, int subjectId, CancellationToken cancellationToken = default)
     {
         var student = await context.Estudiantes

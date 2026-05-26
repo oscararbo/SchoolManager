@@ -1,26 +1,50 @@
 <section class="cal-shell">
     <header class="cal-toolbar">
         <div class="toolbar-info">
-            <span class="h6 mb-0">Calendario semanal</span>
-            <span class="small text-secondary">{{ weekLabel() }}</span>
+            <span class="h6 mb-0">Calendario de clases</span>
+            <span class="small text-secondary">{{ periodLabel() }}</span>
         </div>
         <div class="toolbar-actions">
+            <div class="btn-group btn-group-sm" role="group" aria-label="Modo de vista">
+                <button type="button" class="btn"
+                    [class.btn-primary]="viewMode() === 'week'"
+                    [class.btn-outline-secondary]="viewMode() !== 'week'"
+                    (click)="setWeekView()">Semana</button>
+                <button type="button" class="btn"
+                    [class.btn-primary]="viewMode() === 'day'"
+                    [class.btn-outline-secondary]="viewMode() !== 'day'"
+                    (click)="setDayView()">Dia</button>
+            </div>
             <button type="button" class="btn btn-sm btn-outline-secondary" (click)="goToPreviousWeek()">← Anterior</button>
             <button type="button" class="btn btn-sm btn-outline-secondary" (click)="goToNextWeek()">Siguiente →</button>
-            <input class="form-control form-control-sm cal-date-picker" type="date" [value]="selectedWeekInputValue()"
-                (change)="onWeekDateSelected($any($event.target).value)">
+            <input class="form-control form-control-sm cal-date-picker" type="date"
+                [value]="viewMode() === 'week' ? selectedWeekInputValue() : selectedDayInputValue()"
+                (change)="onDatePickerChanged($any($event.target).value)">
             <button type="button" class="btn btn-sm btn-primary" (click)="goToTodayContext()">Hoy</button>
         </div>
     </header>
 
-    <div class="cal-legend">
-        <span class="legend-item"><span class="legend-dot admin"></span> Horario de clase</span>
-        <span class="legend-item"><span class="legend-dot personal"></span> Evento personal</span>
-    </div>
+    @if (adminSubjectLegend.length > 0) {
+        <div class="cal-subject-legend">
+            @for (subject of adminSubjectLegend; track subject.label) {
+                <span class="legend-item subject-item">
+                    <span class="legend-dot"
+                        [class.c-blue]="subject.colorClass === 'blue'"
+                        [class.c-green]="subject.colorClass === 'green'"
+                        [class.c-orange]="subject.colorClass === 'orange'"
+                        [class.c-pink]="subject.colorClass === 'pink'"
+                        [class.c-slate]="subject.colorClass === 'slate'"
+                        [class.c-purple]="subject.colorClass === 'purple'"
+                        [class.c-red]="subject.colorClass === 'red'"></span>
+                    {{ subject.label }}
+                </span>
+            }
+        </div>
+    }
 
     <div class="cal-days-header">
         <div class="time-gutter-hdr"></div>
-        @for (day of days(); track day.isoDate) {
+        @for (day of visibleDays(); track day.isoDate) {
             <div class="day-hdr-cell" [class.is-today]="isToday(day)" [class.is-focused]="isFocusedDay(day)">
                 <span class="day-name">{{ day.shortName }}</span>
                 <span class="day-date-num" [class.today-circle]="isToday(day)">{{ day.dayNumber }} {{ day.monthShort }}</span>
@@ -40,7 +64,7 @@
                 }
             </div>
 
-            @for (day of days(); track day.isoDate) {
+            @for (day of visibleDays(); track day.isoDate) {
                 <div class="day-col"
                     [class.is-today]="isToday(day)"
                     [class.is-focused]="isFocusedDay(day)"
@@ -53,7 +77,7 @@
                             <div class="now-line" [style.top]="nowTop"></div>
                         }
                     }
-                    @for (event of allEventsByDay(day.dayOfWeek); track event.id) {
+                    @for (event of getPositionedEvents(day.dayOfWeek); track event.id) {
                         <div class="event-block"
                             [class.type-admin]="event.type === 'admin'"
                             [class.type-personal]="event.type === 'personal'"
@@ -64,6 +88,8 @@
                             [class.c-slate]="event.colorClass === 'slate'"
                             [class.c-purple]="event.colorClass === 'purple'"
                             [class.c-red]="event.colorClass === 'red'"
+                            [style.left]="event.left"
+                            [style.width]="event.width"
                             [style.top]="getEventTop(event)"
                             [style.height]="getEventHeight(event)">
                             <div class="ev-title">{{ event.title }}</div>

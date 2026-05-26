@@ -10,4 +10,8 @@ public interface IAdminService
     Task<ApplicationResult> CreateAdminAsync(CreateAdminRequestDto createAdminRequestDto, ClaimsPrincipal user, CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetMatriculasAsync(CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetImparticionesAsync(CancellationToken cancellationToken = default);
+    Task<ApplicationResult> GetHorariosAsync(CancellationToken cancellationToken = default);
+    Task<ApplicationResult> CreateHorarioAsync(CreateHorarioAsignaturaRequestDto requestDto, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> UpdateHorarioAsync(int horarioId, UpdateHorarioAsignaturaRequestDto requestDto, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> DeleteHorarioAsync(int horarioId, CancellationToken cancellationToken = default);
 }

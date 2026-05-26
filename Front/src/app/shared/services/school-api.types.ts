@@ -174,6 +174,17 @@ export interface AlumnoPanelResumen {
     materias: AlumnoMateriaResumen[];
 }
 
+export interface AlumnoHorarioClase {
+    horarioId: number;
+    asignaturaId: number;
+    asignatura: string;
+    profesor: string | null;
+    diaSemana: number;
+    horaInicio: string;
+    horaFin: string;
+    aula: string | null;
+}
+
 export interface AlumnoMateriaDetalle {
     asignaturaId: number;
     asignatura: string;
@@ -416,6 +427,18 @@ export interface AdminImparticionListItem {
     asignatura: string;
     cursoId: number;
     curso: string;
+}
+
+export interface AdminHorarioAsignaturaItem {
+    horarioId: number;
+    asignaturaId: number;
+    asignatura: string;
+    cursoId: number;
+    curso: string;
+    diaSemana: number;
+    horaInicio: string;
+    horaFin: string;
+    aula: string | null;
 }
 
 export interface ProfesorTareaStats {

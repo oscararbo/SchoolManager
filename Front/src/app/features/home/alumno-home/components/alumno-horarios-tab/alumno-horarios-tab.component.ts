@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, Input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AlumnoPanelResumen } from '../../../../../shared/services/school-api.service';
-import { CalendarEvent, WeeklyEventsCalendarComponent } from '../weekly-events-calendar/weekly-events-calendar.component';
+import { AlumnoHorarioClase, AlumnoPanelResumen, SchoolApiService } from '../../../../../shared/services/school-api.service';
+import { CalendarEvent, SubjectColorLegendItem, WeeklyEventsCalendarComponent } from '../weekly-events-calendar/weekly-events-calendar.component';
 
 type PersonalEventColor = CalendarEvent['colorClass'];
 
@@ -14,12 +14,23 @@ type PersonalEventColor = CalendarEvent['colorClass'];
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AlumnoHorariosTabComponent {
-    @Input({ required: true }) set panel(_value: AlumnoPanelResumen | null) {
-        // Reserved for future API integration
+    @Input({ required: true }) set panel(value: AlumnoPanelResumen | null) {
+        const estudianteId = value?.id ?? null;
+        if (estudianteId && estudianteId !== this.lastLoadedStudentId) {
+            this.lastLoadedStudentId = estudianteId;
+            void this.cargarHorarioAsignaturas(estudianteId);
+        }
     }
 
+    private api = inject(SchoolApiService);
+    private lastLoadedStudentId: number | null = null;
+
+    readonly loadingSchedule = signal(false);
+    readonly scheduleError = signal<string | null>(null);
+
     // ── Admin events (read-only, set by admin) ──────────────────────────────
-    readonly adminEvents: CalendarEvent[] = this.buildAdminEvents();
+    readonly adminEvents = signal<CalendarEvent[]>([]);
+    readonly adminSubjectLegend = signal<SubjectColorLegendItem[]>([]);
 
     // ── Personal events (editable by student) ───────────────────────────────
     readonly personalEvents = signal<CalendarEvent[]>(this.buildInitialPersonalEvents());
@@ -113,76 +124,72 @@ export class AlumnoHorariosTabComponent {
         return this.weekdayLabel(dayOfWeek);
     }
 
-    // ── Dummy data ──────────────────────────────────────────────────────────
-    private buildAdminEvents(): CalendarEvent[] {
-        const slots = [
-            { start: '08:30', end: '09:25' },
-            { start: '09:25', end: '10:20' },
-            { start: '10:20', end: '11:15' },
-            { start: '11:45', end: '12:40' },
-            { start: '12:40', end: '13:35' },
-            { start: '13:35', end: '14:30' },
-        ] as const;
+    private async cargarHorarioAsignaturas(estudianteId: number): Promise<void> {
+        this.loadingSchedule.set(true);
+        this.scheduleError.set(null);
+        try {
+            const horario = await this.api.getHorarioAlumno(estudianteId);
+            const adminPalette: CalendarEvent['colorClass'][] = ['blue', 'green', 'orange', 'pink', 'slate', 'purple', 'red'];
+            const colorByAsignaturaId = new Map<number, CalendarEvent['colorClass']>();
 
-        const schedule: Record<1 | 2 | 3 | 4 | 5, Array<{
-            title: string; subtitle: string; location: string; colorClass: CalendarEvent['colorClass']
-        }>> = {
-            1: [
-                { title: 'Matematicas II',     subtitle: 'Profa. Elena Ruiz',       location: 'Aula B-12',    colorClass: 'blue'   },
-                { title: 'Fisica Aplicada',    subtitle: 'Dr. Javier Nunez',        location: 'Aula B-10',    colorClass: 'green'  },
-                { title: 'Programacion Web',   subtitle: 'Ing. Carlos Mena',        location: 'Lab 3',        colorClass: 'orange' },
-                { title: 'Bases de Datos',     subtitle: 'Dra. Alicia Torres',      location: 'Aula C-04',    colorClass: 'pink'   },
-                { title: 'Ingles Tecnico',     subtitle: 'Prof. Daniel Soto',       location: 'Aula A-07',    colorClass: 'slate'  },
-                { title: 'Taller de Proyecto', subtitle: 'Ing. Laura Vega',         location: 'Lab 1',        colorClass: 'blue'   },
-            ],
-            2: [
-                { title: 'Algoritmos',          subtitle: 'Ing. Marta Solis',       location: 'Aula D-01',    colorClass: 'green'  },
-                { title: 'Matematicas II',      subtitle: 'Profa. Elena Ruiz',      location: 'Aula B-12',    colorClass: 'blue'   },
-                { title: 'Arquitectura SW',     subtitle: 'Ing. Laura Vega',        location: 'Aula D-02',    colorClass: 'pink'   },
-                { title: 'Sistemas Operativos', subtitle: 'Ing. Pablo Rojas',       location: 'Aula C-08',    colorClass: 'slate'  },
-                { title: 'Lab. de Redes',       subtitle: 'Ing. Mario Paredes',     location: 'Lab 1',        colorClass: 'orange' },
-                { title: 'Etica Profesional',   subtitle: 'Prof. Ana Ledesma',      location: 'Aula A-03',    colorClass: 'green'  },
-            ],
-            3: [
-                { title: 'Bases de Datos',      subtitle: 'Dra. Alicia Torres',     location: 'Aula C-04',    colorClass: 'pink'   },
-                { title: 'Programacion Web',    subtitle: 'Ing. Carlos Mena',       location: 'Lab 3',        colorClass: 'orange' },
-                { title: 'Diseno UX',           subtitle: 'Lic. Paula Herrera',     location: 'Aula A-11',    colorClass: 'slate'  },
-                { title: 'Ingles Tecnico',      subtitle: 'Prof. Daniel Soto',      location: 'Aula A-07',    colorClass: 'blue'   },
-                { title: 'Sistemas Operativos', subtitle: 'Ing. Pablo Rojas',       location: 'Aula C-08',    colorClass: 'green'  },
-                { title: 'Tutoria Academica',   subtitle: 'Orientacion estudiantil',location: 'Sala tutoria', colorClass: 'orange' },
-            ],
-            4: [
-                { title: 'Arquitectura SW',     subtitle: 'Ing. Laura Vega',        location: 'Aula D-02',    colorClass: 'pink'   },
-                { title: 'Algoritmos',          subtitle: 'Ing. Marta Solis',       location: 'Aula D-01',    colorClass: 'slate'  },
-                { title: 'Matematicas II',      subtitle: 'Profa. Elena Ruiz',      location: 'Aula B-12',    colorClass: 'blue'   },
-                { title: 'Lab. de Redes',       subtitle: 'Ing. Mario Paredes',     location: 'Lab 1',        colorClass: 'green'  },
-                { title: 'Fisica Aplicada',     subtitle: 'Dr. Javier Nunez',       location: 'Aula B-10',    colorClass: 'orange' },
-                { title: 'Proyecto Integrador', subtitle: 'Comite academico',       location: 'Sala 2',       colorClass: 'pink'   },
-            ],
-            5: [
-                { title: 'Sistemas Operativos', subtitle: 'Ing. Pablo Rojas',       location: 'Aula C-08',    colorClass: 'slate'  },
-                { title: 'Bases de Datos',      subtitle: 'Dra. Alicia Torres',     location: 'Aula C-04',    colorClass: 'blue'   },
-                { title: 'Programacion Web',    subtitle: 'Ing. Carlos Mena',       location: 'Lab 3',        colorClass: 'green'  },
-                { title: 'Arquitectura SW',     subtitle: 'Ing. Laura Vega',        location: 'Aula D-02',    colorClass: 'orange' },
-                { title: 'Ingles Tecnico',      subtitle: 'Prof. Daniel Soto',      location: 'Aula A-07',    colorClass: 'pink'   },
-                { title: 'Lab. de Proyecto',    subtitle: 'Ing. Mario Paredes',     location: 'Lab 2',        colorClass: 'slate'  },
-            ],
+            for (const item of [...horario].sort((a, b) => a.asignatura.localeCompare(b.asignatura))) {
+                if (colorByAsignaturaId.has(item.asignaturaId)) {
+                    continue;
+                }
+
+                const nextColor = adminPalette[colorByAsignaturaId.size % adminPalette.length];
+                colorByAsignaturaId.set(item.asignaturaId, nextColor);
+            }
+
+            const legendItems = [...horario]
+                .sort((a, b) => a.asignatura.localeCompare(b.asignatura))
+                .filter((item, index, all) => all.findIndex(x => x.asignaturaId === item.asignaturaId) === index)
+                .map(item => ({
+                    label: item.asignatura,
+                    colorClass: this.getAdminColor(item.asignaturaId, colorByAsignaturaId)
+                } satisfies SubjectColorLegendItem));
+
+            this.adminEvents.set(horario
+                .filter(item => item.diaSemana >= 1 && item.diaSemana <= 5)
+                .map(item => this.toCalendarEvent(item, colorByAsignaturaId)));
+            this.adminSubjectLegend.set(legendItems);
+        } catch (error) {
+            this.adminEvents.set([]);
+            this.adminSubjectLegend.set([]);
+            this.scheduleError.set((error as Error).message);
+        } finally {
+            this.loadingSchedule.set(false);
+        }
+    }
+
+    private toCalendarEvent(
+        item: AlumnoHorarioClase,
+        colorByAsignaturaId: Map<number, CalendarEvent['colorClass']>
+    ): CalendarEvent {
+        return {
+            id: `admin-${item.horarioId}`,
+            title: item.asignatura,
+            subtitle: item.profesor ?? undefined,
+            location: item.aula ?? undefined,
+            colorClass: this.getAdminColor(item.asignaturaId, colorByAsignaturaId),
+            dayOfWeek: item.diaSemana as 1 | 2 | 3 | 4 | 5,
+            startTime: this.normalizeTime(item.horaInicio),
+            endTime: this.normalizeTime(item.horaFin),
+            type: 'admin',
+            repeatWeekly: true,
         };
+    }
 
-        return ([1, 2, 3, 4, 5] as const).flatMap(day =>
-            slots.map((slot, i) => ({
-                id: `admin-${day}-${i}`,
-                title: schedule[day][i].title,
-                subtitle: schedule[day][i].subtitle,
-                location: schedule[day][i].location,
-                colorClass: schedule[day][i].colorClass,
-                dayOfWeek: day,
-                startTime: slot.start,
-                endTime: slot.end,
-                type: 'admin' as const,
-                repeatWeekly: true,
-            }))
-        );
+    private normalizeTime(value: string): string {
+        const [hours = '00', minutes = '00'] = value.split(':');
+        return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+    }
+
+    private getAdminColor(
+        asignaturaId: number,
+        colorByAsignaturaId: Map<number, CalendarEvent['colorClass']>
+    ): CalendarEvent['colorClass'] {
+        return colorByAsignaturaId.get(asignaturaId) ?? 'blue';
     }
 
     private buildInitialPersonalEvents(): CalendarEvent[] {

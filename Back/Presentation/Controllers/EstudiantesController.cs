@@ -84,6 +84,13 @@ public class EstudiantesController(IEstudiantesService estudiantesService) : Con
         return this.ToActionResult(await estudiantesService.GetPanelResumenAsync(id, User, HttpContext.RequestAborted));
     }
 
+    [HttpGet("{id:int}/horario")]
+    [Authorize(Policy = AuthorizationPolicies.AlumnoOrAdmin)]
+    public async Task<IActionResult> GetHorarioAlumno(int id)
+    {
+        return this.ToActionResult(await estudiantesService.GetHorarioAlumnoAsync(id, User, HttpContext.RequestAborted));
+    }
+
     [HttpGet("{id:int}/materias/{asignaturaId:int}/detalle")]
     [Authorize(Policy = AuthorizationPolicies.AlumnoOrAdmin)]
     public async Task<IActionResult> GetMateriaDetalle(int id, int asignaturaId)

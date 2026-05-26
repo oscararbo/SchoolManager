@@ -101,6 +101,17 @@ public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, 
             : ApplicationResult.Ok(panel);
     }
 
+    public async Task<ApplicationResult> GetHorarioAlumnoAsync(int estudianteId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    {
+        if (!UsuarioCoincideConEstudiante(estudianteId, user))
+            return ApplicationResult.Forbidden();
+
+        var horario = await estudiantesDomain.GetHorarioAlumnoAsync(estudianteId, cancellationToken);
+        return horario is null
+            ? ApplicationResult.NotFound("El estudiante no existe.")
+            : ApplicationResult.Ok(horario);
+    }
+
     public async Task<ApplicationResult> GetMateriaDetalleAsync(int estudianteId, int asignaturaId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
         if (!UsuarioCoincideConEstudiante(estudianteId, user))

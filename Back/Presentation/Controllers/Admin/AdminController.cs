@@ -32,6 +32,30 @@ public class AdminController(IAdminService adminService) : ControllerBase
         return this.ToActionResult(await adminService.GetImparticionesAsync(HttpContext.RequestAborted));
     }
 
+    [HttpGet("horarios")]
+    public async Task<IActionResult> GetHorarios()
+    {
+        return this.ToActionResult(await adminService.GetHorariosAsync(HttpContext.RequestAborted));
+    }
+
+    [HttpPost("horarios")]
+    public async Task<IActionResult> CreateHorario([FromBody] CreateHorarioAsignaturaRequestDto requestDto)
+    {
+        return this.ToActionResult(await adminService.CreateHorarioAsync(requestDto, HttpContext.RequestAborted));
+    }
+
+    [HttpPut("horarios/{horarioId:int}")]
+    public async Task<IActionResult> UpdateHorario(int horarioId, [FromBody] UpdateHorarioAsignaturaRequestDto requestDto)
+    {
+        return this.ToActionResult(await adminService.UpdateHorarioAsync(horarioId, requestDto, HttpContext.RequestAborted));
+    }
+
+    [HttpDelete("horarios/{horarioId:int}")]
+    public async Task<IActionResult> DeleteHorario(int horarioId)
+    {
+        return this.ToActionResult(await adminService.DeleteHorarioAsync(horarioId, HttpContext.RequestAborted));
+    }
+
     [HttpPost("create-admin")]
     public async Task<IActionResult> CreateAdmin(CreateAdminRequestDto createAdminRequestDto)
     {

@@ -23,6 +23,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentSchool
     public DbSet<Nota> Notas => Set<Nota>();
     public DbSet<Tarea> Tareas => Set<Tarea>();
     public DbSet<TareaSubmision> TareaSubmisiones => Set<TareaSubmision>();
+    public DbSet<HorarioAsignatura> HorariosAsignaturas => Set<HorarioAsignatura>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     private int? CurrentSchoolId => currentSchoolContext.IsSuperUsuario ? null : currentSchoolContext.SchoolId;
@@ -41,6 +42,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentSchool
         ConfigureSoftDelete<Nota>(modelBuilder);
         ConfigureSoftDelete<Tarea>(modelBuilder);
         ConfigureSoftDelete<TareaSubmision>(modelBuilder);
+        ConfigureSoftDelete<HorarioAsignatura>(modelBuilder);
         ConfigureSoftDelete<RefreshToken>(modelBuilder);
 
         modelBuilder.Entity<Cuenta>()
@@ -110,6 +112,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentSchool
             .HasForeignKey(a => a.CursoId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<HorarioAsignatura>()
+            .HasOne(h => h.Asignatura)
+            .WithMany(a => a.Horarios)
+            .HasForeignKey(h => h.AsignaturaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder.Entity<Tarea>()
             .HasOne(t => t.Profesor)
             .WithMany(p => p.Tareas)
@@ -147,6 +155,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentSchool
         modelBuilder.Entity<RefreshToken>()
             .HasIndex(x => x.ExpiresAtUtc);
 
+        modelBuilder.Entity<HorarioAsignatura>()
+            .HasIndex(h => new { h.AsignaturaId, h.DiaSemana, h.HoraInicio })
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = FALSE");
+
         modelBuilder.Entity<Colegio>()
             .HasQueryFilter(c => !c.IsDeleted);
 
@@ -180,6 +193,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentSchool
         modelBuilder.Entity<Tarea>()
             .HasQueryFilter(t => !t.IsDeleted && (CurrentSchoolId == null || (t.Asignatura != null && t.Asignatura.Curso != null && t.Asignatura.Curso.ColegioId == CurrentSchoolId)));
 
+        modelBuilder.Entity<HorarioAsignatura>()
+            .HasQueryFilter(h => !h.IsDeleted && (CurrentSchoolId == null || (h.Asignatura != null && h.Asignatura.Curso != null && h.Asignatura.Curso.ColegioId == CurrentSchoolId)));
+
         // Length constraints
         modelBuilder.Entity<Curso>().Property(c => c.Nombre).HasMaxLength(100);
         modelBuilder.Entity<Curso>().Property(c => c.ColegioId).HasDefaultValue(1);
@@ -191,6 +207,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentSchool
         modelBuilder.Entity<Colegio>().Property(c => c.MensajeLogin).HasMaxLength(240);
 
         modelBuilder.Entity<Asignatura>().Property(a => a.Nombre).HasMaxLength(100);
+        modelBuilder.Entity<HorarioAsignatura>().Property(h => h.Aula).HasMaxLength(80);
 
         modelBuilder.Entity<Cuenta>().Property(c => c.Correo).HasMaxLength(255);
         modelBuilder.Entity<Cuenta>().Property(c => c.Rol).HasMaxLength(32);
