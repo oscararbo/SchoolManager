@@ -20,6 +20,12 @@ public class AdminStatsController(IAdminStatsService adminStatsService) : Contro
         return this.ToActionResult(await adminStatsService.GetStatsAsync(HttpContext.RequestAborted));
     }
 
+    [HttpGet("top5")]
+    public async Task<IActionResult> GetTop5()
+    {
+        return this.ToActionResult(await adminStatsService.GetTop5Async(HttpContext.RequestAborted));
+    }
+
     [HttpGet("cursos")]
     public async Task<IActionResult> GetCursosStatsSelector()
     {

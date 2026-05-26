@@ -9,6 +9,9 @@ public class AdminStatsService(IAdminStatsDomainRepository adminStatsDomain) : I
     public async Task<ApplicationResult> GetStatsAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await adminStatsDomain.GetStatsAsync(cancellationToken));
 
+    public async Task<ApplicationResult> GetTop5Async(CancellationToken cancellationToken = default)
+        => ApplicationResult.Ok(await adminStatsDomain.GetTop5Async(cancellationToken));
+
     public async Task<ApplicationResult> GetCursosStatsSelectorAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await adminStatsDomain.GetCursosStatsSelectorAsync(cancellationToken));
 

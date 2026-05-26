@@ -12,6 +12,8 @@ public record CursoNotasStatsResponseDto
     public int SinNota { get; init; }
     public double PorcentajeAprobados { get; init; }
     public double PorcentajeSuspensos { get; init; }
+    public AsignaturaNotasStatsDto? AsignaturaDestacada { get; init; }
+    public AsignaturaNotasStatsDto? AsignaturaAVigilar { get; init; }
     public AsignaturaNotasStatsDto? AsignaturaConMejorMedia { get; init; }
     public AsignaturaNotasStatsDto? AsignaturaConPeorMedia { get; init; }
     public IEnumerable<AsignaturaNotasStatsDto> Asignaturas { get; init; } = [];

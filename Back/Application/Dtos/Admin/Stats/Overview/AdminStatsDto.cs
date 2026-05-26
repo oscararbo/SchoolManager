@@ -14,5 +14,4 @@ public record AdminStatsDto
     public CursoResumenKpiDto? CursoConPeorMedia { get; init; }
     public AsignaturaResumenKpiDto? AsignaturaConMejorMedia { get; init; }
     public AsignaturaResumenKpiDto? AsignaturaConPeorMedia { get; init; }
-    public IEnumerable<AsignaturaRendimientoDto> RendimientoPorAsignatura { get; init; } = [];
 }

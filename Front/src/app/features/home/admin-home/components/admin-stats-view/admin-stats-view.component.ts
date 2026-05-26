@@ -1,8 +1,9 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import {
     SchoolApiService,
-    AdminAsignaturaRendimiento,
     AdminStats,
+    AdminTop5Stats,
+    AdminTop5AsignaturaItem,
     AdminCursoNotasStats,
     AdminCursoStatsSelector,
     AdminComparacionCursos
@@ -55,6 +56,7 @@ export class AdminStatsViewComponent implements OnInit, AfterViewInit {
     private toast = inject(ToastService);
 
     stats = signal<AdminStats | null>(null);
+    top5 = signal<AdminTop5Stats | null>(null);
     cursosSelector = signal<AdminCursoStatsSelector[]>([]);
     cursoDetalle = signal<AdminCursoNotasStats | null>(null);
     comparacion = signal<AdminComparacionCursos | null>(null);
@@ -178,59 +180,11 @@ export class AdminStatsViewComponent implements OnInit, AfterViewInit {
         ];
     });
 
-    rankingAsignaturas = computed(() => {
-        const current = this.stats();
-        if (!current) {
-            return {
-                topMedia: [] as AdminAsignaturaRendimiento[],
-                bottomMedia: [] as AdminAsignaturaRendimiento[],
-                topSuspensosPct: [] as AdminAsignaturaRendimiento[],
-                bottomSuspensosPct: [] as AdminAsignaturaRendimiento[]
-            };
-        }
-
-        const conMedia = [...current.rendimientoPorAsignatura].filter(asignatura => asignatura.media !== null);
-        const conSuspensosPct = [...current.rendimientoPorAsignatura];
-
-        return {
-            topMedia: conMedia
-                .sort((left, right) => (right.media ?? 0) - (left.media ?? 0))
-                .slice(0, 5),
-            bottomMedia: conMedia
-                .sort((left, right) => (left.media ?? 0) - (right.media ?? 0))
-                .slice(0, 5),
-            topSuspensosPct: conSuspensosPct
-                .sort((left, right) => right.porcentajeSuspensos - left.porcentajeSuspensos)
-                .slice(0, 5),
-            bottomSuspensosPct: conSuspensosPct
-                .sort((left, right) => left.porcentajeSuspensos - right.porcentajeSuspensos)
-                .slice(0, 5)
-        };
-    });
-
     notasResumenCards = computed(() => {
         const curso = this.cursoNotasSeleccionado();
         if (!curso) {
             return [] as Array<{ label: string; value: string; helper: string }>;
         }
-
-        const asignaturaDestacada = [...curso.asignaturas]
-            .sort((left, right) => {
-                if (right.porcentajeAprobados !== left.porcentajeAprobados) {
-                    return right.porcentajeAprobados - left.porcentajeAprobados;
-                }
-                return (right.media ?? 0) - (left.media ?? 0);
-            })
-            .at(0) ?? null;
-
-        const asignaturaAVigilar = [...curso.asignaturas]
-            .sort((left, right) => {
-                if (right.porcentajeSuspensos !== left.porcentajeSuspensos) {
-                    return right.porcentajeSuspensos - left.porcentajeSuspensos;
-                }
-                return (left.media ?? 0) - (right.media ?? 0);
-            })
-            .at(0) ?? null;
 
         return [
             {
@@ -245,16 +199,16 @@ export class AdminStatsViewComponent implements OnInit, AfterViewInit {
             },
             {
                 label: 'Asignatura destacada',
-                value: asignaturaDestacada?.asignatura ?? '-',
-                helper: asignaturaDestacada
-                    ? `Media ${this.formatNota(asignaturaDestacada.media)} · ${asignaturaDestacada.porcentajeAprobados.toFixed(2)}% aprobados`
+                value: curso.asignaturaDestacada?.asignatura ?? '-',
+                helper: curso.asignaturaDestacada
+                    ? `Media ${this.formatNota(curso.asignaturaDestacada.media)} · ${curso.asignaturaDestacada.porcentajeAprobados.toFixed(2)}% aprobados`
                     : 'Todavia no hay notas cerradas.'
             },
             {
                 label: 'Asignatura a vigilar',
-                value: asignaturaAVigilar?.asignatura ?? '-',
-                helper: asignaturaAVigilar
-                    ? `${asignaturaAVigilar.porcentajeSuspensos.toFixed(2)}% suspensos y media ${this.formatNota(asignaturaAVigilar.media)}`
+                value: curso.asignaturaAVigilar?.asignatura ?? '-',
+                helper: curso.asignaturaAVigilar
+                    ? `${curso.asignaturaAVigilar.porcentajeSuspensos.toFixed(2)}% suspensos y media ${this.formatNota(curso.asignaturaAVigilar.media)}`
                     : 'Sin datos suficientes.'
             }
         ];
@@ -367,8 +321,12 @@ export class AdminStatsViewComponent implements OnInit, AfterViewInit {
         return `${valor.toFixed(2)}%`;
     }
 
-    trackByAsignaturaRendimiento(_: number, item: AdminAsignaturaRendimiento): number {
+    trackByAsignaturaRendimiento(_: number, item: AdminTop5AsignaturaItem): number {
         return item.asignaturaId;
+    }
+
+    trackByCursoTop5(_: number, item: { curso: string }): string {
+        return item.curso;
     }
 
     formatNota(valor: number | null): string {
@@ -378,12 +336,14 @@ export class AdminStatsViewComponent implements OnInit, AfterViewInit {
     private async cargarStats(mostrarToast = false): Promise<void> {
         this.statsEstado.set('loading');
         try {
-            const [stats, selector] = await Promise.all([
+            const [stats, top5, selector] = await Promise.all([
                 this.api.getAdminStats(),
+                this.api.getAdminTop5Stats(),
                 this.api.getAdminCursosStatsSelector()
             ]);
 
             this.stats.set(stats);
+            this.top5.set(top5);
             this.cursosSelector.set(selector);
 
             if (!this.cursoPendienteId() && selector.length > 0) {

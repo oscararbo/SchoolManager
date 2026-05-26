@@ -21,6 +21,7 @@ import {
     AdminImparticionListItem,
     AdminMatriculaListItem,
     AdminStats,
+    AdminTop5Stats,
     AsignaturaItem,
     CreateEstudianteData,
     CreateProfesorData,
@@ -44,6 +45,14 @@ export class SchoolApiAdminService {
     async getAdminStats(): Promise<AdminStats> {
         try {
             return await firstValueFrom(this.http.get<AdminStats>(`${this.apiUrl}/admin/stats`));
+        } catch (e) {
+            throw extractSchoolApiError(e);
+        }
+    }
+
+    async getAdminTop5Stats(): Promise<AdminTop5Stats> {
+        try {
+            return await firstValueFrom(this.http.get<AdminTop5Stats>(`${this.apiUrl}/admin/stats/top5`));
         } catch (e) {
             throw extractSchoolApiError(e);
         }

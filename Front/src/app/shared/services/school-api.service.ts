@@ -8,6 +8,8 @@ import type {
     AdminComparacionCursos,
     AdminCursoRendimiento,
     AdminAsignaturaRendimiento,
+    AdminTop5Stats,
+    AdminTop5AsignaturaItem,
     AdminCursoNotasStats,
     AdminCursoStatsSelector,
     AdminImparticionListItem,
@@ -81,6 +83,8 @@ export type {
     AdminComparacionCursos,
     AdminCursoRendimiento,
     AdminAsignaturaRendimiento,
+    AdminTop5Stats,
+    AdminTop5AsignaturaItem,
     AdminMatriculaAsignaturaItem,
     AdminMatriculaListItem,
     AdminImparticionListItem,
@@ -138,6 +142,7 @@ export class SchoolApiService {
 
     // Admin
     getAdminStats(): Promise<AdminStats> { return this.admin.getAdminStats(); }
+    getAdminTop5Stats(): Promise<AdminTop5Stats> { return this.admin.getAdminTop5Stats(); }
     getAdminCursosStatsSelector(): Promise<AdminCursoStatsSelector[]> { return this.admin.getAdminCursosStatsSelector(); }
     getAdminStatsByCurso(cursoId: number): Promise<AdminCursoNotasStats> { return this.admin.getAdminStatsByCurso(cursoId); }
     compararCursos(cursoIds: number[]): Promise<AdminComparacionCursos> { return this.admin.compararCursos(cursoIds); }

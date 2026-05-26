@@ -314,6 +314,22 @@ export interface AdminAsignaturaResumenKpi {
     media: number | null;
 }
 
+export interface AdminTop5AsignaturaItem {
+    asignaturaId: number;
+    asignatura: string;
+    curso: string;
+    media: number | null;
+    porcentajeAprobados: number;
+    porcentajeSuspensos: number;
+}
+
+export interface AdminTop5Stats {
+    topCursos: AdminCursoResumenKpi[];
+    bottomCursos: AdminCursoResumenKpi[];
+    topAsignaturas: AdminTop5AsignaturaItem[];
+    bottomAsignaturas: AdminTop5AsignaturaItem[];
+}
+
 export interface AdminStats {
     totalCursos: number;
     totalAsignaturas: number;
@@ -326,7 +342,6 @@ export interface AdminStats {
     cursoConPeorMedia: AdminCursoResumenKpi | null;
     asignaturaConMejorMedia: AdminAsignaturaResumenKpi | null;
     asignaturaConPeorMedia: AdminAsignaturaResumenKpi | null;
-    rendimientoPorAsignatura: AdminAsignaturaRendimiento[];
 }
 
 export interface AdminAsignaturaNotasStats {
@@ -358,6 +373,8 @@ export interface AdminCursoNotasStats {
     sinNota: number;
     porcentajeAprobados: number;
     porcentajeSuspensos: number;
+    asignaturaDestacada: AdminAsignaturaNotasStats | null;
+    asignaturaAVigilar: AdminAsignaturaNotasStats | null;
     asignaturaConMejorMedia: AdminAsignaturaNotasStats | null;
     asignaturaConPeorMedia: AdminAsignaturaNotasStats | null;
     asignaturas: AdminAsignaturaNotasStats[];
