@@ -13,6 +13,7 @@ public interface IAdminDomainRepository
     Task<bool> AsignaturaExisteAsync(int asignaturaId, CancellationToken cancellationToken = default);
     Task<bool> HorarioExisteAsync(int horarioId, CancellationToken cancellationToken = default);
     Task<bool> HorarioDuplicadoAsync(int asignaturaId, int diaSemana, TimeOnly horaInicio, int? exceptHorarioId = null, CancellationToken cancellationToken = default);
+    Task<bool> HorarioSolapaEnCursoAsync(int asignaturaId, int diaSemana, TimeOnly horaInicio, TimeOnly horaFin, int? exceptHorarioId = null, CancellationToken cancellationToken = default);
     Task<AdminHorarioAsignaturaReadModelDto> CreateHorarioAsync(int asignaturaId, int diaSemana, TimeOnly horaInicio, TimeOnly horaFin, string? aula, CancellationToken cancellationToken = default);
     Task<AdminHorarioAsignaturaReadModelDto?> UpdateHorarioAsync(int horarioId, int asignaturaId, int diaSemana, TimeOnly horaInicio, TimeOnly horaFin, string? aula, CancellationToken cancellationToken = default);
     Task DeleteHorarioAsync(int horarioId, CancellationToken cancellationToken = default);

@@ -374,6 +374,143 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
         });
     }
 
+    public async Task<ApplicationResult> ImportarHorariosAsync(string csvText, CancellationToken cancellationToken = default)
+    {
+        var errors = new List<string>();
+        var skipped = new List<string>();
+        var created = new List<(int AsignaturaId, int DiaSemana, TimeOnly HoraInicio, TimeOnly HoraFin, string? Aula)>();
+
+        var courses = (await importRepository.GetCursosAsync(cancellationToken))
+            .ToDictionary(c => c.Nombre, c => c, StringComparer.OrdinalIgnoreCase);
+        var subjects = await importRepository.GetAsignaturasAsync(cancellationToken);
+        var existingSchedules = await importRepository.GetHorariosAsync(cancellationToken);
+
+        var existingBySubjectAndStart = existingSchedules
+            .Select(schedule => ToHorarioKey(schedule.AsignaturaId, schedule.DiaSemana, schedule.HoraInicio))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var occupiedByCourseAndDay = existingSchedules
+            .GroupBy(schedule => (schedule.CursoId, schedule.DiaSemana))
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .Select(schedule => (schedule.HoraInicio, schedule.HoraFin))
+                    .ToList());
+
+        foreach (var row in ParseCsv(csvText))
+        {
+            if (row.Columns.Length < 6)
+            {
+                errors.Add($"Linea {row.LineNumber}: se esperaban las columnas asignaturaNombre,cursoNombre,diaSemana,horaInicio,horaFin,aula.");
+                continue;
+            }
+
+            var subjectName = row.Columns[0].Trim();
+            var courseName = row.Columns[1].Trim();
+            var dayRaw = row.Columns[2].Trim();
+            var startRaw = row.Columns[3].Trim();
+            var endRaw = row.Columns[4].Trim();
+            var aula = row.Columns[5].Trim();
+
+            if (string.IsNullOrWhiteSpace(subjectName)
+                || string.IsNullOrWhiteSpace(courseName)
+                || string.IsNullOrWhiteSpace(dayRaw)
+                || string.IsNullOrWhiteSpace(startRaw)
+                || string.IsNullOrWhiteSpace(endRaw))
+            {
+                errors.Add($"Linea {row.LineNumber}: asignaturaNombre, cursoNombre, diaSemana, horaInicio y horaFin son obligatorios.");
+                continue;
+            }
+
+            if (!courses.TryGetValue(courseName, out var course))
+            {
+                errors.Add($"Linea {row.LineNumber}: course no encontrado '{courseName}'.");
+                continue;
+            }
+
+            var subject = subjects.FirstOrDefault(item =>
+                item.CursoId == course.Id
+                && item.Nombre.Equals(subjectName, StringComparison.OrdinalIgnoreCase));
+            if (subject is null)
+            {
+                errors.Add($"Linea {row.LineNumber}: subject no encontrada '{subjectName}' en '{courseName}'.");
+                continue;
+            }
+
+            if (!TryParseDiaSemana(dayRaw, out var day))
+            {
+                errors.Add($"Linea {row.LineNumber}: diaSemana no valido '{dayRaw}'. Usa 1-5 o nombre del dia (lunes-viernes).");
+                continue;
+            }
+
+            if (!TimeOnly.TryParseExact(startRaw, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var start))
+            {
+                errors.Add($"Linea {row.LineNumber}: horaInicio no valida '{startRaw}'. Formato esperado HH:mm.");
+                continue;
+            }
+
+            if (!TimeOnly.TryParseExact(endRaw, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var end))
+            {
+                errors.Add($"Linea {row.LineNumber}: horaFin no valida '{endRaw}'. Formato esperado HH:mm.");
+                continue;
+            }
+
+            if (end <= start)
+            {
+                errors.Add($"Linea {row.LineNumber}: horaFin debe ser mayor que horaInicio.");
+                continue;
+            }
+
+            var keyBySubjectStart = ToHorarioKey(subject.Id, day, start);
+            if (!existingBySubjectAndStart.Add(keyBySubjectStart))
+            {
+                skipped.Add($"Linea {row.LineNumber}: horario omitido para '{subjectName}' ({courseName}) el dia {day} a las {start:HH:mm} (ya existia).");
+                continue;
+            }
+
+            var occupiedKey = (course.Id, day);
+            if (!occupiedByCourseAndDay.TryGetValue(occupiedKey, out var occupiedIntervals))
+            {
+                occupiedIntervals = [];
+                occupiedByCourseAndDay[occupiedKey] = occupiedIntervals;
+            }
+
+            if (occupiedIntervals.Any(interval => start < interval.HoraFin && interval.HoraInicio < end))
+            {
+                errors.Add($"Linea {row.LineNumber}: el curso '{courseName}' ya tiene otro horario solapado para el dia {day} en ese tramo.");
+                continue;
+            }
+
+            occupiedIntervals.Add((start, end));
+            created.Add((subject.Id, day, start, end, string.IsNullOrWhiteSpace(aula) ? null : aula));
+        }
+
+        if (errors.Count > 0)
+        {
+            return ApplicationResult.BadRequest(new CsvImportResultDto
+            {
+                Detail = "La importacion de horarios ha fallado y se ha cancelado.",
+                Mensaje = "La importacion de horarios ha fallado y se ha cancelado.",
+                Creados = 0,
+                Omitidos = skipped.Count,
+                Errores = errors,
+                Detalles = skipped
+            });
+        }
+
+        if (created.Count > 0)
+        {
+            await importRepository.AddHorariosAsync(created, cancellationToken);
+        }
+
+        return ApplicationResult.Ok(new CsvImportResultDto
+        {
+            Creados = created.Count,
+            Omitidos = skipped.Count,
+            Errores = errors,
+            Detalles = skipped
+        });
+    }
+
     public async Task<ApplicationResult> ImportarMatriculasAsync(string csvText, CancellationToken cancellationToken = default)
     {
         var errors = new List<string>();
@@ -744,6 +881,40 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
             }
         }
     }
+
+    private static bool TryParseDiaSemana(string raw, out int day)
+    {
+        if (int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedDay)
+            && parsedDay >= 1
+            && parsedDay <= 5)
+        {
+            day = parsedDay;
+            return true;
+        }
+
+        var normalized = raw.Trim().ToLowerInvariant();
+        var names = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["lunes"] = 1,
+            ["martes"] = 2,
+            ["miercoles"] = 3,
+            ["miércoles"] = 3,
+            ["jueves"] = 4,
+            ["viernes"] = 5
+        };
+
+        if (names.TryGetValue(normalized, out var mapped))
+        {
+            day = mapped;
+            return true;
+        }
+
+        day = 0;
+        return false;
+    }
+
+    private static string ToHorarioKey(int asignaturaId, int day, TimeOnly start)
+        => $"{asignaturaId}:{day}:{start:HH\\:mm}";
 
     private static string ToAsignaturaKey(int cursoId, string nombre)
         => $"{cursoId}:{nombre.Trim().ToLowerInvariant()}";

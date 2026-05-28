@@ -484,6 +484,7 @@ export type CsvImportEntity =
     | 'profesores'
     | 'estudiantes'
     | 'tareas'
+    | 'horarios'
     | 'matriculas'
     | 'imparticiones'
     | 'notas';

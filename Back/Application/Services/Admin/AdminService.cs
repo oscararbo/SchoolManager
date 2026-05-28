@@ -99,6 +99,9 @@ public class AdminService(
         if (await adminDomain.HorarioDuplicadoAsync(asignaturaId, diaSemana, horaInicio, exceptHorarioId, cancellationToken))
             return ApplicationResult.BadRequest("Ya existe un horario para esa asignatura, dia y hora de inicio.");
 
+        if (await adminDomain.HorarioSolapaEnCursoAsync(asignaturaId, diaSemana, horaInicio, horaFin, exceptHorarioId, cancellationToken))
+            return ApplicationResult.BadRequest("Ese curso ya tiene otra asignatura en ese tramo horario.");
+
         return null;
     }
 }

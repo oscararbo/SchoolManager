@@ -164,13 +164,52 @@ public sealed class DatabaseSeeder
 
         var existingScheduleRows = await db.HorariosAsignaturas
             .AsNoTracking()
-            .Select(h => new
+            .Select(horario => new
             {
-                h.AsignaturaId,
-                h.DiaSemana,
-                h.HoraInicio
+                horario.Id,
+                horario.AsignaturaId,
+                CursoId = horario.Asignatura != null ? horario.Asignatura.CursoId : 0,
+                horario.DiaSemana,
+                horario.HoraInicio,
+                horario.HoraFin
             })
             .ToListAsync(cancellationToken);
+
+        var conflictingScheduleIds = new HashSet<int>();
+        foreach (var courseDayGroup in existingScheduleRows
+            .GroupBy(row => new { row.CursoId, row.DiaSemana }))
+        {
+            var orderedRows = courseDayGroup
+                .OrderBy(row => row.HoraInicio)
+                .ThenBy(row => row.Id)
+                .ToList();
+
+            TimeOnly? lastEnd = null;
+            foreach (var row in orderedRows)
+            {
+                if (lastEnd.HasValue && row.HoraInicio < lastEnd.Value)
+                {
+                    conflictingScheduleIds.Add(row.Id);
+                    continue;
+                }
+
+                lastEnd = row.HoraFin;
+            }
+        }
+
+        if (conflictingScheduleIds.Count > 0)
+        {
+            var rowsToSoftDelete = await db.HorariosAsignaturas
+                .Where(horario => conflictingScheduleIds.Contains(horario.Id))
+                .ToListAsync(cancellationToken);
+
+            foreach (var row in rowsToSoftDelete)
+                row.IsDeleted = true;
+
+            existingScheduleRows = existingScheduleRows
+                .Where(row => !conflictingScheduleIds.Contains(row.Id))
+                .ToList();
+        }
 
         var scheduleCountBySubject = existingScheduleRows
             .GroupBy(row => row.AsignaturaId)
@@ -184,68 +223,43 @@ public sealed class DatabaseSeeder
                     .Select(item => $"{item.DiaSemana}-{item.HoraInicio:HH\\:mm}")
                     .ToHashSet(StringComparer.Ordinal));
 
-        var morningTemplateGroups = new[]
+        var occupiedSlotsByCourse = existingScheduleRows
+            .GroupBy(row => row.CursoId)
+            .ToDictionary(
+                grouped => grouped.Key,
+                grouped => grouped
+                    .Select(item => $"{item.DiaSemana}-{item.HoraInicio:HH\\:mm}")
+                    .ToHashSet(StringComparer.Ordinal));
+
+        var occupiedIntervalsByCourse = existingScheduleRows
+            .GroupBy(row => row.CursoId)
+            .ToDictionary(
+                grouped => grouped.Key,
+                grouped => grouped
+                    .GroupBy(item => item.DiaSemana)
+                    .ToDictionary(
+                        dayGroup => dayGroup.Key,
+                        dayGroup => dayGroup
+                            .Select(item => (item.HoraInicio, item.HoraFin))
+                            .ToList()));
+
+        var dayStarts = new[]
         {
-            new (int DiaSemana, TimeOnly Inicio, TimeOnly Fin)[]
-            {
-                (1, new TimeOnly(8, 30), new TimeOnly(9, 25)),
-                (1, new TimeOnly(10, 20), new TimeOnly(11, 15)),
-                (2, new TimeOnly(9, 25), new TimeOnly(10, 20)),
-                (2, new TimeOnly(11, 45), new TimeOnly(12, 40)),
-                (3, new TimeOnly(8, 30), new TimeOnly(9, 25)),
-                (3, new TimeOnly(12, 40), new TimeOnly(13, 35)),
-                (4, new TimeOnly(9, 25), new TimeOnly(10, 20)),
-                (4, new TimeOnly(13, 35), new TimeOnly(14, 30)),
-                (5, new TimeOnly(8, 30), new TimeOnly(9, 25)),
-                (5, new TimeOnly(11, 45), new TimeOnly(12, 40))
-            },
-            new (int DiaSemana, TimeOnly Inicio, TimeOnly Fin)[]
-            {
-                (1, new TimeOnly(9, 25), new TimeOnly(10, 20)),
-                (1, new TimeOnly(11, 45), new TimeOnly(12, 40)),
-                (2, new TimeOnly(8, 30), new TimeOnly(9, 25)),
-                (2, new TimeOnly(12, 40), new TimeOnly(13, 35)),
-                (3, new TimeOnly(10, 20), new TimeOnly(11, 15)),
-                (3, new TimeOnly(11, 45), new TimeOnly(12, 40)),
-                (4, new TimeOnly(8, 30), new TimeOnly(9, 25)),
-                (4, new TimeOnly(12, 40), new TimeOnly(13, 35)),
-                (5, new TimeOnly(10, 20), new TimeOnly(11, 15)),
-                (5, new TimeOnly(11, 45), new TimeOnly(12, 40))
-            },
-            new (int DiaSemana, TimeOnly Inicio, TimeOnly Fin)[]
-            {
-                (1, new TimeOnly(12, 40), new TimeOnly(13, 35)),
-                (1, new TimeOnly(11, 45), new TimeOnly(12, 40)),
-                (2, new TimeOnly(10, 20), new TimeOnly(11, 15)),
-                (2, new TimeOnly(12, 40), new TimeOnly(13, 35)),
-                (3, new TimeOnly(9, 25), new TimeOnly(10, 20)),
-                (3, new TimeOnly(12, 40), new TimeOnly(13, 35)),
-                (4, new TimeOnly(11, 45), new TimeOnly(12, 40)),
-                (4, new TimeOnly(10, 20), new TimeOnly(11, 15)),
-                (5, new TimeOnly(8, 30), new TimeOnly(9, 25)),
-                (5, new TimeOnly(12, 40), new TimeOnly(13, 35))
-            }
+            new TimeOnly(8, 30),
+            new TimeOnly(9, 25),
+            new TimeOnly(10, 20),
+            new TimeOnly(11, 15),
+            new TimeOnly(12, 10),
+            new TimeOnly(13, 5),
+            new TimeOnly(14, 0),
+            new TimeOnly(14, 55),
+            new TimeOnly(15, 50),
+            new TimeOnly(16, 45)
         };
 
-        var afternoonTemplateGroups = new[]
-        {
-            new (int DiaSemana, TimeOnly Inicio, TimeOnly Fin)[]
-            {
-                (1, new TimeOnly(14, 30), new TimeOnly(15, 25)),
-                (2, new TimeOnly(15, 25), new TimeOnly(16, 20)),
-                (3, new TimeOnly(14, 30), new TimeOnly(15, 25)),
-                (4, new TimeOnly(16, 20), new TimeOnly(17, 15)),
-                (5, new TimeOnly(13, 35), new TimeOnly(14, 30))
-            },
-            new (int DiaSemana, TimeOnly Inicio, TimeOnly Fin)[]
-            {
-                (1, new TimeOnly(15, 25), new TimeOnly(16, 20)),
-                (2, new TimeOnly(14, 30), new TimeOnly(15, 25)),
-                (3, new TimeOnly(16, 20), new TimeOnly(17, 15)),
-                (4, new TimeOnly(14, 30), new TimeOnly(15, 25)),
-                (5, new TimeOnly(15, 25), new TimeOnly(16, 20))
-            }
-        };
+        var baseTemplates = Enumerable.Range(1, 5)
+            .SelectMany(day => dayStarts.Select(start => (DiaSemana: day, Inicio: start, Fin: start.Add(TimeSpan.FromMinutes(55)))))
+            .ToArray();
 
         var aulaZones = new[] { "Norte", "Central", "Sur", "Laboratorio", "Tecnologia" };
 
@@ -260,25 +274,52 @@ public sealed class DatabaseSeeder
                 occupiedSlotsBySubject[subject.Id] = occupiedSlots;
             }
 
+            if (!occupiedSlotsByCourse.TryGetValue(subject.CursoId, out var occupiedCourseSlots))
+            {
+                occupiedCourseSlots = new HashSet<string>(StringComparer.Ordinal);
+                occupiedSlotsByCourse[subject.CursoId] = occupiedCourseSlots;
+            }
+
+            if (!occupiedIntervalsByCourse.TryGetValue(subject.CursoId, out var occupiedCourseIntervalsByDay))
+            {
+                occupiedCourseIntervalsByDay = new Dictionary<int, List<(TimeOnly HoraInicio, TimeOnly HoraFin)>>();
+                occupiedIntervalsByCourse[subject.CursoId] = occupiedCourseIntervalsByDay;
+            }
+
             if (currentCount >= minWeeklyBlocksPerSubject)
                 continue;
 
-            var templates = morningTemplateGroups[subject.CursoId % morningTemplateGroups.Length];
-            // Solo algunos cursos tienen bloques de tarde para mantener variedad realista.
-            if (subject.CursoId % 3 == 0)
+            var baseIndex = (subject.Id + (subject.CursoId * 7)) % baseTemplates.Length;
+            for (var i = 0; i < baseTemplates.Length && currentCount < minWeeklyBlocksPerSubject; i++)
             {
-                var afternoonTemplates = afternoonTemplateGroups[subject.CursoId % afternoonTemplateGroups.Length];
-                templates = templates.Concat(afternoonTemplates).ToArray();
-            }
-
-            var baseIndex = (subject.Id + (subject.CursoId * 3)) % templates.Length;
-            for (var i = 0; i < templates.Length && currentCount < minWeeklyBlocksPerSubject; i++)
-            {
-                var template = templates[(baseIndex + i) % templates.Length];
+                var template = baseTemplates[(baseIndex + i) % baseTemplates.Length];
                 var slotKey = $"{template.DiaSemana}-{template.Inicio:HH\\:mm}";
 
                 if (!occupiedSlots.Add(slotKey))
                     continue;
+
+                if (!occupiedCourseSlots.Add(slotKey))
+                {
+                    occupiedSlots.Remove(slotKey);
+                    continue;
+                }
+
+                if (!occupiedCourseIntervalsByDay.TryGetValue(template.DiaSemana, out var occupiedIntervalsInDay))
+                {
+                    occupiedIntervalsInDay = new List<(TimeOnly HoraInicio, TimeOnly HoraFin)>();
+                    occupiedCourseIntervalsByDay[template.DiaSemana] = occupiedIntervalsInDay;
+                }
+
+                var overlapsInCourse = occupiedIntervalsInDay.Any(interval =>
+                    template.Inicio < interval.HoraFin
+                    && interval.HoraInicio < template.Fin);
+
+                if (overlapsInCourse)
+                {
+                    occupiedCourseSlots.Remove(slotKey);
+                    occupiedSlots.Remove(slotKey);
+                    continue;
+                }
 
                 db.HorariosAsignaturas.Add(new HorarioAsignatura
                 {
@@ -288,6 +329,8 @@ public sealed class DatabaseSeeder
                     HoraFin = template.Fin,
                     Aula = $"{aulaZones[subject.CursoId % aulaZones.Length]}-{template.DiaSemana}{10 + ((subject.Id + currentCount) % 20)}"
                 });
+
+                occupiedIntervalsInDay.Add((template.Inicio, template.Fin));
 
                 currentCount++;
             }

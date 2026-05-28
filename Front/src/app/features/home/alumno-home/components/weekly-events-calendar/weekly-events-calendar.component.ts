@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild, computed, signal } from '@angular/core';
 
 export interface CalendarEvent {
     id: string;
@@ -44,7 +44,7 @@ interface PositionedCalendarEvent extends CalendarEvent {
     styleUrl: './weekly-events-calendar.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class WeeklyEventsCalendarComponent {
+export class WeeklyEventsCalendarComponent implements AfterViewInit {
     @Input() adminEvents: CalendarEvent[] = [];
     @Input() adminSubjectLegend: SubjectColorLegendItem[] = [];
     @Input() personalEvents: CalendarEvent[] = [];
@@ -59,6 +59,9 @@ export class WeeklyEventsCalendarComponent {
         (_, i) => this.GRID_START_HOUR + i
     );
     readonly totalGridHeight = (this.GRID_END_HOUR - this.GRID_START_HOUR) * this.HOUR_HEIGHT;
+    @ViewChild('scrollArea') private scrollAreaRef?: ElementRef<HTMLDivElement>;
+
+    private didInitialAutoScroll = false;
 
     private readonly focusedDate = signal<Date>(this.getDefaultFocusDate());
     readonly weekStart = signal<Date>(this.getDisplayWeekStartForNow());
@@ -110,6 +113,11 @@ export class WeeklyEventsCalendarComponent {
 
     readonly selectedWeekInputValue = computed(() => this.toIsoDate(this.weekStart()));
     readonly selectedDayInputValue = computed(() => this.toIsoDate(this.focusedDate()));
+
+    ngAfterViewInit(): void {
+        // Wait for layout paint before forcing initial scroll position.
+        setTimeout(() => this.scrollToCurrentTime(true), 0);
+    }
 
     allEventsByDay(dayOfWeek: 1 | 2 | 3 | 4 | 5): CalendarEvent[] {
         return [
@@ -257,6 +265,7 @@ export class WeeklyEventsCalendarComponent {
     goToTodayContext(): void {
         this.focusedDate.set(this.getDefaultFocusDate());
         this.weekStart.set(this.getDisplayWeekStartForNow());
+        this.scrollToCurrentTime(true);
     }
 
     onWeekDateSelected(value: string): void {
@@ -284,11 +293,13 @@ export class WeeklyEventsCalendarComponent {
 
     setWeekView(): void {
         this.viewMode.set('week');
+        this.scrollToCurrentTime(true);
     }
 
     setDayView(): void {
         this.viewMode.set('day');
         this.focusedDate.set(this.adjustDateToWeekday(this.focusedDate()));
+        this.scrollToCurrentTime(true);
     }
 
     isFocusedDay(day: WeekDayCell): boolean {
@@ -375,5 +386,30 @@ export class WeeklyEventsCalendarComponent {
     private toMinutes(value: string): number {
         const [hours, minutes] = value.split(':').map(Number);
         return (hours * 60) + minutes;
+    }
+
+    private scrollToCurrentTime(force = false): void {
+        if (!force && this.didInitialAutoScroll) {
+            return;
+        }
+
+        const scrollArea = this.scrollAreaRef?.nativeElement;
+        if (!scrollArea) {
+            return;
+        }
+
+        const now = new Date();
+        const minutesFromGridStart = ((now.getHours() - this.GRID_START_HOUR) * 60) + now.getMinutes();
+        if (minutesFromGridStart <= 0) {
+            scrollArea.scrollTop = 0;
+            this.didInitialAutoScroll = true;
+            return;
+        }
+
+        const topPx = (minutesFromGridStart / 60) * this.HOUR_HEIGHT;
+        const target = topPx - (scrollArea.clientHeight * 0.35);
+        const maxTop = Math.max(0, scrollArea.scrollHeight - scrollArea.clientHeight);
+        scrollArea.scrollTop = Math.min(Math.max(0, target), maxTop);
+        this.didInitialAutoScroll = true;
     }
 }

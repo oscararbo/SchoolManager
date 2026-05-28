@@ -4,9 +4,14 @@
             <h3 class="h5 mb-0">Tu Horario</h3>
             <p class="small text-secondary mb-0">Semana laboral · vista semanal o de un solo dia</p>
         </div>
-        <button type="button" class="btn btn-sm btn-primary" (click)="abrirFormulario()">
-            + Nuevo evento
-        </button>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="exportarHorarioIcs()" [disabled]="exportingIcs() || adminEvents().length === 0">
+                {{ exportingIcs() ? 'Exportando...' : 'Exportar ICS' }}
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" (click)="abrirFormulario()">
+                + Nuevo evento
+            </button>
+        </div>
     </div>
 
     @if (loadingSchedule()) {

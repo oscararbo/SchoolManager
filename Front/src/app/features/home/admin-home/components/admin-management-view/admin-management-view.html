@@ -1,8 +1,28 @@
 <section class="vstack gap-3">
-    <app-admin-tabs-nav
-        [tabActiva]="tabActiva()"
-        (tabChange)="cambiarTab($event)">
-    </app-admin-tabs-nav>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <app-admin-tabs-nav
+            [tabActiva]="tabActiva()"
+            (tabChange)="cambiarTab($event)">
+        </app-admin-tabs-nav>
+        <div class="d-flex gap-2">
+            @if (tabActiva() !== 'importar') {
+                <button
+                    class="btn btn-sm btn-outline-secondary"
+                    type="button"
+                    (click)="recargarTabActual()"
+                    [disabled]="cargandoTabActual()">
+                    {{ cargandoTabActual() ? 'Recargando...' : 'Recargar' }}
+                </button>
+                <button
+                    class="btn btn-sm btn-outline-secondary"
+                    type="button"
+                    (click)="exportarTabActualExcel()"
+                    [disabled]="!puedeExportarTabActual()">
+                    Exportar Excel
+                </button>
+            }
+        </div>
+    </div>
 
     <!-- CURSOS -->
     @if (tabActiva() === 'cursos') {

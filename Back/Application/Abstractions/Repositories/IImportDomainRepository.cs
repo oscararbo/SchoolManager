@@ -6,6 +6,7 @@ public sealed record ImportEstudianteLookup(int Id, string Correo, int CursoId, 
 public sealed record ImportAsignaturaLookup(int Id, string Nombre, int CursoId);
 public sealed record ImportImparticionLookup(int ProfesorId, int AsignaturaId, int CursoId);
 public sealed record ImportTareaLookup(int Id, string Nombre, int Trimestre, int AsignaturaId, int ProfesorId);
+public sealed record ImportHorarioLookup(int AsignaturaId, int CursoId, int DiaSemana, TimeOnly HoraInicio, TimeOnly HoraFin);
 
 public interface IImportDomainRepository
 {
@@ -17,6 +18,7 @@ public interface IImportDomainRepository
     Task<List<ImportImparticionLookup>> GetImparticionesAsync(CancellationToken cancellationToken = default);
     Task<List<ImportTareaLookup>> GetTareasAsync(CancellationToken cancellationToken = default);
     Task<List<(int EstudianteId, int TareaId)>> GetNotasAsync(CancellationToken cancellationToken = default);
+    Task<List<ImportHorarioLookup>> GetHorariosAsync(CancellationToken cancellationToken = default);
     Task AddCursosAsync(IEnumerable<string> nombres, CancellationToken cancellationToken = default);
     Task AddAsignaturasAsync(IEnumerable<(string Nombre, int CursoId)> asignaturas, CancellationToken cancellationToken = default);
     Task AddProfesoresAsync(IEnumerable<(string Nombre, string Correo, string ContrasenaHash, string Apellidos, string DNI, string Telefono, string Especialidad)> profesores, CancellationToken cancellationToken = default);
@@ -25,4 +27,5 @@ public interface IImportDomainRepository
     Task AddImparticionesAsync(IEnumerable<(int ProfesorId, int AsignaturaId, int CursoId)> imparticiones, CancellationToken cancellationToken = default);
     Task AddTareasAsync(IEnumerable<(string Nombre, int Trimestre, int AsignaturaId, int ProfesorId)> tareas, CancellationToken cancellationToken = default);
     Task UpsertNotasAsync(IEnumerable<(int EstudianteId, int TareaId, decimal Valor)> notas, CancellationToken cancellationToken = default);
+    Task AddHorariosAsync(IEnumerable<(int AsignaturaId, int DiaSemana, TimeOnly HoraInicio, TimeOnly HoraFin, string? Aula)> horarios, CancellationToken cancellationToken = default);
 }

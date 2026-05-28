@@ -50,6 +50,27 @@ public class AdminDomainRepository(AppDbContext context, ICurrentSchoolContext c
             && horario.HoraInicio == horaInicio
             && (!exceptHorarioId.HasValue || horario.Id != exceptHorarioId.Value), cancellationToken);
 
+    public async Task<bool> HorarioSolapaEnCursoAsync(int asignaturaId, int diaSemana, TimeOnly horaInicio, TimeOnly horaFin, int? exceptHorarioId = null, CancellationToken cancellationToken = default)
+    {
+        var cursoId = await context.Asignaturas
+            .AsNoTracking()
+            .Where(asignatura => asignatura.Id == asignaturaId)
+            .Select(asignatura => (int?)asignatura.CursoId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (!cursoId.HasValue)
+            return false;
+
+        return await context.HorariosAsignaturas.AnyAsync(horario =>
+            horario.Asignatura != null
+            && horario.Asignatura.CursoId == cursoId.Value
+            && horario.DiaSemana == diaSemana
+            && (!exceptHorarioId.HasValue || horario.Id != exceptHorarioId.Value)
+            && horario.HoraInicio < horaFin
+            && horaInicio < horario.HoraFin,
+            cancellationToken);
+    }
+
     public Task<bool> CorreoDuplicadoAsync(string correo, CancellationToken cancellationToken = default)
         => context.Cuentas.AnyAsync(c => c.Correo == correo && c.ColegioId == currentSchoolContext.SchoolId, cancellationToken);
 

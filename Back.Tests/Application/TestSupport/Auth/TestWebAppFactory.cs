@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using System.Net.Http.Headers;
 using Back.Api.Application.Configuration;
 using Back.Api.Persistence.Context;
 using Microsoft.AspNetCore.Authentication;
@@ -17,6 +18,19 @@ namespace Back.Tests.Application.TestSupport.Auth;
 public sealed class TestWebAppFactory : WebApplicationFactory<Program>
 {
     public const string TestScheme = "TestScheme";
+
+    public HttpClient CreateAuthenticatedClient(string userRole = Roles.Admin, int schoolId = 1, string schoolSlug = "default")
+    {
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(TestScheme);
+        client.DefaultRequestHeaders.Add(TestAuthHandler.RoleHeader, userRole);
+        client.DefaultRequestHeaders.Add(TestAuthHandler.SchoolIdHeader, schoolId.ToString());
+        client.DefaultRequestHeaders.Add(TestAuthHandler.SchoolSlugHeader, schoolSlug);
+        return client;
+    }
+
+    public HttpClient CreateAdminClient(int schoolId = 1, string schoolSlug = "default")
+        => CreateAuthenticatedClient(Roles.Admin, schoolId, schoolSlug);
 
     protected override void ConfigureWebHost(IWebHostBuilder webHostBuilder)
     {

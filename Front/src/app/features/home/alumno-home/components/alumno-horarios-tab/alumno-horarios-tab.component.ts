@@ -27,6 +27,7 @@ export class AlumnoHorariosTabComponent {
 
     readonly loadingSchedule = signal(false);
     readonly scheduleError = signal<string | null>(null);
+    readonly exportingIcs = signal(false);
 
     // ── Admin events (read-only, set by admin) ──────────────────────────────
     readonly adminEvents = signal<CalendarEvent[]>([]);
@@ -116,6 +117,64 @@ export class AlumnoHorariosTabComponent {
 
     eliminarEventoPersonal(id: string): void {
         this.personalEvents.update(events => events.filter(e => e.id !== id));
+    }
+
+    exportarHorarioIcs(): void {
+        const classEvents = this.adminEvents()
+            .filter(event => event.type === 'admin')
+            .sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime));
+
+        if (classEvents.length === 0) {
+            return;
+        }
+
+        this.exportingIcs.set(true);
+        try {
+            const monday = this.getCurrentWeekMonday();
+            const lines: string[] = [
+                'BEGIN:VCALENDAR',
+                'VERSION:2.0',
+                'PRODID:-//SchoolManager//Horario Alumno//ES',
+                'CALSCALE:GREGORIAN',
+                'METHOD:PUBLISH',
+                'X-WR-CALNAME:Horario de clases'
+            ];
+
+            for (const event of classEvents) {
+                const date = new Date(monday);
+                date.setDate(monday.getDate() + (event.dayOfWeek - 1));
+
+                lines.push('BEGIN:VEVENT');
+                lines.push(`UID:${event.id}@schoolmanager.local`);
+                lines.push(`DTSTAMP:${this.formatIcsUtcDateTime(new Date())}`);
+                lines.push(`DTSTART:${this.formatIcsLocalDateTime(date, event.startTime)}`);
+                lines.push(`DTEND:${this.formatIcsLocalDateTime(date, event.endTime)}`);
+                lines.push(`SUMMARY:${this.escapeIcsText(event.title)}`);
+
+                if (event.subtitle) {
+                    lines.push(`DESCRIPTION:${this.escapeIcsText(event.subtitle)}`);
+                }
+
+                if (event.location) {
+                    lines.push(`LOCATION:${this.escapeIcsText(event.location)}`);
+                }
+
+                lines.push(`RRULE:FREQ=WEEKLY;BYDAY=${this.toIcsByDay(event.dayOfWeek)}`);
+                lines.push('END:VEVENT');
+            }
+
+            lines.push('END:VCALENDAR');
+
+            const blob = new Blob([`${lines.join('\r\n')}\r\n`], { type: 'text/calendar;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `horario-alumno-${this.lastLoadedStudentId ?? 'actual'}.ics`;
+            link.click();
+            URL.revokeObjectURL(url);
+        } finally {
+            this.exportingIcs.set(false);
+        }
     }
 
     getSelectedDateDayLabel(): string {
@@ -270,6 +329,55 @@ export class AlumnoHorariosTabComponent {
             5: 'Viernes'
         };
         return labels[day];
+    }
+
+    private getCurrentWeekMonday(): Date {
+        const today = new Date();
+        const normalized = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const day = normalized.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        normalized.setDate(normalized.getDate() + diff);
+        return normalized;
+    }
+
+    private formatIcsLocalDateTime(date: Date, time: string): string {
+        const [hours, minutes] = time.split(':').map(Number);
+        const local = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hours, minutes, 0);
+        const y = local.getFullYear();
+        const m = String(local.getMonth() + 1).padStart(2, '0');
+        const d = String(local.getDate()).padStart(2, '0');
+        const hh = String(local.getHours()).padStart(2, '0');
+        const mm = String(local.getMinutes()).padStart(2, '0');
+        return `${y}${m}${d}T${hh}${mm}00`;
+    }
+
+    private formatIcsUtcDateTime(date: Date): string {
+        const y = date.getUTCFullYear();
+        const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const d = String(date.getUTCDate()).padStart(2, '0');
+        const hh = String(date.getUTCHours()).padStart(2, '0');
+        const mm = String(date.getUTCMinutes()).padStart(2, '0');
+        const ss = String(date.getUTCSeconds()).padStart(2, '0');
+        return `${y}${m}${d}T${hh}${mm}${ss}Z`;
+    }
+
+    private toIcsByDay(dayOfWeek: 1 | 2 | 3 | 4 | 5): string {
+        const map: Record<1 | 2 | 3 | 4 | 5, string> = {
+            1: 'MO',
+            2: 'TU',
+            3: 'WE',
+            4: 'TH',
+            5: 'FR'
+        };
+        return map[dayOfWeek];
+    }
+
+    private escapeIcsText(value: string): string {
+        return value
+            .replace(/\\/g, '\\\\')
+            .replace(/;/g, '\\;')
+            .replace(/,/g, '\\,')
+            .replace(/\r?\n/g, '\\n');
     }
 }
 

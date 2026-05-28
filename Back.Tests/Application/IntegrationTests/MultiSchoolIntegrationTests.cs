@@ -1,11 +1,13 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Configuration;
 using Back.Api.Domain.Entities;
 using Back.Api.Persistence.Context;
 using Back.Tests.Application.TestSupport.Auth;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -34,7 +36,7 @@ public class MultiSchoolIntegrationTests : IClassFixture<TestWebAppFactory>
             new Curso { Nombre = "Curso Colegio Dos", ColegioId = 102 });
         await db.SaveChangesAsync();
 
-        using var clientSchoolOne = CreateAuthenticatedClient(Roles.Admin, 101, "colegio-uno");
+        using var clientSchoolOne = webAppFactory.CreateAuthenticatedClient(Roles.Admin, 101, "colegio-uno");
         var response = await clientSchoolOne.GetAsync("/api/cursos");
         var body = await response.Content.ReadAsStringAsync();
 
@@ -96,13 +98,62 @@ public class MultiSchoolIntegrationTests : IClassFixture<TestWebAppFactory>
         Assert.Contains("colegio-b", schoolBBody, StringComparison.OrdinalIgnoreCase);
     }
 
-    private HttpClient CreateAuthenticatedClient(string userRole, int schoolId, string schoolSlug)
+    [Fact]
+    public async Task GetHorarios_AdminSoloVeHorariosDeSuColegio()
     {
-        var authenticatedClient = webAppFactory.CreateClient();
-        authenticatedClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(TestWebAppFactory.TestScheme);
-        authenticatedClient.DefaultRequestHeaders.Add(TestAuthHandler.RoleHeader, userRole);
-        authenticatedClient.DefaultRequestHeaders.Add(TestAuthHandler.SchoolIdHeader, schoolId.ToString());
-        authenticatedClient.DefaultRequestHeaders.Add(TestAuthHandler.SchoolSlugHeader, schoolSlug);
-        return authenticatedClient;
+        await using var scope = webAppFactory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        db.Colegios.AddRange(
+            new Colegio { Id = 201, Nombre = "Colegio H1", Slug = "colegio-h1" },
+            new Colegio { Id = 202, Nombre = "Colegio H2", Slug = "colegio-h2" });
+
+        var cursoUno = new Curso { Id = 2101, Nombre = "Curso H1", ColegioId = 201 };
+        var cursoDos = new Curso { Id = 2201, Nombre = "Curso H2", ColegioId = 202 };
+        db.Cursos.AddRange(cursoUno, cursoDos);
+
+        var asignaturaUno = new Asignatura { Id = 3101, Nombre = "Matematicas H1", CursoId = 2101 };
+        var asignaturaDos = new Asignatura { Id = 3201, Nombre = "Matematicas H2", CursoId = 2201 };
+        db.Asignaturas.AddRange(asignaturaUno, asignaturaDos);
+
+        db.HorariosAsignaturas.AddRange(
+            new HorarioAsignatura { AsignaturaId = 3101, DiaSemana = 1, HoraInicio = new TimeOnly(8, 30), HoraFin = new TimeOnly(9, 25), Aula = "Aula H1" },
+            new HorarioAsignatura { AsignaturaId = 3201, DiaSemana = 2, HoraInicio = new TimeOnly(9, 30), HoraFin = new TimeOnly(10, 25), Aula = "Aula H2" });
+        await db.SaveChangesAsync();
+
+        using var clientSchoolOne = webAppFactory.CreateAuthenticatedClient(Roles.Admin, 201, "colegio-h1");
+        var response = await clientSchoolOne.GetAsync("/api/admin/horarios");
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("Matematicas H1", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Matematicas H2", body, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task ImportarCursosCsv_AdminSoloImportaEnSuColegio()
+    {
+        await using var scope = webAppFactory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        db.Colegios.AddRange(
+            new Colegio { Id = 301, Nombre = "Colegio Import 1", Slug = "colegio-import-1" },
+            new Colegio { Id = 302, Nombre = "Colegio Import 2", Slug = "colegio-import-2" });
+        await db.SaveChangesAsync();
+
+        using var clientSchoolOne = webAppFactory.CreateAuthenticatedClient(Roles.Admin, 301, "colegio-import-1");
+        using var form = new MultipartFormDataContent();
+        using var fileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("nombre\nCurso Importado H1"));
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("text/csv");
+        form.Add(fileContent, "file", "cursos.csv");
+
+        var response = await clientSchoolOne.PostAsync("/api/admin/csv/cursos", form);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var cursos = db.Cursos.IgnoreQueryFilters().ToList();
+        Assert.Contains(cursos, c => c.Nombre == "Curso Importado H1" && c.ColegioId == 301);
+        Assert.DoesNotContain(cursos, c => c.Nombre == "Curso Importado H1" && c.ColegioId == 302);
+    }
+
 }

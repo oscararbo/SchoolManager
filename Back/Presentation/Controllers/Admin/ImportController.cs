@@ -43,6 +43,9 @@ public class ImportController(IImportService importService) : ControllerBase
     [HttpPost("tareas")]
     public async Task<IActionResult> ImportarTareas([FromForm] CsvImportRequest request)
         => await ImportarCsvAsync(request, importService.ImportarTareasAsync);
+    [HttpPost("horarios")]
+    public async Task<IActionResult> ImportarHorarios([FromForm] CsvImportRequest request)
+        => await ImportarCsvAsync(request, importService.ImportarHorariosAsync);
     [HttpPost("matriculas")]
     public async Task<IActionResult> ImportarMatriculas([FromForm] CsvImportRequest request)
         => await ImportarCsvAsync(request, importService.ImportarMatriculasAsync);

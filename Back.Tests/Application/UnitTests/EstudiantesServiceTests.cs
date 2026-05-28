@@ -2,6 +2,8 @@ using Back.Api.Application.Common;
 using Back.Api.Application.Dtos;
 using Back.Api.Application.Services;
 using Back.Tests.Application.Mocks;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.FileProviders;
 using Moq;
 using System.ComponentModel.DataAnnotations;
 using Xunit;
@@ -92,7 +94,7 @@ public class EstudiantesServiceTests
     }
 
     private static EstudiantesService CreateService(Back.Api.Application.Abstractions.Repositories.IEstudiantesDomainRepository repo)
-        => new(repo, new FakePasswordService(), new FakeCurrentSchoolContext());
+        => new(repo, new FakePasswordService(), new FakeCurrentSchoolContext(), new FakeWebHostEnvironment());
 
     private static CreateEstudianteRequestDto CreateValidDto() => new()
     {
@@ -125,5 +127,15 @@ public class EstudiantesServiceTests
         public string? SchoolSlug => "demo";
         public bool IsSuperUsuario => false;
         public bool HasSchool => true;
+    }
+
+    private sealed class FakeWebHostEnvironment : IWebHostEnvironment
+    {
+        public string ApplicationName { get; set; } = "Back.Tests";
+        public IFileProvider WebRootFileProvider { get; set; } = null!;
+        public string WebRootPath { get; set; } = string.Empty;
+        public string EnvironmentName { get; set; } = "Development";
+        public string ContentRootPath { get; set; } = Path.GetTempPath();
+        public IFileProvider ContentRootFileProvider { get; set; } = null!;
     }
 }

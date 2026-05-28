@@ -9,6 +9,7 @@ public interface IImportService
     Task<ApplicationResult> ImportarProfesoresAsync(string csvText, CancellationToken cancellationToken = default);
     Task<ApplicationResult> ImportarEstudiantesAsync(string csvText, CancellationToken cancellationToken = default);
     Task<ApplicationResult> ImportarTareasAsync(string csvText, CancellationToken cancellationToken = default);
+    Task<ApplicationResult> ImportarHorariosAsync(string csvText, CancellationToken cancellationToken = default);
     Task<ApplicationResult> ImportarMatriculasAsync(string csvText, CancellationToken cancellationToken = default);
     Task<ApplicationResult> ImportarImparticionesAsync(string csvText, CancellationToken cancellationToken = default);
     Task<ApplicationResult> ImportarNotasAsync(string csvText, CancellationToken cancellationToken = default);

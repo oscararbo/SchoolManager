@@ -25,8 +25,9 @@ export const CSV_IMPORT_ITEMS: Array<{ entidad: CsvImportEntity; titulo: string;
     { entidad: 'estudiantes', titulo: 'Estudiantes', descripcion: 'Alta masiva de estudiantes con su curso (correo/contrasena autogenerados).', orden: '4' },
     { entidad: 'imparticiones', titulo: 'Imparticiones', descripcion: 'Relaciona profesor, asignatura y curso.', orden: '5' },
     { entidad: 'tareas', titulo: 'Tareas', descripcion: 'Crea tareas por profesor, asignatura, curso y trimestre.', orden: '6' },
-    { entidad: 'matriculas', titulo: 'Matriculas', descripcion: 'Relaciona estudiante con asignaturas de su curso.', orden: '7' },
-    { entidad: 'notas', titulo: 'Notas', descripcion: 'Carga masiva de calificaciones sobre tareas ya existentes.', orden: '8' }
+    { entidad: 'horarios', titulo: 'Horarios', descripcion: 'Carga horarios de asignaturas por curso sin solapes.', orden: '7' },
+    { entidad: 'matriculas', titulo: 'Matriculas', descripcion: 'Relaciona estudiante con asignaturas de su curso.', orden: '8' },
+    { entidad: 'notas', titulo: 'Notas', descripcion: 'Carga masiva de calificaciones sobre tareas ya existentes.', orden: '9' }
 ];
 
 export const CSV_PLANTILLAS: Record<CsvImportEntity, string> = {
@@ -35,6 +36,7 @@ export const CSV_PLANTILLAS: Record<CsvImportEntity, string> = {
     profesores: 'nombre,dniNie\nJuan Garcia,12345678Z',
     estudiantes: 'nombre,dniNie,cursoNombre\nLucia Perez,X1234567L,1°A',
     tareas: 'profesorCorreo,asignaturaNombre,cursoNombre,trimestre,tareaNombre\njuan@colegio.es,Matematicas,1°A,1,Examen T1',
+    horarios: 'asignaturaNombre,cursoNombre,diaSemana,horaInicio,horaFin,aula\nMatematicas,1°A,1,08:30,09:25,Aula B-12',
     matriculas: 'estudianteCorreo,asignaturaNombre,cursoNombre\nlucia@colegio.es,Matematicas,1°A',
     imparticiones: 'profesorCorreo,asignaturaNombre,cursoNombre\njuan@colegio.es,Matematicas,1°A',
     notas: 'profesorCorreo,estudianteCorreo,asignaturaNombre,cursoNombre,trimestre,tareaNombre,valor\njuan@colegio.es,lucia@colegio.es,Matematicas,1°A,1,Examen T1,7.50'

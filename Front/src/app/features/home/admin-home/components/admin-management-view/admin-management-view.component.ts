@@ -17,6 +17,7 @@ import { AdminImparticionesTabComponent } from './tabs/admin-imparticiones-tab/a
 import { AdminImportarCsvTabComponent } from './tabs/admin-importar-csv-tab/admin-importar-csv-tab.component';
 import { Subject, debounceTime } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import * as XLSX from 'xlsx';
 import { AdminManagementForms, createAdminManagementForms, getAdminControlErrorMessage } from './admin-management-view.forms';
 import {
     agruparErroresCsv,
@@ -143,6 +144,7 @@ export class AdminManagementViewComponent implements OnInit {
     csvProfesoresFile: File | null = null;
     csvEstudiantesFile: File | null = null;
     csvTareasFile: File | null = null;
+    csvHorariosFile: File | null = null;
     csvMatriculasFile: File | null = null;
     csvImparticionesFile: File | null = null;
     csvNotasFile: File | null = null;
@@ -638,6 +640,12 @@ export class AdminManagementViewComponent implements OnInit {
             return;
         }
 
+        if (entidad === 'horarios') {
+            this.setResourceLoaded('asignaturas', false);
+            this.setResourceLoaded('horarios', false);
+            return;
+        }
+
         if (entidad === 'imparticiones') {
             this.setResourceLoaded('profesores', false);
             this.setResourceLoaded('imparticiones', false);
@@ -981,6 +989,52 @@ export class AdminManagementViewComponent implements OnInit {
         });
     }
 
+    puedeExportarTabActual(): boolean {
+        const tab = this.getExportableTabActiva();
+        return this.getExcelRowsForTab(tab).length > 0;
+    }
+
+    cargandoTabActual(): boolean {
+        const tab = this.getExportableTabActiva();
+        switch (tab) {
+            case 'cursos': return this.cargandoListaCursos();
+            case 'asignaturas': return this.cargandoListaAsignaturas();
+            case 'profesores': return this.cargandoListaProfesores();
+            case 'estudiantes': return this.cargandoListaEstudiantes();
+            case 'matriculas': return this.cargandoListaMatriculas();
+            case 'imparticiones': return this.cargandoListaImparticiones();
+            case 'horarios': return this.cargandoListaHorarios();
+        }
+    }
+
+    async recargarTabActual(): Promise<void> {
+        await this.cargarTab(this.tabActiva(), true);
+    }
+
+    exportarTabActualExcel(): void {
+        const tab = this.getExportableTabActiva();
+        const rows = this.getExcelRowsForTab(tab);
+        if (rows.length === 0) {
+            this.toast.show('No hay datos para exportar en la pestaña actual.', 'warning');
+            return;
+        }
+
+        const worksheet = XLSX.utils.json_to_sheet(rows);
+        const headers = Object.keys(rows[0]);
+        const range = XLSX.utils.encode_range({
+            s: { r: 0, c: 0 },
+            e: { r: rows.length, c: Math.max(headers.length - 1, 0) }
+        });
+        worksheet['!autofilter'] = { ref: range };
+
+        const workbook = XLSX.utils.book_new();
+        const sheetName = this.getExcelSheetName(tab);
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+        XLSX.writeFile(workbook, `${this.getExcelFileBaseName(tab)}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+
+        this.toast.show(`Exportacion Excel completada para ${sheetName}.`, 'success');
+    }
+
     // Matriculas
     async matricularEstudiante(): Promise<void> {
         if (!this.matriculaEstudianteId() || !this.matriculaAsignaturaId()) {
@@ -1291,9 +1345,14 @@ export class AdminManagementViewComponent implements OnInit {
             : entidad === 'profesores' ? this.csvProfesoresFile
             : entidad === 'estudiantes' ? this.csvEstudiantesFile
             : entidad === 'tareas' ? this.csvTareasFile
+            : entidad === 'horarios' ? this.csvHorariosFile
             : entidad === 'matriculas' ? this.csvMatriculasFile
             : entidad === 'imparticiones' ? this.csvImparticionesFile
             : this.csvNotasFile;
+    }
+
+    private getExportableTabActiva(): Exclude<AdminTab, 'importar'> {
+        return this.tabActiva() as Exclude<AdminTab, 'importar'>;
     }
 
     private setCsvFile(entidad: CsvImportEntity, file: File | null): void {
@@ -1302,6 +1361,7 @@ export class AdminManagementViewComponent implements OnInit {
         else if (entidad === 'profesores') this.csvProfesoresFile = file;
         else if (entidad === 'estudiantes') this.csvEstudiantesFile = file;
         else if (entidad === 'tareas') this.csvTareasFile = file;
+        else if (entidad === 'horarios') this.csvHorariosFile = file;
         else if (entidad === 'matriculas') this.csvMatriculasFile = file;
         else if (entidad === 'imparticiones') this.csvImparticionesFile = file;
         else this.csvNotasFile = file;
@@ -1360,6 +1420,108 @@ export class AdminManagementViewComponent implements OnInit {
         link.download = `plantilla_${entidad}.csv`;
         link.click();
         URL.revokeObjectURL(url);
+    }
+
+    private getExcelRowsForTab(tab: Exclude<AdminTab, 'importar'>): Record<string, string | number>[] {
+        const excludeKeys = new Set(['contrasenaTemporal']);
+
+        if (tab === 'horarios') {
+            return this.horariosVista()
+                .map(item => ({ ...item, diaSemana: this.diaSemanaLabel(item.diaSemana) }))
+                .map(item => this.flattenForExcel(item as Record<string, unknown>, excludeKeys));
+        }
+
+        return this.getTabVista(tab)
+            .map(item => this.flattenForExcel(item as Record<string, unknown>, excludeKeys));
+    }
+
+    private getTabVista(tab: Exclude<AdminTab, 'importar'>): unknown[] {
+        switch (tab) {
+            case 'cursos': return this.cursosVista();
+            case 'asignaturas': return this.asignaturasVista();
+            case 'profesores': return this.profesoresVista();
+            case 'estudiantes': return this.estudiantesVista();
+            case 'matriculas': return this.matriculasVista();
+            case 'imparticiones': return this.imparticionesVista();
+            case 'horarios': return this.horariosVista();
+        }
+    }
+
+    private flattenForExcel(
+        obj: Record<string, unknown>,
+        excludeKeys: Set<string> = new Set()
+    ): Record<string, string | number> {
+        const result: Record<string, string | number> = {};
+
+        for (const [key, value] of Object.entries(obj)) {
+            if (excludeKeys.has(key)) continue;
+
+            const label = key.charAt(0).toUpperCase() + key.slice(1);
+
+            if (value === null || value === undefined) {
+                result[label] = '';
+            } else if (Array.isArray(value)) {
+                if (value.length === 0) {
+                    result[label] = 0;
+                } else if (typeof value[0] === 'object' && value[0] !== null) {
+                    const items = value as Record<string, unknown>[];
+                    const names = items.map(item => {
+                        const display = item['nombre'] ?? item['asignatura'] ?? item['curso'];
+                        return display !== undefined
+                            ? String(display)
+                            : (Object.values(item).find(v => typeof v === 'string') as string | undefined) ?? '';
+                    });
+                    result[label] = names.join(' | ');
+                } else {
+                    result[label] = (value as (string | number)[]).join(', ');
+                }
+            } else if (typeof value === 'object') {
+                const nested = value as Record<string, unknown>;
+                const display = nested['nombre'] ?? nested['name'];
+                if (display !== undefined) {
+                    result[label] = String(display);
+                } else {
+                    for (const [nKey, nVal] of Object.entries(nested)) {
+                        if (excludeKeys.has(nKey) || nKey === 'id') continue;
+                        const nLabel = `${label}_${nKey.charAt(0).toUpperCase() + nKey.slice(1)}`;
+                        result[nLabel] = nVal !== null && nVal !== undefined
+                            ? (typeof nVal === 'number' ? nVal : String(nVal)) : '';
+                    }
+                }
+            } else {
+                result[label] = value as string | number;
+            }
+        }
+
+        return result;
+    }
+
+    private getExcelSheetName(tab: Exclude<AdminTab, 'importar'>): string {
+        const names: Record<Exclude<AdminTab, 'importar'>, string> = {
+            cursos: 'Cursos',
+            asignaturas: 'Asignaturas',
+            profesores: 'Profesores',
+            estudiantes: 'Estudiantes',
+            matriculas: 'Matriculas',
+            imparticiones: 'Imparticiones',
+            horarios: 'Horarios'
+        };
+
+        return names[tab];
+    }
+
+    private getExcelFileBaseName(tab: Exclude<AdminTab, 'importar'>): string {
+        const names: Record<Exclude<AdminTab, 'importar'>, string> = {
+            cursos: 'admin-cursos',
+            asignaturas: 'admin-asignaturas',
+            profesores: 'admin-profesores',
+            estudiantes: 'admin-estudiantes',
+            matriculas: 'admin-matriculas',
+            imparticiones: 'admin-imparticiones',
+            horarios: 'admin-horarios'
+        };
+
+        return names[tab];
     }
 
     // Task Management

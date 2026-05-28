@@ -49,6 +49,11 @@ public class ImportDomainRepository(AppDbContext context, ICurrentSchoolContext 
         .Select(n => new ValueTuple<int, int>(n.EstudianteId, n.TareaId))
         .ToListAsync(cancellationToken);
 
+    public Task<List<ImportHorarioLookup>> GetHorariosAsync(CancellationToken cancellationToken = default) => context.HorariosAsignaturas
+        .AsNoTracking()
+        .Select(h => new ImportHorarioLookup(h.AsignaturaId, h.Asignatura!.CursoId, h.DiaSemana, h.HoraInicio, h.HoraFin))
+        .ToListAsync(cancellationToken);
+
     public async Task AddCursosAsync(IEnumerable<string> nombres, CancellationToken cancellationToken = default)
     {
         foreach (var nombre in nombres)
@@ -274,6 +279,38 @@ public class ImportDomainRepository(AppDbContext context, ICurrentSchoolContext 
                 var nueva = new Nota { EstudianteId = nota.EstudianteId, TareaId = nota.TareaId, Valor = nota.Valor };
                 context.Notas.Add(nueva);
                 existentesMap[(nota.EstudianteId, nota.TareaId)] = nueva;
+            }
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task AddHorariosAsync(IEnumerable<(int AsignaturaId, int DiaSemana, TimeOnly HoraInicio, TimeOnly HoraFin, string? Aula)> horarios, CancellationToken cancellationToken = default)
+    {
+        foreach (var item in horarios)
+        {
+            var existente = await context.HorariosAsignaturas
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(h => h.AsignaturaId == item.AsignaturaId
+                    && h.DiaSemana == item.DiaSemana
+                    && h.HoraInicio == item.HoraInicio, cancellationToken);
+
+            if (existente is null)
+            {
+                context.HorariosAsignaturas.Add(new HorarioAsignatura
+                {
+                    AsignaturaId = item.AsignaturaId,
+                    DiaSemana = item.DiaSemana,
+                    HoraInicio = item.HoraInicio,
+                    HoraFin = item.HoraFin,
+                    Aula = string.IsNullOrWhiteSpace(item.Aula) ? null : item.Aula!.Trim()
+                });
+            }
+            else
+            {
+                existente.HoraFin = item.HoraFin;
+                existente.Aula = string.IsNullOrWhiteSpace(item.Aula) ? null : item.Aula!.Trim();
+                existente.IsDeleted = false;
             }
         }
 
