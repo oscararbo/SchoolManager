@@ -11,6 +11,7 @@ namespace Back.Api.Application.Services;
 
 public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPasswordService passwordService, ICurrentSchoolContext currentSchoolContext, IWebHostEnvironment hostEnvironment) : IProfesoresService
 {
+    #region CRUD profesores
     public async Task<ApplicationResult> GetAllProfesoresAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await profesoresDomain.GetAllProfesoresAsync(cancellationToken));
 
@@ -44,6 +45,36 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         return ApplicationResult.Created($"/api/profesores/{createdProfesor.Id}", createdProfesor);
     }
 
+    public async Task<ApplicationResult> UpdateProfesorAsync(int profesorId, UpdateProfesorRequestDto updateProfesorRequestDto, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(updateProfesorRequestDto.Nombre))
+            return ApplicationResult.BadRequest("El nombre del teacher es obligatorio.");
+        if (!await profesoresDomain.ProfesorExisteAsync(profesorId, cancellationToken))
+            return ApplicationResult.NotFound("El teacher no existe.");
+
+        var normalizedDocumento = CredentialGenerationHelper.NormalizeDniNie(updateProfesorRequestDto.DNI);
+        if (!CredentialGenerationHelper.IsValidDniNie(normalizedDocumento))
+            return ApplicationResult.BadRequest("El documento debe ser un DNI o NIE valido.");
+        if (await profesoresDomain.DocumentoDuplicadoExceptAsync(normalizedDocumento, profesorId, cancellationToken))
+            return ApplicationResult.BadRequest("Ya existe una persona con ese DNI/NIE.");
+
+        var updatedProfesor = await profesoresDomain.UpdateProfesorAsync(profesorId, updateProfesorRequestDto.Nombre.Trim(), updateProfesorRequestDto.Apellidos.Trim(), normalizedDocumento, updateProfesorRequestDto.Telefono.Trim(), updateProfesorRequestDto.Especialidad.Trim(), cancellationToken);
+        return updatedProfesor is null
+            ? ApplicationResult.NotFound("El teacher no existe.")
+            : ApplicationResult.Ok(updatedProfesor);
+    }
+
+    public async Task<ApplicationResult> DeleteProfesorAsync(int profesorId, CancellationToken cancellationToken = default)
+    {
+        if (!await profesoresDomain.ProfesorExisteAsync(profesorId, cancellationToken))
+            return ApplicationResult.NotFound("El teacher no existe.");
+
+        await profesoresDomain.DeleteProfesorAsync(profesorId, cancellationToken);
+        return ApplicationResult.NoContent();
+    }
+    #endregion
+
+    #region Panel y alumnos
     public async Task<ApplicationResult> GetPanelProfesorAsync(int profesorId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
         if (!UsuarioCoincideConProfesor(profesorId, user))
@@ -87,7 +118,9 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
             ? ApplicationResult.NotFound("No se encontro el alumno en la subject indicada.")
             : ApplicationResult.Ok(detail);
     }
+    #endregion
 
+    #region Calificaciones y tareas
     public async Task<ApplicationResult> GetCalificacionesDeTareaAsync(int profesorId, int asignaturaId, int tareaId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
         var guard = await ValidarProfesorYAsignaturaAsync(profesorId, asignaturaId, user, cancellationToken);
@@ -294,26 +327,9 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         var tasks = await profesoresDomain.GetTareasDeProfesorEnAsignaturaAsync(profesorId, asignaturaId, cancellationToken);
         return ApplicationResult.Ok(tasks);
     }
+    #endregion
 
-    public async Task<ApplicationResult> UpdateProfesorAsync(int profesorId, UpdateProfesorRequestDto updateProfesorRequestDto, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(updateProfesorRequestDto.Nombre))
-            return ApplicationResult.BadRequest("El nombre del teacher es obligatorio.");
-        if (!await profesoresDomain.ProfesorExisteAsync(profesorId, cancellationToken))
-            return ApplicationResult.NotFound("El teacher no existe.");
-
-        var normalizedDocumento = CredentialGenerationHelper.NormalizeDniNie(updateProfesorRequestDto.DNI);
-        if (!CredentialGenerationHelper.IsValidDniNie(normalizedDocumento))
-            return ApplicationResult.BadRequest("El documento debe ser un DNI o NIE valido.");
-        if (await profesoresDomain.DocumentoDuplicadoExceptAsync(normalizedDocumento, profesorId, cancellationToken))
-            return ApplicationResult.BadRequest("Ya existe una persona con ese DNI/NIE.");
-
-        var updatedProfesor = await profesoresDomain.UpdateProfesorAsync(profesorId, updateProfesorRequestDto.Nombre.Trim(), updateProfesorRequestDto.Apellidos.Trim(), normalizedDocumento, updateProfesorRequestDto.Telefono.Trim(), updateProfesorRequestDto.Especialidad.Trim(), cancellationToken);
-        return updatedProfesor is null
-            ? ApplicationResult.NotFound("El teacher no existe.")
-            : ApplicationResult.Ok(updatedProfesor);
-    }
-
+    #region Imparticiones
     private async Task<string> GenerateUniqueEmailAsync(string fullName, string rolePrefix, string schoolSlug, CancellationToken cancellationToken)
     {
         for (var i = 0; i < 2000; i++)
@@ -327,16 +343,9 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
 
         throw new InvalidOperationException("No se pudo generar un correo unico para el profesor.");
     }
+    #endregion
 
-    public async Task<ApplicationResult> DeleteProfesorAsync(int profesorId, CancellationToken cancellationToken = default)
-    {
-        if (!await profesoresDomain.ProfesorExisteAsync(profesorId, cancellationToken))
-            return ApplicationResult.NotFound("El teacher no existe.");
-
-        await profesoresDomain.DeleteProfesorAsync(profesorId, cancellationToken);
-        return ApplicationResult.NoContent();
-    }
-
+    #region Estadisticas y validaciones
     public async Task<ApplicationResult> GetTareasConNotasAsync(int asignaturaId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
         if (!user.IsInRole(Roles.Admin))
@@ -379,4 +388,5 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
         var idClaim = user.FindFirstValue("id") ?? user.FindFirstValue(ClaimTypes.NameIdentifier);
         return int.TryParse(idClaim, out var usuarioId) && usuarioId == profesorId;
     }
+    #endregion
 }

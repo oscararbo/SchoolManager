@@ -109,7 +109,7 @@ export class SchoolApiService {
     private admin = inject(SchoolApiAdminService);
     private superUsuario = inject(SchoolApiSuperUsuarioService);
 
-    // Auth
+    // #region Auth
     login(correo: string, contrasena: string): Promise<LoginResponse> { return this.auth.login(correo, contrasena); }
     logout(): Promise<void> { return this.auth.logout(); }
     getColegioBySlug(slug: string): Promise<ColegioItem> { return this.superUsuario.getColegioBySlug(slug); }
@@ -121,7 +121,8 @@ export class SchoolApiService {
     deleteColegio(id: number): Promise<void> { return this.superUsuario.deleteColegio(id); }
     createAdminColegio(colegioId: number, nombre: string): Promise<ColegioAdminItem> { return this.superUsuario.createAdminColegio(colegioId, nombre); }
 
-    // Profesor panel
+    // #endregion
+    // #region Profesor panel
     getPanelProfesor(profesorId: number): Promise<ProfesorPanel> { return this.profesor.getPanelProfesor(profesorId); }
     getProfesorStats(profesorId: number): Promise<ProfesorStats> { return this.profesor.getProfesorStats(profesorId); }
     getAlumnosDeAsignatura(profesorId: number, asignaturaId: number): Promise<AsignaturaAlumnos> { return this.profesor.getAlumnosDeAsignatura(profesorId, asignaturaId); }
@@ -135,7 +136,8 @@ export class SchoolApiService {
     getTareaSubmisiones(profesorId: number, tareaId: number): Promise<TareaSubmision[]> { return this.profesor.getTareaSubmisiones(profesorId, tareaId); }
     deleteTareaSubmision(profesorId: number, submisionId: number): Promise<void> { return this.profesor.deleteTareaSubmision(profesorId, submisionId); }
 
-    // Alumno panel
+    // #endregion
+    // #region Alumno panel
     getPanelAlumno(estudianteId: number): Promise<AlumnoPanel> { return this.alumno.getPanelAlumno(estudianteId); }
     getPanelAlumnoResumen(estudianteId: number): Promise<AlumnoPanelResumen> { return this.alumno.getPanelAlumnoResumen(estudianteId); }
     getHorarioAlumno(estudianteId: number): Promise<AlumnoHorarioClase[]> { return this.alumno.getHorarioAlumno(estudianteId); }
@@ -145,7 +147,8 @@ export class SchoolApiService {
     deleteSubmisionAlumno(estudianteId: number, submisionId: number): Promise<void> { return this.alumno.deleteSubmision(estudianteId, submisionId); }
     marcarTareaHechaAlumno(estudianteId: number, tareaId: number): Promise<TareaSubmision> { return this.alumno.marcarHecha(estudianteId, tareaId); }
 
-    // Admin
+    // #endregion
+    // #region Admin
     getAdminStats(): Promise<AdminStats> { return this.admin.getAdminStats(); }
     getAdminTop5Stats(): Promise<AdminTop5Stats> { return this.admin.getAdminTop5Stats(); }
     getAdminCursosStatsSelector(): Promise<AdminCursoStatsSelector[]> { return this.admin.getAdminCursosStatsSelector(); }
@@ -183,4 +186,5 @@ export class SchoolApiService {
     eliminarImparticion(profesorId: number, asignaturaId: number, cursoId: number): Promise<void> { return this.admin.eliminarImparticion(profesorId, asignaturaId, cursoId); }
     importarCsv(entidad: CsvImportEntity, file: File): Promise<CsvImportResult> { return this.admin.importarCsv(entidad, file); }
     getTareasConNotas(asignaturaId: number): Promise<TareaConNotas[]> { return this.admin.getTareasConNotas(asignaturaId); }
+    // #endregion
 }

@@ -8,9 +8,11 @@ public static class CredentialGenerationHelper
 {
     private const string UpperChars = "ABCDEFGHJKLMNPQRSTUVWXYZ";
     private const string LowerChars = "abcdefghijkmnopqrstuvwxyz";
-    private const string DigitChars = "0123456789";
-    private const string SpecialChars = "@#$%&*!?";
-    private const int PasswordLength = 10;
+    private const string DigitChars = "23456789";
+    private const string SpecialChars = "@#$%&*!?-_";
+    private const int PasswordLength = 14;
+    private const int MinimumDigitCount = 2;
+    private const int MinimumSpecialCount = 2;
     private static readonly Regex DniNieRegex = new(@"^(?:\d{8}|[XYZ]\d{7})[TRWAGMYFPDXBNJZSQVHLCKE]$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly Regex MultiDashRegex = new(@"-{2,}", RegexOptions.Compiled);
 
@@ -52,57 +54,59 @@ public static class CredentialGenerationHelper
 
     public static string GeneratePassword()
     {
-        var chars = new char[PasswordLength];
-        var usedIndices = new HashSet<int>();
-
-        var specialIndex = RandomNumberGenerator.GetInt32(1, PasswordLength);
-        chars[specialIndex] = Pick(SpecialChars);
-        usedIndices.Add(specialIndex);
-
-        for (var i = 0; i < 3; i++)
+        var chars = new List<char>(PasswordLength)
         {
-            var index = NextAvailableIndex(usedIndices);
-            chars[index] = Pick(DigitChars);
-            usedIndices.Add(index);
+            Pick(UpperChars),
+            Pick(LowerChars)
+        };
+
+        for (var i = 0; i < MinimumDigitCount; i++)
+        {
+            chars.Add(Pick(DigitChars));
         }
 
-        var upperIndex = NextAvailableIndex(usedIndices);
-        chars[upperIndex] = Pick(UpperChars);
-        usedIndices.Add(upperIndex);
-
-        var lowerIndex = NextAvailableIndex(usedIndices);
-        chars[lowerIndex] = Pick(LowerChars);
-        usedIndices.Add(lowerIndex);
-
-        for (var i = 0; i < PasswordLength; i++)
+        for (var i = 0; i < MinimumSpecialCount; i++)
         {
-            if (chars[i] != default)
+            chars.Add(Pick(SpecialChars));
+        }
+
+        var allChars = UpperChars + LowerChars + DigitChars + SpecialChars;
+        while (chars.Count < PasswordLength)
+        {
+            chars.Add(Pick(allChars));
+        }
+
+        Shuffle(chars);
+        EnsureLeadingLetter(chars);
+        return new string(chars.ToArray());
+    }
+
+    private static void Shuffle(IList<char> chars)
+    {
+        for (var i = chars.Count - 1; i > 0; i--)
+        {
+            var swapIndex = RandomNumberGenerator.GetInt32(0, i + 1);
+            (chars[i], chars[swapIndex]) = (chars[swapIndex], chars[i]);
+        }
+    }
+
+    private static void EnsureLeadingLetter(IList<char> chars)
+    {
+        if (chars.Count == 0 || char.IsLetter(chars[0]))
+        {
+            return;
+        }
+
+        for (var i = 1; i < chars.Count; i++)
+        {
+            if (!char.IsLetter(chars[i]))
             {
                 continue;
             }
 
-            chars[i] = Pick(UpperChars + LowerChars + DigitChars);
+            (chars[0], chars[i]) = (chars[i], chars[0]);
+            return;
         }
-
-        if (SpecialChars.Contains(chars[0]))
-        {
-            var swapIndex = RandomNumberGenerator.GetInt32(1, PasswordLength);
-            (chars[0], chars[swapIndex]) = (chars[swapIndex], chars[0]);
-        }
-
-        return new string(chars);
-    }
-
-    private static int NextAvailableIndex(HashSet<int> usedIndices)
-    {
-        int index;
-        do
-        {
-            index = RandomNumberGenerator.GetInt32(0, PasswordLength);
-        }
-        while (usedIndices.Contains(index));
-
-        return index;
     }
 
     private static char Pick(string charset)

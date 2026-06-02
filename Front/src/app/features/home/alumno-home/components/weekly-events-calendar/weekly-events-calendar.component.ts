@@ -19,8 +19,9 @@ export interface SubjectColorLegendItem {
     colorClass: CalendarEvent['colorClass'];
 }
 
-/** Alias for backwards compatibility */
+// #region Backwards compatibility
 export type WeeklyCalendarEvent = CalendarEvent;
+// #endregion
 
 interface WeekDayCell {
     date: Date;
@@ -45,12 +46,15 @@ interface PositionedCalendarEvent extends CalendarEvent {
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WeeklyEventsCalendarComponent implements AfterViewInit {
+    // #region Inputs and outputs
     @Input() adminEvents: CalendarEvent[] = [];
     @Input() adminSubjectLegend: SubjectColorLegendItem[] = [];
     @Input() personalEvents: CalendarEvent[] = [];
     @Output() readonly requestAddEvent = new EventEmitter<{ dayOfWeek: 1 | 2 | 3 | 4 | 5 }>();
     @Output() readonly requestDeletePersonalEvent = new EventEmitter<string>();
+    // #endregion
 
+    // #region Layout configuration
     readonly GRID_START_HOUR = 0;
     readonly GRID_END_HOUR = 24;
     readonly HOUR_HEIGHT = 64;
@@ -62,11 +66,15 @@ export class WeeklyEventsCalendarComponent implements AfterViewInit {
     @ViewChild('scrollArea') private scrollAreaRef?: ElementRef<HTMLDivElement>;
 
     private didInitialAutoScroll = false;
+    // #endregion
 
+    // #region View state
     private readonly focusedDate = signal<Date>(this.getDefaultFocusDate());
     readonly weekStart = signal<Date>(this.getDisplayWeekStartForNow());
     readonly viewMode = signal<'week' | 'day'>('week');
+    // #endregion
 
+    // #region Computed view models
     readonly days = computed<WeekDayCell[]>(() => {
         const start = this.weekStart();
         const shortFmt = new Intl.DateTimeFormat('es-ES', { weekday: 'short' });
@@ -113,12 +121,17 @@ export class WeeklyEventsCalendarComponent implements AfterViewInit {
 
     readonly selectedWeekInputValue = computed(() => this.toIsoDate(this.weekStart()));
     readonly selectedDayInputValue = computed(() => this.toIsoDate(this.focusedDate()));
+    // #endregion
 
+    // #region Lifecycle
     ngAfterViewInit(): void {
-        // Wait for layout paint before forcing initial scroll position.
+        // #region Initial scroll positioning
         setTimeout(() => this.scrollToCurrentTime(true), 0);
+        // #endregion
     }
+    // #endregion
 
+    // #region Event layout
     allEventsByDay(dayOfWeek: 1 | 2 | 3 | 4 | 5): CalendarEvent[] {
         return [
             ...this.adminEvents.filter(e => e.dayOfWeek === dayOfWeek),
@@ -217,7 +230,9 @@ export class WeeklyEventsCalendarComponent implements AfterViewInit {
         const duration = (eh * 60 + em) - (sh * 60 + sm);
         return `${Math.max((duration / 60) * this.HOUR_HEIGHT, 28)}px`;
     }
+    // #endregion
 
+    // #region UI actions
     getCurrentTimeTop(): string | null {
         const now = new Date();
         const total = (now.getHours() - this.GRID_START_HOUR) * 60 + now.getMinutes();
@@ -301,7 +316,9 @@ export class WeeklyEventsCalendarComponent implements AfterViewInit {
         this.focusedDate.set(this.adjustDateToWeekday(this.focusedDate()));
         this.scrollToCurrentTime(true);
     }
+    // #endregion
 
+    // #region Date helpers
     isFocusedDay(day: WeekDayCell): boolean {
         return day.isoDate === this.toIsoDate(this.focusedDate());
     }
@@ -382,7 +399,9 @@ export class WeeklyEventsCalendarComponent implements AfterViewInit {
         const [year, month, day] = value.split('-').map(Number);
         return this.startOfDay(new Date(year, month - 1, day));
     }
+    // #endregion
 
+    // #region Scroll helpers
     private toMinutes(value: string): number {
         const [hours, minutes] = value.split(':').map(Number);
         return (hours * 60) + minutes;
@@ -412,4 +431,5 @@ export class WeeklyEventsCalendarComponent implements AfterViewInit {
         scrollArea.scrollTop = Math.min(Math.max(0, target), maxTop);
         this.didInitialAutoScroll = true;
     }
+    // #endregion
 }

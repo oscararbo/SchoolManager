@@ -14,6 +14,7 @@ type PersonalEventColor = CalendarEvent['colorClass'];
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AlumnoHorariosTabComponent {
+    // #region Input handling
     @Input({ required: true }) set panel(value: AlumnoPanelResumen | null) {
         const estudianteId = value?.id ?? null;
         if (estudianteId && estudianteId !== this.lastLoadedStudentId) {
@@ -21,22 +22,27 @@ export class AlumnoHorariosTabComponent {
             void this.cargarHorarioAsignaturas(estudianteId);
         }
     }
+    // #endregion
 
+    // #region Dependencies and state
     private api = inject(SchoolApiService);
     private lastLoadedStudentId: number | null = null;
 
     readonly loadingSchedule = signal(false);
     readonly scheduleError = signal<string | null>(null);
     readonly exportingIcs = signal(false);
+    // #endregion
 
-    // ── Admin events (read-only, set by admin) ──────────────────────────────
+    // #region Admin events
     readonly adminEvents = signal<CalendarEvent[]>([]);
     readonly adminSubjectLegend = signal<SubjectColorLegendItem[]>([]);
 
-    // ── Personal events (editable by student) ───────────────────────────────
+    // #endregion
+    // #region Personal events
     readonly personalEvents = signal<CalendarEvent[]>(this.buildInitialPersonalEvents());
 
-    // ── Form state ──────────────────────────────────────────────────────────
+    // #endregion
+    // #region Form state
     readonly showForm = signal(false);
     formTitle = '';
     formDescription = '';
@@ -58,7 +64,8 @@ export class AlumnoHorariosTabComponent {
         { value: 'slate',  label: 'Gris',    bg: '#475569' },
     ];
 
-    // ── Form actions ────────────────────────────────────────────────────────
+    // #endregion
+    // #region Form actions
     abrirFormulario(dayOfWeek: 1 | 2 | 3 | 4 | 5 = 1): void {
         this.formTitle = '';
         this.formDescription = '';
@@ -182,7 +189,9 @@ export class AlumnoHorariosTabComponent {
         if (!dayOfWeek) return 'Fin de semana';
         return this.weekdayLabel(dayOfWeek);
     }
+    // #endregion
 
+    // #region Schedule loading and mapping
     private async cargarHorarioAsignaturas(estudianteId: number): Promise<void> {
         this.loadingSchedule.set(true);
         this.scheduleError.set(null);
@@ -250,7 +259,9 @@ export class AlumnoHorariosTabComponent {
     ): CalendarEvent['colorClass'] {
         return colorByAsignaturaId.get(asignaturaId) ?? 'blue';
     }
+    // #endregion
 
+    // #region Personal event defaults
     private buildInitialPersonalEvents(): CalendarEvent[] {
         return [
             {
@@ -290,7 +301,9 @@ export class AlumnoHorariosTabComponent {
             },
         ];
     }
+    // #endregion
 
+    // #region Date helpers
     private toIsoDate(date: Date): string {
         const y = date.getFullYear();
         const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -330,7 +343,9 @@ export class AlumnoHorariosTabComponent {
         };
         return labels[day];
     }
+    // #endregion
 
+    // #region ICS export helpers
     private getCurrentWeekMonday(): Date {
         const today = new Date();
         const normalized = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -379,5 +394,6 @@ export class AlumnoHorariosTabComponent {
             .replace(/,/g, '\\,')
             .replace(/\r?\n/g, '\\n');
     }
+    // #endregion
 }
 

@@ -138,21 +138,24 @@ public class AuthDomainRepository(AppDbContext context) : IAuthDomainRepository
 
     public async Task<bool> UserBelongsToSchoolAsync(int userId, int schoolId, CancellationToken cancellationToken = default)
     {
-        // Verificar si el usuario es un Admin de ese colegio
+        #region Admin membership
         var isAdmin = await context.Admins
             .AnyAsync(a => a.Id == userId && a.Cuenta!.ColegioId == schoolId, cancellationToken);
 
         if (isAdmin) return true;
+        #endregion
 
-        // Verificar si el usuario es un Profesor de ese colegio
+        #region Profesor membership
         var isProfesor = await context.Profesores
             .AnyAsync(p => p.Id == userId && p.Cuenta!.ColegioId == schoolId, cancellationToken);
 
         if (isProfesor) return true;
+        #endregion
 
-        // Verificar si el usuario es un Estudiante de ese colegio
+        #region Estudiante membership
         var isEstudiante = await context.Estudiantes
             .AnyAsync(e => e.Id == userId && e.Cuenta!.ColegioId == schoolId, cancellationToken);
+        #endregion
 
         return isEstudiante;
     }

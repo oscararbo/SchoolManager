@@ -61,12 +61,13 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 
     return next(request).pipe(
         catchError((error: HttpErrorResponse) => {
-            // 401 is handled by the auth refresh flow and the session-expired dialog.
+            // #region Error toast routing
             if (error.status === 403 && !skipToast) {
                 toastService.show('No tienes permisos para realizar esta accion.', 'warning');
             } else if (error.status !== 401 && !esImportCsv && !skipToast) {
                 toastService.show(getHttpErrorMessage(error), 'error');
             }
+            // #endregion
             return throwError(() => error);
         })
     );

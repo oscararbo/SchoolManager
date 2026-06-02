@@ -19,7 +19,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Core web API services.
+#region Core web API services
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddControllers()
@@ -36,8 +36,9 @@ builder.Services.AddApiVersioning(options =>
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+#endregion
 
-// JWT authentication setup.
+#region JWT authentication setup
 builder.Services.AddOptions<JwtOptions>()
     .Bind(builder.Configuration.GetSection("Jwt"))
     .ValidateDataAnnotations()
@@ -139,8 +140,9 @@ builder.Services.AddScoped<IImportService, ImportService>();
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddHostedService<RefreshTokenCleanupService>();
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
+#endregion
 
-// Frontend access policy for the Angular app.
+#region Frontend access policy
 builder.Services.AddCors(options =>
 {
     var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
@@ -154,6 +156,7 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod()
             .AllowCredentials());
 });
+#endregion
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Host=localhost;Port=5432;Database=schooldb;Username=postgres;Password=postgres";
@@ -193,7 +196,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("Front");
 
-// Serve uploaded files (submissions, colegio images) from /uploads path
+#region Uploaded files
 var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
 Directory.CreateDirectory(uploadsPath);
 app.UseStaticFiles(new StaticFileOptions
@@ -205,6 +208,8 @@ if (!app.Environment.IsEnvironment("Testing"))
 {
     app.UseHttpsRedirection();
 }
+#endregion
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapHealthChecks("/health");
@@ -212,6 +217,7 @@ app.MapControllers();
 
 app.Run();
 
-// Required to expose the entry-point type for WebApplicationFactory<Program> in integration tests.
+#region Test host entry point
 public partial class Program { }
+#endregion
 

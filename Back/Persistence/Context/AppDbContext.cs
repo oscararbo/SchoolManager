@@ -196,7 +196,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentSchool
         modelBuilder.Entity<HorarioAsignatura>()
             .HasQueryFilter(h => !h.IsDeleted && (CurrentSchoolId == null || (h.Asignatura != null && h.Asignatura.Curso != null && h.Asignatura.Curso.ColegioId == CurrentSchoolId)));
 
-        // Length constraints
+        #region Length constraints
         modelBuilder.Entity<Curso>().Property(c => c.Nombre).HasMaxLength(100);
         modelBuilder.Entity<Curso>().Property(c => c.ColegioId).HasDefaultValue(1);
         modelBuilder.Entity<Colegio>().Property(c => c.Nombre).HasMaxLength(160);
@@ -265,8 +265,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentSchool
         modelBuilder.Entity<Estudiante>().Property(e => e.Telefono).HasMaxLength(20).IsRequired();
 
         modelBuilder.Entity<Admin>().Property(a => a.Nombre).HasMaxLength(150);
+    #endregion
 
-        // FK performance indexes
+    #region FK performance indexes
         modelBuilder.Entity<Admin>().HasIndex(a => a.CuentaId).IsUnique();
         modelBuilder.Entity<Profesor>().HasIndex(p => p.CuentaId).IsUnique();
         modelBuilder.Entity<Estudiante>().HasIndex(e => e.CuentaId).IsUnique();
@@ -276,6 +277,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentSchool
 
         modelBuilder.Entity<Nota>()
             .HasIndex(n => n.TareaId);
+        #endregion
 
         base.OnModelCreating(modelBuilder);
     }

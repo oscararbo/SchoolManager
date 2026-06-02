@@ -46,14 +46,16 @@ export class ProfesorHomeComponent implements OnInit {
     guardandoNota = signal(false);
     alumnosExpandidos = signal(new Set<number>());
 
-    // Descripcion
+    // #region Descripcion
     editandoDescripcion = signal(false);
     nuevaDescripcion = signal('');
     guardandoDescripcion = signal(false);
 
-    // Submisiones
+    // #endregion
+    // #region Submisiones
     submisiones = signal<TareaSubmision[]>([]);
     submisionesCargando = signal(false);
+    // #endregion
 
     private alumnoDetalles = signal<Record<number, AsignaturaAlumno>>({});
     private alumnoTareasByTrimestre = signal<Record<number, Record<number, Array<{ tareaId: number; nombre: string; valor: number | null }>>>>({});
@@ -131,12 +133,13 @@ export class ProfesorHomeComponent implements OnInit {
         this.nuevaDescripcion.set((tarea as any).descripcion ?? '');
         this.submisiones.set([]);
 
-        // Auto-scroll hacia la tarea seleccionada
+        // #region Auto-scroll tarea seleccionada
         setTimeout(() => {
             if (this.taskListElement?.nativeElement) {
                 this.taskListElement.nativeElement.scrollTop = 0;
             }
         }, 0);
+        // #endregion
 
         const asignaturaId = this.asignaturaActivaId();
         if (!asignaturaId) {
@@ -163,8 +166,9 @@ export class ProfesorHomeComponent implements OnInit {
                 this.error.set((e as Error).message);
             }
         }
-        // Load submisiones in parallel (don't block)
+        // #region Parallel submisiones load
         this.cargarSubmisiones();
+        // #endregion
     }
 
     mostrarResumen(): void {
@@ -313,8 +317,9 @@ export class ProfesorHomeComponent implements OnInit {
         this.error.set(null);
         try {
             const updated = await this.api.updateTareaDescripcion(this.profesorId, tarea.tareaId, this.nuevaDescripcion() || undefined);
-            // Update local cache
+            // #region Update local cache
             (this.tareaActiva() as any).descripcion = updated.descripcion;
+            // #endregion
             this.editandoDescripcion.set(false);
             this.toast.show('Descripción guardada.', 'success');
         } catch (e) {
@@ -556,7 +561,8 @@ export class ProfesorHomeComponent implements OnInit {
                 this.stats.set(stats);
             }
         } catch {
-            // Si falla esta recarga no debe bloquear la operacion principal.
+            // #region Silent stats refresh failure
         }
+        // #endregion
     }
 }

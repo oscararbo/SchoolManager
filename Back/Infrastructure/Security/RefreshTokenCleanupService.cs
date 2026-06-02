@@ -37,13 +37,14 @@ public sealed class RefreshTokenCleanupService(IServiceScopeFactory scopeFactory
             }
             catch (InvalidOperationException)
             {
-                // Some providers (e.g. InMemory in tests) do not support ExecuteDelete.
+                #region Provider fallback
                 var expiredTokens = await query.ToListAsync(cancellationToken);
                 if (expiredTokens.Count == 0)
                     return;
 
                 context.RefreshTokens.RemoveRange(expiredTokens);
                 deleted = await context.SaveChangesAsync(cancellationToken);
+                #endregion
             }
 
             if (deleted > 0)

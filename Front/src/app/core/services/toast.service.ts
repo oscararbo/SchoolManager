@@ -25,10 +25,11 @@ export class ToastService {
         const key = `${type}:${message}`;
         const last = this.lastShown.get(key) ?? 0;
 
-        // Evita toasts duplicados cuando una misma operacion dispara interceptor + manejo local.
+        // #region Duplicate toast guard
         if (now - last < this.dedupeWindowMs) {
             return;
         }
+        // #endregion
         this.lastShown.set(key, now);
 
         const id = ++this.counter;

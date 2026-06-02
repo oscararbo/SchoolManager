@@ -8,19 +8,21 @@ export class TenantService {
     private router = inject(Router);
 
     getSchoolSlug(): string {
-        // 1. Intentar obtener desde el path: /school/:schoolSlug/...
+        // #region Path slug resolution
         const pathSchool = this.extractSchoolFromPath();
         if (pathSchool) {
             return pathSchool;
         }
+        // #endregion
 
-        // 2. Intentar obtener desde query param: ?school=default
+        // #region Query slug resolution
         const querySchool = new URLSearchParams(window.location.search).get('school')?.trim().toLowerCase();
         if (querySchool) {
             return querySchool;
         }
+        // #endregion
 
-        // 3. Intentar obtener desde hostname: school-slug.app.com
+        // #region Hostname slug resolution
         const host = window.location.hostname.toLowerCase();
         if (host !== 'localhost' && host !== '127.0.0.1') {
             const labels = host.split('.').filter(Boolean);
@@ -28,9 +30,11 @@ export class TenantService {
                 return labels[0];
             }
         }
+        // #endregion
 
-        // 4. Usar fallback por defecto
+        // #region Default fallback
         return this.fallbackSlug;
+        // #endregion
     }
 
     private extractSchoolFromPath(): string | null {

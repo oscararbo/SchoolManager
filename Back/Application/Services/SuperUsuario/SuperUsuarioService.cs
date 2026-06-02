@@ -12,6 +12,7 @@ public class SuperUsuarioService(
     IPasswordService passwordService,
     IWebHostEnvironment hostEnvironment) : ISuperUsuarioService
 {
+    #region Consultas colegios
     public async Task<ApplicationResult> GetColegiosAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await superUsuarioDomain.GetColegiosAsync(cancellationToken));
 
@@ -26,7 +27,9 @@ public class SuperUsuarioService(
             ? ApplicationResult.NotFound("Colegio no encontrado.")
             : ApplicationResult.Ok(colegio);
     }
+    #endregion
 
+    #region CRUD colegios
     public async Task<ApplicationResult> CreateColegioAsync(CreateColegioRequestDto request, CancellationToken cancellationToken = default)
     {
         var nombre = request.Nombre.Trim();
@@ -60,7 +63,9 @@ public class SuperUsuarioService(
             ? ApplicationResult.NoContent()
             : ApplicationResult.NotFound("Colegio no encontrado.");
     }
+    #endregion
 
+    #region Admins de colegio
     public async Task<ApplicationResult> CreateAdminColegioAsync(int colegioId, CreateAdminColegioRequestDto request, CancellationToken cancellationToken = default)
     {
         var colegio = await superUsuarioDomain.GetColegioByIdAsync(colegioId, cancellationToken);
@@ -82,7 +87,9 @@ public class SuperUsuarioService(
 
         return ApplicationResult.Created($"/api/superusuario/colegios/{colegioId}/admins/{created.Id}", created);
     }
+    #endregion
 
+    #region Imagenes de colegio
     public async Task<ApplicationResult> UpdateColegioImagenAsync(int colegioId, UpdateColegioImagenRequestDto request, CancellationToken cancellationToken = default)
     {
         var tipo = (request.TipoImagen ?? string.Empty).Trim().ToLowerInvariant();
@@ -116,7 +123,9 @@ public class SuperUsuarioService(
             ? ApplicationResult.NotFound("Colegio no encontrado.")
             : ApplicationResult.Ok(updated);
     }
+    #endregion
 
+    #region Helpers
     private async Task<string> GenerateUniqueEmailAsync(string fullName, string rolePrefix, string schoolSlug, int colegioId, CancellationToken cancellationToken)
     {
         for (var i = 0; i < 2000; i++)
@@ -133,4 +142,5 @@ public class SuperUsuarioService(
 
     private static string NormalizeSlug(string slug)
         => slug.Trim().ToLowerInvariant();
+    #endregion
 }

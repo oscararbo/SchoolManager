@@ -11,6 +11,7 @@ namespace Back.Api.Application.Services;
 
 public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, IPasswordService passwordService, ICurrentSchoolContext currentSchoolContext, IWebHostEnvironment hostEnvironment) : IEstudiantesService
 {
+    #region CRUD estudiantes
     public async Task<ApplicationResult> GetAllEstudiantesAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await estudiantesDomain.GetAllEstudiantesAsync(cancellationToken));
 
@@ -78,7 +79,9 @@ public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, 
         await estudiantesDomain.DesmatricularAsync(estudianteId, asignaturaId, cancellationToken);
         return ApplicationResult.NoContent();
     }
+    #endregion
 
+    #region Panel y materias
     public async Task<ApplicationResult> GetPanelAlumnoAsync(int estudianteId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
         if (!UsuarioCoincideConEstudiante(estudianteId, user))
@@ -122,7 +125,9 @@ public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, 
             ? ApplicationResult.NotFound("La asignatura o el estudiante no existe.")
             : ApplicationResult.Ok(detail);
     }
+    #endregion
 
+    #region Actualizacion y helpers de identidad
     public async Task<ApplicationResult> UpdateEstudianteAsync(int estudianteId, UpdateEstudianteRequestDto updateEstudianteRequestDto, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(updateEstudianteRequestDto.Nombre))
@@ -175,7 +180,9 @@ public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, 
         var idClaim = user.FindFirstValue("id") ?? user.FindFirstValue(ClaimsIdentity.DefaultNameClaimType);
         return int.TryParse(idClaim, out var usuarioId) && usuarioId == estudianteId;
     }
+    #endregion
 
+    #region Submisiones y tareas
     public async Task<ApplicationResult> SubirSubmisionAsync(int estudianteId, int tareaId, IFormFile archivo, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
         if (!UsuarioCoincideConEstudiante(estudianteId, user))
@@ -247,4 +254,5 @@ public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, 
         var saved = await estudiantesDomain.MarcarTareaHechaAsync(estudianteId, tareaId, cancellationToken);
         return ApplicationResult.Ok(saved);
     }
+    #endregion
 }

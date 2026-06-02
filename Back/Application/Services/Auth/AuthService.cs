@@ -13,6 +13,7 @@ namespace Back.Api.Application.Services;
 
 public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> jwtOptions, IPasswordService passwordService) : IAuthService
 {
+    #region Authentication flows
     public async Task<ApplicationResult> LoginAsync(LoginRequestDto loginRequestDto, string? colegioSlug, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(loginRequestDto.Correo) || string.IsNullOrWhiteSpace(loginRequestDto.Contrasena))
@@ -150,7 +151,9 @@ public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> 
         await authDomain.RevokeTokenAsync(storedToken, cancellationToken);
         return ApplicationResult.NoContent();
     }
+    #endregion
 
+    #region Token generation
     private string GenerarToken(int userId, string email, string role, int? colegioId, string? colegioSlug)
     {
         var options = jwtOptions.Value;
@@ -185,4 +188,5 @@ public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> 
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+    #endregion
 }

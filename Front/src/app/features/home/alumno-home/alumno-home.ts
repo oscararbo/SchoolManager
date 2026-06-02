@@ -22,6 +22,7 @@ type AlumnoSection = 'notas' | 'tareas' | 'horarios' | 'incidencias';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AlumnoHomeComponent implements OnInit {
+    // #region Inputs and state
     @Input({ required: true }) estudianteId!: number;
     @Input({ required: true }) nombre!: string;
 
@@ -42,7 +43,9 @@ export class AlumnoHomeComponent implements OnInit {
     expandidas = signal(new Set<number>());
 
     private api = inject(SchoolApiService);
+    // #endregion
 
+    // #region Lifecycle and panel loading
     async ngOnInit(): Promise<void> {
         await this.cargarPanel();
     }
@@ -59,7 +62,9 @@ export class AlumnoHomeComponent implements OnInit {
             this.cargando.set(false);
         }
     }
+    // #endregion
 
+    // #region Section navigation
     cambiarSeccion(seccion: AlumnoSection): void {
         this.seccionActiva.set(seccion);
         this.tareaExpandida.set(null);
@@ -78,7 +83,9 @@ export class AlumnoHomeComponent implements OnInit {
             }
         }
     }
+    // #endregion
 
+    // #region Submisiones
     async cargarSubmisiones(tareaId: number): Promise<void> {
         this.submisionesCargando.update(m => ({ ...m, [tareaId]: true }));
         try {
@@ -88,10 +95,11 @@ export class AlumnoHomeComponent implements OnInit {
                 this.tareasMarcadasHechas.update(m => ({ ...m, [tareaId]: true }));
             }
         } catch {
-            // silencioso
+            // #region Silent submission preload failure
         } finally {
             this.submisionesCargando.update(m => ({ ...m, [tareaId]: false }));
         }
+        // #endregion
     }
 
     async onArchivoSeleccionado(tareaId: number, event: Event): Promise<void> {
@@ -136,7 +144,9 @@ export class AlumnoHomeComponent implements OnInit {
     subiendoArchivoTarea(tareaId: number): boolean {
         return this.subiendoArchivo()[tareaId] ?? false;
     }
+    // #endregion
 
+    // #region Tareas pendientes y estados
     esTareaPendiente(tareaId: number, valor: number | null): boolean {
         return valor === null && !this.tareasMarcadasHechas()[tareaId];
     }
@@ -172,8 +182,9 @@ export class AlumnoHomeComponent implements OnInit {
                 this.submisionesMap.update(m => ({ ...m, [tareaId]: [saved] }));
             })
             .catch(() => {
-                // Si falla, revertir el estado visual
+                // #region Revert optimistic completion state
                 this.tareasMarcadasHechas.update(m => ({ ...m, [tareaId]: false }));
+                // #endregion
             });
     }
 
@@ -182,7 +193,9 @@ export class AlumnoHomeComponent implements OnInit {
         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
         return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     }
+    // #endregion
 
+    // #region Materias expandidas
     async toggleExpandir(asignaturaId: number): Promise<void> {
         if (this.expandidas().has(asignaturaId)) {
             this.expandidas.update(expanded => {
@@ -224,7 +237,9 @@ export class AlumnoHomeComponent implements OnInit {
     formatNota(valor: number | null | undefined): string {
         return (valor === null || valor === undefined) ? '-' : valor.toFixed(2);
     }
+    // #endregion
 
+    // #region Materia detail helpers
     private async cargarMateriaDetalle(asignaturaId: number): Promise<void> {
         if (this.materiaDetalles()[asignaturaId]) return;
 
@@ -250,7 +265,7 @@ export class AlumnoHomeComponent implements OnInit {
                 .filter(m => !this.materiaDetalles()[m.asignaturaId])
                 .map(m => this.cargarMateriaDetalle(m.asignaturaId))
         );
-        // Pre-cargar submisiones de tareas pendientes para detectar las ya marcadas como hechas
+        // #region Pending task submission preload
         const tareaIds = materias.flatMap(m => {
             const detalle = this.materiaDetalles()[m.asignaturaId];
             if (!detalle) return [];
@@ -259,6 +274,7 @@ export class AlumnoHomeComponent implements OnInit {
                 .map(n => n.tareaId);
         });
         await Promise.all(tareaIds.map(tareaId => this.cargarSubmisiones(tareaId)));
+        // #endregion
     }
 
     private buildTareasByTrimestre(detalle: AlumnoMateriaDetalle): Record<number, Array<{ tareaId: number; nombre: string; descripcion?: string | null; valor: number | null }>> {
@@ -269,5 +285,6 @@ export class AlumnoHomeComponent implements OnInit {
             return acc;
         }, {} as Record<number, Array<{ tareaId: number; nombre: string; descripcion?: string | null; valor: number | null }>>);
     }
+    // #endregion
 }
 

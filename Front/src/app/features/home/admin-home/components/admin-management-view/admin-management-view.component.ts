@@ -93,37 +93,43 @@ export class AdminManagementViewComponent implements OnInit {
 
     readonly opCargando = signal<Record<string, boolean>>({});
 
-    // Curso Management
+    // #region Curso Management
     editandoCursoId: number | null = null;
     busquedaCursos = signal('');
 
-    // Asignatura Management
+    // #endregion
+    // #region Asignatura Management
     filtroAsignaturasCursoId = signal<number | null>(null);
     editandoAsignaturaId: number | null = null;
     busquedaAsignaturas = signal('');
 
-    // Profesor Management
+    // #endregion
+    // #region Profesor Management
     filtroProfesoresCursoId = signal<number | null>(null);
     editandoProfesorId: number | null = null;
     busquedaProfesores = signal('');
 
-    // Estudiante Management
+    // #endregion
+    // #region Estudiante Management
     filtroEstudiantesCursoId = signal<number | null>(null);
     editandoEstudianteId: number | null = null;
     busquedaEstudiantes = signal('');
 
-    // Matricula Management
+    // #endregion
+    // #region Matricula Management
     matriculaEstudianteId = signal<number | null>(null);
     matriculaAsignaturaId = signal<number | null>(null);
     filtroMatriculasCursoId = signal<number | null>(null);
 
-    // Imparticion Management
+    // #endregion
+    // #region Imparticion Management
     imparticionProfesorId = signal<number | null>(null);
     imparticionAsignaturaId = signal<number | null>(null);
     imparticionCursoId = signal<number | null>(null);
     filtroImparticionesCursoId = signal<number | null>(null);
 
-    // Horarios Management
+    // #endregion
+    // #region Horarios Management
     editandoHorarioId: number | null = null;
     horarioAsignaturaId = signal<number | null>(null);
     horarioDiaSemana = signal<number>(1);
@@ -132,13 +138,15 @@ export class AdminManagementViewComponent implements OnInit {
     horarioAula = signal('');
     filtroHorariosCursoId = signal<number | null>(null);
 
-    // Task Management
+    // #endregion
+    // #region Task Management
     mostrarModalTareas = signal(false);
     tareasConNotas = signal<TareaConNotas[]>([]);
     tareaEnDetalle = signal<TareaConNotas | null>(null);
     cargandoTareas = signal(false);
 
-    // CSV Import
+    // #endregion
+    // #region CSV Import
     csvCursosFile: File | null = null;
     csvAsignaturasFile: File | null = null;
     csvProfesoresFile: File | null = null;
@@ -195,6 +203,8 @@ export class AdminManagementViewComponent implements OnInit {
         const omitidosSet = new Set(omitidos);
         return result.detalles.filter(det => !omitidosSet.has(det));
     });
+
+    // #endregion
 
     grupoErroresExpandido(key: string): boolean {
         return this.csvErroresExpandidos()[key] ?? false;
@@ -283,7 +293,7 @@ export class AdminManagementViewComponent implements OnInit {
         return this.estaCargando('cargarHorarios') || (this.tabBootstrapping() && !this.resourcesLoaded().horarios);
     }
 
-    // Forms
+    // #region Forms
     private readonly forms: AdminManagementForms = createAdminManagementForms(this.fb);
     readonly cursoForm = this.forms.cursoForm;
     readonly editCursoForm = this.forms.editCursoForm;
@@ -294,7 +304,8 @@ export class AdminManagementViewComponent implements OnInit {
     readonly estudianteForm = this.forms.estudianteForm;
     readonly editEstudianteForm = this.forms.editEstudianteForm;
 
-    // Computed
+    // #endregion
+    // #region Computed
     cursosVista = computed<CursoItem[]>(() => {
         const q = this.busquedaCursos().trim().toLowerCase();
         const cursos = this.cursos();
@@ -473,8 +484,9 @@ export class AdminManagementViewComponent implements OnInit {
                     ]);
                     break;
                 case 'importar':
-                    // No carga listas hasta que se necesiten en otras pestañas.
+                    // #region Import tab bootstrap
                     break;
+                    // #endregion
                 case 'horarios':
                     await Promise.all([
                         this.cargarCursos(force),
@@ -675,7 +687,8 @@ export class AdminManagementViewComponent implements OnInit {
         this.resetHorarioForm();
     }
 
-    // CRUD: Cursos
+    // #endregion
+    // #region CRUD: Cursos
     async crearCurso(): Promise<void> {
         if (this.cursoForm.invalid) {
             this.toast.show('El nombre del curso es obligatorio.', 'warning');
@@ -748,7 +761,8 @@ export class AdminManagementViewComponent implements OnInit {
         });
     }
 
-    // CRUD: Asignaturas
+    // #endregion
+    // #region CRUD: Asignaturas
     async crearAsignatura(): Promise<void> {
         if (this.asignaturaForm.invalid) {
             this.toast.show('Nombre y curso son obligatorios.', 'warning');
@@ -818,7 +832,8 @@ export class AdminManagementViewComponent implements OnInit {
         });
     }
 
-    // CRUD: Profesores
+    // #endregion
+    // #region CRUD: Profesores
     async crearProfesor(): Promise<void> {
         if (this.profesorForm.invalid) {
             this.toast.show('Completa todos los campos del profesor y revisa DNI/telefono.', 'warning');
@@ -901,7 +916,8 @@ export class AdminManagementViewComponent implements OnInit {
         });
     }
 
-    // CRUD: Estudiantes
+    // #endregion
+    // #region CRUD: Estudiantes
     async crearEstudiante(): Promise<void> {
         if (this.estudianteForm.invalid) {
             this.toast.show('Completa todos los campos del estudiante y revisa DNI/telefono/fecha.', 'warning');
@@ -1035,7 +1051,8 @@ export class AdminManagementViewComponent implements OnInit {
         this.toast.show(`Exportacion Excel completada para ${sheetName}.`, 'success');
     }
 
-    // Matriculas
+    // #endregion
+    // #region Matriculas
     async matricularEstudiante(): Promise<void> {
         if (!this.matriculaEstudianteId() || !this.matriculaAsignaturaId()) {
             this.toast.show('Selecciona un estudiante y una asignatura.', 'warning');
@@ -1076,7 +1093,8 @@ export class AdminManagementViewComponent implements OnInit {
         });
     }
 
-    // Imparticiones
+    // #endregion
+    // #region Imparticiones
     async asignarImparticion(): Promise<void> {
         if (!this.imparticionProfesorId() || !this.imparticionAsignaturaId() || !this.imparticionCursoId()) {
             this.toast.show('Selecciona profesor, asignatura y curso.', 'warning');
@@ -1177,7 +1195,8 @@ export class AdminManagementViewComponent implements OnInit {
         });
     }
 
-    // Horarios
+    // #endregion
+    // #region Horarios
     async crearHorario(): Promise<void> {
         const asignaturaId = Number(this.horarioAsignaturaId());
         const diaSemana = Number(this.horarioDiaSemana());
@@ -1278,7 +1297,8 @@ export class AdminManagementViewComponent implements OnInit {
         return labels[diaSemana] ?? 'N/A';
     }
 
-    // CSV Import
+    // #endregion
+    // #region CSV Import
     onCsvFileChange(event: Event, entidad: CsvImportEntity): void {
         const input = event.target as HTMLInputElement;
         const file = input.files?.[0] ?? null;
@@ -1524,7 +1544,8 @@ export class AdminManagementViewComponent implements OnInit {
         return names[tab];
     }
 
-    // Task Management
+    // #endregion
+    // #region Task Management
     async verTareasAsignatura(asignaturaId: number): Promise<void> {
         this.cargandoTareas.set(true);
         try {
@@ -1548,4 +1569,5 @@ export class AdminManagementViewComponent implements OnInit {
         this.tareasConNotas.set([]);
     }
 
+    // #endregion
 }

@@ -9,9 +9,12 @@ namespace Back.Api.Application.Services;
 
 public class ImportService(IImportDomainRepository importRepository, IPasswordService passwordService, ICurrentSchoolContext currentSchoolContext) : IImportService
 {
+    #region Configuration
     private static readonly Regex TelefonoRegex = new(@"^[6-9]\d{8}$", RegexOptions.Compiled);
     private sealed record CsvRow(int LineNumber, string[] Columns);
+    #endregion
 
+    #region Entity imports
     public async Task<ApplicationResult> ImportarCursosAsync(string csvText, CancellationToken cancellationToken = default)
     {
         var created = new List<string>();
@@ -857,7 +860,9 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
             Detalles = details
         });
     }
+    #endregion
 
+    #region Parsing and key helpers
     private static IEnumerable<CsvRow> ParseCsv(string text)
     {
         var lines = text.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n');
@@ -921,4 +926,5 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
 
     private static string ToTareaKey(int asignaturaId, int term, string nombre)
         => $"{asignaturaId}:{term}:{nombre.Trim().ToLowerInvariant()}";
+    #endregion
 }

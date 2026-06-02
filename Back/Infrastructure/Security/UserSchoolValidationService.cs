@@ -11,6 +11,8 @@ namespace Back.Api.Infrastructure.Security;
 /// </summary>
 public sealed class UserSchoolValidationService(IAuthDomainRepository authRepository) : IUserSchoolValidationService
 {
+    private const int SuperUsuarioSchoolBypassId = -1;
+
     public async Task<int> ValidateUserBelongsToSchoolAsync(ClaimsPrincipal user, string? schoolSlug, CancellationToken cancellationToken = default)
     {
         if (user?.Identity?.IsAuthenticated != true)
@@ -18,12 +20,13 @@ public sealed class UserSchoolValidationService(IAuthDomainRepository authReposi
             throw new UnauthorizedAccessException("Usuario no autenticado.");
         }
 
-        // Los superusuarios no necesitan validación de colegio
+        #region Superusuario bypass
         var roleClaim = user.FindFirstValue(ClaimTypes.Role);
         if (string.Equals(roleClaim, Roles.SuperUsuario, StringComparison.OrdinalIgnoreCase))
         {
-            return -1; // Indicador de superusuario sin colegio específico
+            return SuperUsuarioSchoolBypassId;
         }
+        #endregion
 
         if (string.IsNullOrWhiteSpace(schoolSlug))
         {
@@ -36,19 +39,21 @@ public sealed class UserSchoolValidationService(IAuthDomainRepository authReposi
             throw new InvalidOperationException("No se pudo obtener el ID del usuario.");
         }
 
-        // Obtener el colegio por slug
+        #region School lookup
         var colegio = await authRepository.GetColegioBySlugAsync(schoolSlug, cancellationToken);
         if (colegio == null)
         {
             throw new KeyNotFoundException($"El colegio '{schoolSlug}' no existe.");
         }
+        #endregion
 
-        // Validar que el usuario pertenece a este colegio
+        #region School membership validation
         var userBelongsToSchool = await authRepository.UserBelongsToSchoolAsync(userId, colegio.Id, cancellationToken);
         if (!userBelongsToSchool)
         {
             throw new UnauthorizedAccessException("No tienes acceso a este colegio.");
         }
+        #endregion
 
         return colegio.Id;
     }
