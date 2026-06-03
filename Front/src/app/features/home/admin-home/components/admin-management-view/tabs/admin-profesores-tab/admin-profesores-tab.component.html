@@ -16,11 +16,11 @@
                 } @else if (editandoProfesorId !== null) {
                     <h5 class="card-title">Editar profesor</h5>
                     <form [formGroup]="editProfesorForm">
-                        <app-text-input id="editProfesorNombre" label="Nombre" formControlName="nombre"></app-text-input>
-                        <app-text-input id="editProfesorApellidos" label="Apellidos" formControlName="apellidos"></app-text-input>
-                        <app-text-input id="editProfesorDni" label="DNI/NIE" formControlName="dni" placeholder="12345678Z o X1234567L"></app-text-input>
-                        <app-text-input id="editProfesorTelefono" label="Telefono" type="tel" formControlName="telefono" placeholder="612345678"></app-text-input>
-                        <app-text-input id="editProfesorEspecialidad" label="Especialidad" formControlName="especialidad"></app-text-input>
+                        <app-text-input id="editProfesorNombre" label="Nombre" formControlName="nombre" [errorMessage]="controlErrorMessage(editProfesorForm.get('nombre'))"></app-text-input>
+                        <app-text-input id="editProfesorApellidos" label="Apellidos" formControlName="apellidos" [errorMessage]="controlErrorMessage(editProfesorForm.get('apellidos'))"></app-text-input>
+                        <app-text-input id="editProfesorDni" label="DNI/NIE" formControlName="dni" placeholder="12345678Z o X1234567L" [errorMessage]="controlErrorMessage(editProfesorForm.get('dni'))"></app-text-input>
+                        <app-text-input id="editProfesorTelefono" label="Telefono" type="tel" formControlName="telefono" placeholder="612345678" [errorMessage]="controlErrorMessage(editProfesorForm.get('telefono'))"></app-text-input>
+                        <app-text-input id="editProfesorEspecialidad" label="Especialidad" formControlName="especialidad" [errorMessage]="controlErrorMessage(editProfesorForm.get('especialidad'))"></app-text-input>
 
                         <div class="d-flex gap-2">
                             <button class="btn btn-success" type="button" (click)="guardarProfesor.emit()" [disabled]="cargandoGuardarProfesor || editProfesorForm.invalid">
@@ -32,11 +32,11 @@
                 } @else {
                     <h5 class="card-title">Nuevo profesor</h5>
                     <form [formGroup]="profesorForm" (ngSubmit)="crearProfesor.emit()">
-                        <app-text-input id="createProfesorNombre" label="Nombre" formControlName="nombre"></app-text-input>
-                        <app-text-input id="createProfesorApellidos" label="Apellidos" formControlName="apellidos"></app-text-input>
-                        <app-text-input id="createProfesorDni" label="DNI/NIE" formControlName="dni" placeholder="12345678Z o X1234567L"></app-text-input>
-                        <app-text-input id="createProfesorTelefono" label="Telefono" type="tel" formControlName="telefono" placeholder="612345678"></app-text-input>
-                        <app-text-input id="createProfesorEspecialidad" label="Especialidad" formControlName="especialidad"></app-text-input>
+                        <app-text-input id="createProfesorNombre" label="Nombre" formControlName="nombre" [errorMessage]="controlErrorMessage(profesorForm.get('nombre'))"></app-text-input>
+                        <app-text-input id="createProfesorApellidos" label="Apellidos" formControlName="apellidos" [errorMessage]="controlErrorMessage(profesorForm.get('apellidos'))"></app-text-input>
+                        <app-text-input id="createProfesorDni" label="DNI/NIE" formControlName="dni" placeholder="12345678Z o X1234567L" [errorMessage]="controlErrorMessage(profesorForm.get('dni'))"></app-text-input>
+                        <app-text-input id="createProfesorTelefono" label="Telefono" type="tel" formControlName="telefono" placeholder="612345678" [errorMessage]="controlErrorMessage(profesorForm.get('telefono'))"></app-text-input>
+                        <app-text-input id="createProfesorEspecialidad" label="Especialidad" formControlName="especialidad" [errorMessage]="controlErrorMessage(profesorForm.get('especialidad'))"></app-text-input>
                         <div class="alert alert-light border small mb-2">
                             El correo y la contrasena temporal se generan automaticamente.
                         </div>

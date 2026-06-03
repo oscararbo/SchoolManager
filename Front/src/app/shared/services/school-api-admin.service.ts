@@ -208,7 +208,8 @@ export class SchoolApiAdminService {
 
     async createProfesor(data: CreateProfesorData): Promise<ProfesorListItem> {
         try {
-            return await firstValueFrom(this.http.post<ProfesorListItem>(`${this.apiUrl}/profesores`, data));
+            const response = await firstValueFrom(this.http.post<ApiProfesorListItem>(`${this.apiUrl}/profesores`, data));
+            return mapProfesorListItem(response);
         } catch (e) {
             throw extractSchoolApiError(e);
         }
@@ -216,7 +217,8 @@ export class SchoolApiAdminService {
 
     async updateProfesor(id: number, data: UpdateProfesorData): Promise<ProfesorListItem> {
         try {
-            return await firstValueFrom(this.http.put<ProfesorListItem>(`${this.apiUrl}/profesores/${id}`, data));
+            const response = await firstValueFrom(this.http.put<ApiProfesorListItem>(`${this.apiUrl}/profesores/${id}`, data));
+            return mapProfesorListItem(response);
         } catch (e) {
             throw extractSchoolApiError(e);
         }
@@ -241,7 +243,8 @@ export class SchoolApiAdminService {
 
     async createEstudiante(data: CreateEstudianteData): Promise<EstudianteItem> {
         try {
-            return await firstValueFrom(this.http.post<EstudianteItem>(`${this.apiUrl}/estudiantes`, data));
+            const response = await firstValueFrom(this.http.post<ApiEstudianteItem>(`${this.apiUrl}/estudiantes`, data));
+            return mapEstudianteItem(response);
         } catch (e) {
             throw extractSchoolApiError(e);
         }
@@ -249,7 +252,8 @@ export class SchoolApiAdminService {
 
     async updateEstudiante(id: number, data: UpdateEstudianteData): Promise<EstudianteItem> {
         try {
-            return await firstValueFrom(this.http.put<EstudianteItem>(`${this.apiUrl}/estudiantes/${id}`, data));
+            const response = await firstValueFrom(this.http.put<ApiEstudianteItem>(`${this.apiUrl}/estudiantes/${id}`, data));
+            return mapEstudianteItem(response);
         } catch (e) {
             throw extractSchoolApiError(e);
         }

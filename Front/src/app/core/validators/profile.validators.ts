@@ -3,9 +3,22 @@ import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 const dniRegex = /^(?:\d{8}|[XYZ]\d{7})[TRWAGMYFPDXBNJZSQVHLCKE]$/i;
 const phoneRegex = /^[6-9]\d{8}$/;
 
+export function normalizeDniInput(value: string | null | undefined): string {
+    return String(value ?? '')
+        .trim()
+        .replace(/[\s-]+/g, '')
+        .toUpperCase();
+}
+
+export function normalizePhoneInput(value: string | null | undefined): string {
+    return String(value ?? '')
+        .trim()
+        .replace(/[\s-]+/g, '');
+}
+
 export function dniValidator(): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
-        const value = String(control.value ?? '').trim();
+        const value = normalizeDniInput(control.value);
         if (!value) {
             return null;
         }
@@ -16,7 +29,7 @@ export function dniValidator(): ValidatorFn {
 
 export function phoneValidator(): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
-        const value = String(control.value ?? '').trim();
+        const value = normalizePhoneInput(control.value);
         if (!value) {
             return null;
         }

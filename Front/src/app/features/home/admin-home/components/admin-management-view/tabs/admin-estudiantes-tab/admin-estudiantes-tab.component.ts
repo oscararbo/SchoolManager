@@ -16,6 +16,7 @@ export class AdminEstudiantesTabComponent {
     @Input() editandoEstudianteId: number | null = null;
     @Input() editEstudianteForm!: FormGroup;
     @Input() estudianteForm!: FormGroup;
+    @Input() puedeCrearEstudiante = true;
     @Input() estudiantesVista: EstudianteItem[] = [];
     @Input() cursos: CursoItem[] = [];
     @Input() cursoOptions: SelectOption[] = [];

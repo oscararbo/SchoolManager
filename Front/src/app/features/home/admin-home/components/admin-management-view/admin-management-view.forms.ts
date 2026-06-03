@@ -75,5 +75,21 @@ export function getAdminControlErrorMessage(control: AbstractControl | null): st
         return `Maximo ${requiredLength ?? 0} caracteres.`;
     }
 
+    if (control.hasError('invalidDni')) {
+        return 'Introduce un DNI o NIE valido.';
+    }
+
+    if (control.hasError('duplicateDni')) {
+        return 'Ya existe una persona con ese DNI/NIE.';
+    }
+
+    if (control.hasError('invalidPhone')) {
+        return 'Introduce un telefono valido de 9 digitos.';
+    }
+
+    if (control.hasError('invalidDate')) {
+        return 'Introduce una fecha valida.';
+    }
+
     return null;
 }

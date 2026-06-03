@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, EventEmitter, OnInit, Output, ViewChild, computed, inject, signal } from '@angular/core';
-import { AbstractControl, FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormsModule, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import {
     SchoolApiService,
     CursoItem, AsignaturaItem, ProfesorListItem, EstudianteItem,
@@ -19,6 +19,10 @@ import { Subject, debounceTime } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import * as XLSX from 'xlsx';
 import { AdminManagementForms, createAdminManagementForms, getAdminControlErrorMessage } from './admin-management-view.forms';
+import {
+    normalizeDniInput,
+    normalizePhoneInput
+} from '../../../../../core/validators/profile.validators';
 import {
     agruparErroresCsv,
     CSV_ERROR_PREVIEW_COUNT,
@@ -114,6 +118,7 @@ export class AdminManagementViewComponent implements OnInit {
     filtroEstudiantesCursoId = signal<number | null>(null);
     editandoEstudianteId: number | null = null;
     busquedaEstudiantes = signal('');
+    bloquearCrearEstudianteHastaCambio = signal(false);
 
     // #endregion
     // #region Matricula Management
@@ -386,8 +391,54 @@ export class AdminManagementViewComponent implements OnInit {
     });
 
     ngOnInit(): void {
+        this.configurarValidadoresDocumento();
+        this.configurarBloqueoReenvioEstudiante();
         this.configurarDebounceBusquedas();
         void this.cargarTab(this.tabActiva());
+    }
+
+    private configurarValidadoresDocumento(): void {
+        this.profesorForm.controls.dni.addValidators(this.documentoDisponibleValidator(() => this.editandoProfesorId, () => this.editandoEstudianteId));
+        this.editProfesorForm.controls.dni.addValidators(this.documentoDisponibleValidator(() => this.editandoProfesorId, () => this.editandoEstudianteId));
+        this.editEstudianteForm.controls.dni.addValidators(this.documentoDisponibleValidator(() => this.editandoProfesorId, () => this.editandoEstudianteId));
+        this.actualizarValidacionDocumentos();
+    }
+
+    private configurarBloqueoReenvioEstudiante(): void {
+        this.estudianteForm.valueChanges
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => {
+                if (this.bloquearCrearEstudianteHastaCambio()) {
+                    this.bloquearCrearEstudianteHastaCambio.set(false);
+                }
+            });
+    }
+
+    private documentoDisponibleValidator(getProfesorExcluidoId: () => number | null, getEstudianteExcluidoId: () => number | null): ValidatorFn {
+        return (control: AbstractControl): ValidationErrors | null => {
+            const documento = normalizeDniInput(control.value);
+            if (!documento) {
+                return null;
+            }
+
+            const profesorExcluidoId = getProfesorExcluidoId();
+            const estudianteExcluidoId = getEstudianteExcluidoId();
+
+            const existeProfesor = this.profesores().some(profesor => profesor.id !== profesorExcluidoId && normalizeDniInput(profesor.dni) === documento);
+            const existeEstudiante = this.estudiantes().some(estudiante => estudiante.id !== estudianteExcluidoId && normalizeDniInput(estudiante.dni) === documento);
+
+            return existeProfesor || existeEstudiante ? { duplicateDni: true } : null;
+        };
+    }
+
+    private actualizarValidacionDocumentos(): void {
+        this.profesorForm.controls.dni.updateValueAndValidity({ emitEvent: false });
+        this.editProfesorForm.controls.dni.updateValueAndValidity({ emitEvent: false });
+        this.editEstudianteForm.controls.dni.updateValueAndValidity({ emitEvent: false });
+    }
+
+    puedeCrearEstudiante(): boolean {
+        return this.estudianteForm.valid && !this.bloquearCrearEstudianteHastaCambio();
     }
 
     onBusquedaCursosChange(value: string): void {
@@ -588,6 +639,7 @@ export class AdminManagementViewComponent implements OnInit {
             try {
                 this.profesores.set(await this.api.getProfesores());
                 this.setResourceLoaded('profesores', true);
+                this.actualizarValidacionDocumentos();
             } catch (e) {
                 this.mostrarError(e, 'No se pudieron cargar los profesores.');
             }
@@ -603,6 +655,7 @@ export class AdminManagementViewComponent implements OnInit {
             try {
                 this.estudiantes.set(await this.api.getEstudiantes());
                 this.setResourceLoaded('estudiantes', true);
+                this.actualizarValidacionDocumentos();
             } catch (e) {
                 this.mostrarError(e, 'No se pudieron cargar los estudiantes.');
             }
@@ -684,6 +737,8 @@ export class AdminManagementViewComponent implements OnInit {
         this.editAsignaturaForm.reset({ nombre: '', cursoId: null });
         this.editProfesorForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', especialidad: '' });
         this.editEstudianteForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', fechaNacimiento: '', cursoId: null });
+        this.bloquearCrearEstudianteHastaCambio.set(false);
+        this.actualizarValidacionDocumentos();
         this.resetHorarioForm();
     }
 
@@ -845,11 +900,12 @@ export class AdminManagementViewComponent implements OnInit {
                 const p = await this.api.createProfesor({
                     nombre: (this.profesorForm.value.nombre ?? '').trim(),
                     apellidos: (this.profesorForm.value.apellidos ?? '').trim(),
-                    dni: (this.profesorForm.value.dni ?? '').trim().toUpperCase(),
-                    telefono: (this.profesorForm.value.telefono ?? '').trim(),
+                    dni: normalizeDniInput(this.profesorForm.value.dni),
+                    telefono: normalizePhoneInput(this.profesorForm.value.telefono),
                     especialidad: (this.profesorForm.value.especialidad ?? '').trim()
                 });
                 this.profesores.set([...this.profesores(), p]);
+                this.actualizarValidacionDocumentos();
                 this.profesorForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', especialidad: '' });
                 this.toast.show(`Profesor "${p.nombre}" creado. Correo: ${p.correo}. Clave temporal: ${p.contrasenaTemporal ?? 'no disponible'}`, 'success');
                 this.dataChanged.emit();
@@ -868,6 +924,7 @@ export class AdminManagementViewComponent implements OnInit {
             telefono: p.telefono,
             especialidad: p.especialidad
         });
+        this.actualizarValidacionDocumentos();
     }
 
     async guardarProfesor(): Promise<void> {
@@ -876,8 +933,8 @@ export class AdminManagementViewComponent implements OnInit {
         const data: UpdateProfesorData = {
             nombre: (this.editProfesorForm.value.nombre ?? '').trim(),
             apellidos: (this.editProfesorForm.value.apellidos ?? '').trim(),
-            dni: (this.editProfesorForm.value.dni ?? '').trim().toUpperCase(),
-            telefono: (this.editProfesorForm.value.telefono ?? '').trim(),
+            dni: normalizeDniInput(this.editProfesorForm.value.dni),
+            telefono: normalizePhoneInput(this.editProfesorForm.value.telefono),
             especialidad: (this.editProfesorForm.value.especialidad ?? '').trim()
         };
 
@@ -886,6 +943,7 @@ export class AdminManagementViewComponent implements OnInit {
                 const updated = await this.api.updateProfesor(this.editandoProfesorId!, data);
                 this.profesores.update(list => list.map(p => p.id === updated.id ? updated : p));
                 this.editandoProfesorId = null;
+                this.actualizarValidacionDocumentos();
                 this.toast.show('Profesor actualizado.', 'success');
             } catch (e) {
                 this.mostrarError(e);
@@ -905,6 +963,7 @@ export class AdminManagementViewComponent implements OnInit {
             try {
                 await this.api.deleteProfesor(id);
                 this.profesores.update(list => list.filter(p => p.id !== id));
+                this.actualizarValidacionDocumentos();
                 this.toast.show(`Profesor "${nombre}" eliminado.`, 'success');
                 this.setResourceLoaded('profesores', false);
                 this.setResourceLoaded('imparticiones', false);
@@ -924,18 +983,23 @@ export class AdminManagementViewComponent implements OnInit {
             return;
         }
 
+        const cursoIdSeleccionado = Number(this.estudianteForm.value.cursoId);
+
         await this.runWithLoading('crearEstudiante', async () => {
             try {
                 const e = await this.api.createEstudiante({
                     nombre: (this.estudianteForm.value.nombre ?? '').trim(),
                     apellidos: (this.estudianteForm.value.apellidos ?? '').trim(),
-                    dni: (this.estudianteForm.value.dni ?? '').trim().toUpperCase(),
-                    telefono: (this.estudianteForm.value.telefono ?? '').trim(),
+                    dni: normalizeDniInput(this.estudianteForm.value.dni),
+                    telefono: normalizePhoneInput(this.estudianteForm.value.telefono),
                     fechaNacimiento: (this.estudianteForm.value.fechaNacimiento ?? '').trim(),
-                    cursoId: Number(this.estudianteForm.value.cursoId)
+                    cursoId: cursoIdSeleccionado
                 });
                 this.estudiantes.set([...this.estudiantes(), e]);
-                this.estudianteForm.reset({ nombre: '', apellidos: '', dni: '', telefono: '', fechaNacimiento: '', cursoId: null });
+                this.actualizarValidacionDocumentos();
+                this.estudianteForm.markAsPristine();
+                this.estudianteForm.markAsUntouched();
+                this.bloquearCrearEstudianteHastaCambio.set(true);
                 this.toast.show(`Estudiante "${e.nombre}" creado. Correo: ${e.correo}. Clave temporal: ${e.contrasenaTemporal ?? 'no disponible'}`, 'success');
                 this.dataChanged.emit();
             } catch (e) {
@@ -954,6 +1018,7 @@ export class AdminManagementViewComponent implements OnInit {
             fechaNacimiento: e.fechaNacimiento,
             cursoId: e.cursoId
         });
+        this.actualizarValidacionDocumentos();
     }
 
     async guardarEstudiante(): Promise<void> {
@@ -962,8 +1027,8 @@ export class AdminManagementViewComponent implements OnInit {
         const data: UpdateEstudianteData = {
             nombre: (this.editEstudianteForm.value.nombre ?? '').trim(),
             apellidos: (this.editEstudianteForm.value.apellidos ?? '').trim(),
-            dni: (this.editEstudianteForm.value.dni ?? '').trim().toUpperCase(),
-            telefono: (this.editEstudianteForm.value.telefono ?? '').trim(),
+            dni: normalizeDniInput(this.editEstudianteForm.value.dni),
+            telefono: normalizePhoneInput(this.editEstudianteForm.value.telefono),
             fechaNacimiento: (this.editEstudianteForm.value.fechaNacimiento ?? '').trim(),
             cursoId: Number(this.editEstudianteForm.value.cursoId)
         };
@@ -973,6 +1038,7 @@ export class AdminManagementViewComponent implements OnInit {
                 const updated = await this.api.updateEstudiante(this.editandoEstudianteId!, data);
                 this.estudiantes.update(list => list.map(e => e.id === updated.id ? updated : e));
                 this.editandoEstudianteId = null;
+                this.actualizarValidacionDocumentos();
                 this.toast.show('Estudiante actualizado.', 'success');
             } catch (e) {
                 this.mostrarError(e);
@@ -993,6 +1059,7 @@ export class AdminManagementViewComponent implements OnInit {
             try {
                 await this.api.deleteEstudiante(id);
                 this.estudiantes.update(list => list.filter(e => e.id !== id));
+                this.actualizarValidacionDocumentos();
                 this.toast.show(`Estudiante "${nombre}" eliminado.`, 'success');
                 this.setResourceLoaded('estudiantes', false);
                 this.setResourceLoaded('asignaturas', false);

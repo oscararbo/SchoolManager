@@ -16,10 +16,10 @@
                 } @else if (editandoEstudianteId !== null) {
                     <h5 class="card-title">Editar estudiante</h5>
                     <form [formGroup]="editEstudianteForm">
-                        <app-text-input id="editEstudianteNombre" label="Nombre" formControlName="nombre"></app-text-input>
-                        <app-text-input id="editEstudianteApellidos" label="Apellidos" formControlName="apellidos"></app-text-input>
-                        <app-text-input id="editEstudianteDni" label="DNI/NIE" formControlName="dni" placeholder="12345678Z o X1234567L"></app-text-input>
-                        <app-text-input id="editEstudianteTelefono" label="Telefono" type="tel" formControlName="telefono" placeholder="612345678"></app-text-input>
+                        <app-text-input id="editEstudianteNombre" label="Nombre" formControlName="nombre" [errorMessage]="controlErrorMessage(editEstudianteForm.get('nombre'))"></app-text-input>
+                        <app-text-input id="editEstudianteApellidos" label="Apellidos" formControlName="apellidos" [errorMessage]="controlErrorMessage(editEstudianteForm.get('apellidos'))"></app-text-input>
+                        <app-text-input id="editEstudianteDni" label="DNI/NIE" formControlName="dni" placeholder="12345678Z o X1234567L" [errorMessage]="controlErrorMessage(editEstudianteForm.get('dni'))"></app-text-input>
+                        <app-text-input id="editEstudianteTelefono" label="Telefono" type="tel" formControlName="telefono" placeholder="612345678" [errorMessage]="controlErrorMessage(editEstudianteForm.get('telefono'))"></app-text-input>
                         <app-date-input
                             class="d-block mb-2"
                             id="editFechaNacimiento"
@@ -46,10 +46,10 @@
                 } @else {
                     <h5 class="card-title">Nuevo estudiante</h5>
                     <form [formGroup]="estudianteForm" (ngSubmit)="crearEstudiante.emit()">
-                        <app-text-input id="createEstudianteNombre" label="Nombre" formControlName="nombre"></app-text-input>
-                        <app-text-input id="createEstudianteApellidos" label="Apellidos" formControlName="apellidos"></app-text-input>
-                        <app-text-input id="createEstudianteDni" label="DNI/NIE" formControlName="dni" placeholder="12345678Z o X1234567L"></app-text-input>
-                        <app-text-input id="createEstudianteTelefono" label="Telefono" type="tel" formControlName="telefono" placeholder="612345678"></app-text-input>
+                        <app-text-input id="createEstudianteNombre" label="Nombre" formControlName="nombre" [errorMessage]="controlErrorMessage(estudianteForm.get('nombre'))"></app-text-input>
+                        <app-text-input id="createEstudianteApellidos" label="Apellidos" formControlName="apellidos" [errorMessage]="controlErrorMessage(estudianteForm.get('apellidos'))"></app-text-input>
+                        <app-text-input id="createEstudianteDni" label="DNI/NIE" formControlName="dni" placeholder="12345678Z o X1234567L" [errorMessage]="controlErrorMessage(estudianteForm.get('dni'))"></app-text-input>
+                        <app-text-input id="createEstudianteTelefono" label="Telefono" type="tel" formControlName="telefono" placeholder="612345678" [errorMessage]="controlErrorMessage(estudianteForm.get('telefono'))"></app-text-input>
                         <app-date-input
                             class="d-block mb-2"
                             id="createFechaNacimiento"
@@ -70,7 +70,7 @@
                             [errorMessage]="controlErrorMessage(estudianteForm.get('cursoId'))">
                         </app-select-input>
 
-                        <button class="btn btn-primary" type="submit" [disabled]="cargandoCrearEstudiante || estudianteForm.invalid">
+                        <button class="btn btn-primary" type="submit" [disabled]="cargandoCrearEstudiante || !puedeCrearEstudiante">
                             {{ cargandoCrearEstudiante ? 'Creando...' : 'Crear estudiante' }}
                         </button>
                     </form>
