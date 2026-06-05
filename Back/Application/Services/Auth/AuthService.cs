@@ -3,6 +3,7 @@ using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Configuration;
 using Back.Api.Application.Dtos;
+using Back.Api.Application.Services.Audit;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -11,7 +12,11 @@ using System.Text;
 
 namespace Back.Api.Application.Services;
 
-public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> jwtOptions, IPasswordService passwordService) : IAuthService
+public class AuthService(
+    IAuthDomainRepository authDomain,
+    IOptions<JwtOptions> jwtOptions,
+    IPasswordService passwordService,
+    IAuditLogService auditLog) : IAuthService
 {
     #region Authentication flows
     public async Task<ApplicationResult> LoginAsync(LoginRequestDto loginRequestDto, string? colegioSlug, CancellationToken cancellationToken = default)
@@ -28,6 +33,7 @@ public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> 
         {
             var tokenSuperUsuario = GenerarToken(superUsuario.Id, superUsuario.Correo, Roles.SuperUsuario, null, null);
             var refreshSuperUsuario = await authDomain.CreateRefreshTokenAsync(superUsuario.Id, Roles.SuperUsuario, jwtOptions.Value.RefreshExpiresDays, cancellationToken);
+            await auditLog.LogLoginAttemptAsync(email, true, null, cancellationToken);
             return ApplicationResult.Ok(new LoginResponseDto
             {
                 Rol = Roles.SuperUsuario,
@@ -47,6 +53,7 @@ public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> 
         {
             var token = GenerarToken(admin.Id, admin.Cuenta.Correo, Roles.Admin, admin.Cuenta.ColegioId, admin.Cuenta.Colegio?.Slug);
             var refreshToken = await authDomain.CreateRefreshTokenAsync(admin.Id, Roles.Admin, jwtOptions.Value.RefreshExpiresDays, cancellationToken);
+            await auditLog.LogLoginAttemptAsync(email, true, slug, cancellationToken);
             return ApplicationResult.Ok(new LoginResponseDto
             {
                 Rol = Roles.Admin,
@@ -67,6 +74,7 @@ public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> 
         {
             var token = GenerarToken(teacher.Id, teacher.Cuenta.Correo, Roles.Profesor, teacher.Cuenta.ColegioId, teacher.Cuenta.Colegio?.Slug);
             var refreshToken = await authDomain.CreateRefreshTokenAsync(teacher.Id, Roles.Profesor, jwtOptions.Value.RefreshExpiresDays, cancellationToken);
+            await auditLog.LogLoginAttemptAsync(email, true, slug, cancellationToken);
             return ApplicationResult.Ok(new LoginResponseDto
             {
                 Rol = Roles.Profesor,
@@ -87,6 +95,7 @@ public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> 
         {
             var token = GenerarToken(student.Id, student.Cuenta.Correo, Roles.Alumno, student.Cuenta.ColegioId, student.Cuenta.Colegio?.Slug);
             var refreshToken = await authDomain.CreateRefreshTokenAsync(student.Id, Roles.Alumno, jwtOptions.Value.RefreshExpiresDays, cancellationToken);
+            await auditLog.LogLoginAttemptAsync(email, true, slug, cancellationToken);
             return ApplicationResult.Ok(new LoginResponseDto
             {
                 Rol = Roles.Alumno,
@@ -104,6 +113,7 @@ public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> 
             });
         }
 
+        await auditLog.LogLoginAttemptAsync(email, false, slug, cancellationToken);
         return ApplicationResult.Unauthorized("Credenciales incorrectas.");
     }
 
@@ -114,18 +124,23 @@ public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> 
 
         var storedToken = await authDomain.FindRefreshTokenAsync(refreshToken, cancellationToken);
         if (storedToken is null || !storedToken.IsActive)
+        {
+            await auditLog.LogTokenRefreshAsync(false, null, cancellationToken);
             return ApplicationResult.Unauthorized("Refresh token no valido o expirado.");
+        }
 
         var userContext = await authDomain.GetUserContextAsync(storedToken.UserId, storedToken.Rol, cancellationToken);
         if (userContext is null)
         {
             await authDomain.RevokeTokenAsync(storedToken, cancellationToken);
+            await auditLog.LogTokenRefreshAsync(false, null, cancellationToken);
             return ApplicationResult.Unauthorized("Usuario no valido.");
         }
 
         await authDomain.RevokeTokenAsync(storedToken, cancellationToken);
         var newAccessToken = GenerarToken(storedToken.UserId, userContext.Correo, storedToken.Rol, userContext.ColegioId, userContext.ColegioSlug);
         var newRefreshToken = await authDomain.CreateRefreshTokenAsync(storedToken.UserId, storedToken.Rol, jwtOptions.Value.RefreshExpiresDays, cancellationToken);
+        await auditLog.LogTokenRefreshAsync(true, userContext.Correo, cancellationToken);
 
         return ApplicationResult.Ok(new RefreshResponseDto { Token = newAccessToken, RefreshToken = newRefreshToken });
     }
@@ -149,6 +164,7 @@ public class AuthService(IAuthDomainRepository authDomain, IOptions<JwtOptions> 
             return ApplicationResult.Forbidden();
 
         await authDomain.RevokeTokenAsync(storedToken, cancellationToken);
+        await auditLog.LogLogoutAsync(cancellationToken);
         return ApplicationResult.NoContent();
     }
     #endregion

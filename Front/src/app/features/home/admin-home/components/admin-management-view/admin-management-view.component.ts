@@ -1113,7 +1113,13 @@ export class AdminManagementViewComponent implements OnInit {
         const workbook = XLSX.utils.book_new();
         const sheetName = this.getExcelSheetName(tab);
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-        XLSX.writeFile(workbook, `${this.getExcelFileBaseName(tab)}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        const fileName = `${this.getExcelFileBaseName(tab)}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        XLSX.writeFile(workbook, fileName);
+
+        void this.api.registrarExportacionExcel(tab, rows.length, fileName)
+            .catch(() => {
+                this.toast.show('El Excel se exporto, pero no se pudo registrar el log en el servidor.', 'warning');
+            });
 
         this.toast.show(`Exportacion Excel completada para ${sheetName}.`, 'success');
     }

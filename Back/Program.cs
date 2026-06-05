@@ -2,7 +2,10 @@ using Back.Api.Application.Services;
 using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Configuration;
+using Back.Api.Application.Services.Audit;
 using Back.Api.Infrastructure.ErrorHandling;
+using Back.Api.Infrastructure.Logging;
+using Back.Api.Infrastructure.Mongo;
 using Back.Api.Infrastructure.Security;
 using Back.Api.Infrastructure.Startup;
 using Back.Api.Persistence.Context;
@@ -11,13 +14,33 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
+using Serilog.Sinks.PeriodicBatching;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+#region Serilog configuration
+var mongoOpts = builder.Configuration.GetSection("MongoDB").Get<MongoOptions>()
+    ?? new MongoOptions();
+
+var mongoSink = new PeriodicBatchingSink(
+    new SerilogMongoDbSink(mongoOpts),
+    new PeriodicBatchingSinkOptions { BatchSizeLimit = 50, Period = TimeSpan.FromSeconds(5) });
+
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(outputTemplate:
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {UserEmail} | {Message:lj}{NewLine}{Exception}")
+    .WriteTo.Sink(mongoSink)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+#endregion
 
 #region Core web API services
 builder.Services.AddProblemDetails();
@@ -139,6 +162,11 @@ builder.Services.AddScoped<IAsignaturasService, AsignaturasService>();
 builder.Services.AddScoped<IImportService, ImportService>();
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddHostedService<RefreshTokenCleanupService>();
+
+// MongoDB audit log
+builder.Services.Configure<MongoOptions>(builder.Configuration.GetSection("MongoDB"));
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
 #endregion
 
@@ -211,6 +239,7 @@ if (!app.Environment.IsEnvironment("Testing"))
 #endregion
 
 app.UseAuthentication();
+app.UseMiddleware<UserContextLoggingMiddleware>();
 app.UseAuthorization();
 app.MapHealthChecks("/health");
 app.MapControllers();

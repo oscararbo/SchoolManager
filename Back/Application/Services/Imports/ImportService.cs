@@ -2,12 +2,17 @@ using Back.Api.Application.Common;
 using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Dtos;
+using Back.Api.Application.Services.Audit;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace Back.Api.Application.Services;
 
-public class ImportService(IImportDomainRepository importRepository, IPasswordService passwordService, ICurrentSchoolContext currentSchoolContext) : IImportService
+public class ImportService(
+    IImportDomainRepository importRepository,
+    IPasswordService passwordService,
+    ICurrentSchoolContext currentSchoolContext,
+    IAuditLogService auditLog) : IImportService
 {
     #region Configuration
     private static readonly Regex TelefonoRegex = new(@"^[6-9]\d{8}$", RegexOptions.Compiled);
@@ -45,13 +50,13 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
             await importRepository.AddCursosAsync(created, cancellationToken);
         }
 
-        return ApplicationResult.Ok(new CsvImportResultDto
+        return await LogAndReturnAsync("cursos", ApplicationResult.Ok(new CsvImportResultDto
         {
             Creados = created.Count,
             Omitidos = skipped.Count,
             Errores = errors,
             Detalles = skipped
-        });
+        }), cancellationToken);
     }
 
     public async Task<ApplicationResult> ImportarAsignaturasAsync(string csvText, CancellationToken cancellationToken = default)
@@ -91,13 +96,12 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
 
         if (errors.Count > 0)
         {
-            return ApplicationResult.BadRequest(new CsvImportResultDto
+            return await LogAndReturnAsync("asignaturas", ApplicationResult.BadRequest(new CsvImportResultDto
             {
                 Detail = "La importacion de subjects ha fallado y se ha cancelado.",
-                Mensaje = "La importacion de subjects ha fallado y se ha cancelado.",
                 Creados = 0,
                 Errores = errors
-            });
+            }), cancellationToken);
         }
 
         if (created.Count > 0)
@@ -105,11 +109,11 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
             await importRepository.AddAsignaturasAsync(created, cancellationToken);
         }
 
-        return ApplicationResult.Ok(new CsvImportResultDto
+        return await LogAndReturnAsync("asignaturas", ApplicationResult.Ok(new CsvImportResultDto
         {
             Creados = created.Count,
             Errores = errors
-        });
+        }), cancellationToken);
     }
 
     public async Task<ApplicationResult> ImportarProfesoresAsync(string csvText, CancellationToken cancellationToken = default)
@@ -169,12 +173,12 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
             await importRepository.AddProfesoresAsync(created, cancellationToken);
         }
 
-        return ApplicationResult.Ok(new CsvImportResultDto
+        return await LogAndReturnAsync("profesores", ApplicationResult.Ok(new CsvImportResultDto
         {
             Creados = created.Count,
             Errores = errors,
             Detalles = detalles
-        });
+        }), cancellationToken);
     }
 
     public async Task<ApplicationResult> ImportarEstudiantesAsync(string csvText, CancellationToken cancellationToken = default)
@@ -238,13 +242,12 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
 
         if (errors.Count > 0)
         {
-            return ApplicationResult.BadRequest(new CsvImportResultDto
+            return await LogAndReturnAsync("estudiantes", ApplicationResult.BadRequest(new CsvImportResultDto
             {
                 Detail = "La importacion de students ha fallado y se ha cancelado.",
-                Mensaje = "La importacion de students ha fallado y se ha cancelado.",
                 Creados = 0,
                 Errores = errors
-            });
+            }), cancellationToken);
         }
 
         if (created.Count > 0)
@@ -252,12 +255,12 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
             await importRepository.AddEstudiantesAsync(created, cancellationToken);
         }
 
-        return ApplicationResult.Ok(new CsvImportResultDto
+        return await LogAndReturnAsync("estudiantes", ApplicationResult.Ok(new CsvImportResultDto
         {
             Creados = created.Count,
             Errores = errors,
             Detalles = detalles
-        });
+        }), cancellationToken);
     }
 
     private static string GenerateUniqueEmail(string fullName, string rolePrefix, string schoolSlug, HashSet<string> existingEmails)
@@ -352,15 +355,14 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
 
         if (errors.Count > 0)
         {
-            return ApplicationResult.BadRequest(new CsvImportResultDto
+            return await LogAndReturnAsync("tareas", ApplicationResult.BadRequest(new CsvImportResultDto
             {
                 Detail = "La importacion de tasks ha fallado y se ha cancelado.",
-                Mensaje = "La importacion de tasks ha fallado y se ha cancelado.",
                 Creados = 0,
                 Omitidos = skipped.Count,
                 Errores = errors,
                 Detalles = skipped
-            });
+            }), cancellationToken);
         }
 
         if (created.Count > 0)
@@ -368,13 +370,13 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
             await importRepository.AddTareasAsync(created, cancellationToken);
         }
 
-        return ApplicationResult.Ok(new CsvImportResultDto
+        return await LogAndReturnAsync("tareas", ApplicationResult.Ok(new CsvImportResultDto
         {
             Creados = created.Count,
             Omitidos = skipped.Count,
             Errores = errors,
             Detalles = skipped
-        });
+        }), cancellationToken);
     }
 
     public async Task<ApplicationResult> ImportarHorariosAsync(string csvText, CancellationToken cancellationToken = default)
@@ -489,15 +491,14 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
 
         if (errors.Count > 0)
         {
-            return ApplicationResult.BadRequest(new CsvImportResultDto
+            return await LogAndReturnAsync("horarios", ApplicationResult.BadRequest(new CsvImportResultDto
             {
                 Detail = "La importacion de horarios ha fallado y se ha cancelado.",
-                Mensaje = "La importacion de horarios ha fallado y se ha cancelado.",
                 Creados = 0,
                 Omitidos = skipped.Count,
                 Errores = errors,
                 Detalles = skipped
-            });
+            }), cancellationToken);
         }
 
         if (created.Count > 0)
@@ -505,13 +506,13 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
             await importRepository.AddHorariosAsync(created, cancellationToken);
         }
 
-        return ApplicationResult.Ok(new CsvImportResultDto
+        return await LogAndReturnAsync("horarios", ApplicationResult.Ok(new CsvImportResultDto
         {
             Creados = created.Count,
             Omitidos = skipped.Count,
             Errores = errors,
             Detalles = skipped
-        });
+        }), cancellationToken);
     }
 
     public async Task<ApplicationResult> ImportarMatriculasAsync(string csvText, CancellationToken cancellationToken = default)
@@ -579,15 +580,14 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
 
         if (errors.Count > 0)
         {
-            return ApplicationResult.BadRequest(new CsvImportResultDto
+            return await LogAndReturnAsync("matriculas", ApplicationResult.BadRequest(new CsvImportResultDto
             {
                 Detail = "La importacion de enrollments ha fallado y se ha cancelado.",
-                Mensaje = "La importacion de enrollments ha fallado y se ha cancelado.",
                 Creados = 0,
                 Omitidos = skipped.Count,
                 Errores = errors,
                 Detalles = skipped
-            });
+            }), cancellationToken);
         }
 
         if (created.Count > 0)
@@ -595,13 +595,13 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
             await importRepository.AddMatriculasAsync(created, cancellationToken);
         }
 
-        return ApplicationResult.Ok(new CsvImportResultDto
+        return await LogAndReturnAsync("matriculas", ApplicationResult.Ok(new CsvImportResultDto
         {
             Creados = created.Count,
             Omitidos = skipped.Count,
             Errores = errors,
             Detalles = skipped
-        });
+        }), cancellationToken);
     }
 
     public async Task<ApplicationResult> ImportarImparticionesAsync(string csvText, CancellationToken cancellationToken = default)
@@ -680,15 +680,14 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
 
         if (errors.Count > 0)
         {
-            return ApplicationResult.BadRequest(new CsvImportResultDto
+            return await LogAndReturnAsync("imparticiones", ApplicationResult.BadRequest(new CsvImportResultDto
             {
                 Detail = "La importacion de assignments ha fallado y se ha cancelado.",
-                Mensaje = "La importacion de assignments ha fallado y se ha cancelado.",
                 Creados = 0,
                 Omitidos = skipped.Count,
                 Errores = errors,
                 Detalles = skipped
-            });
+            }), cancellationToken);
         }
 
         if (created.Count > 0)
@@ -696,13 +695,13 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
             await importRepository.AddImparticionesAsync(created, cancellationToken);
         }
 
-        return ApplicationResult.Ok(new CsvImportResultDto
+        return await LogAndReturnAsync("imparticiones", ApplicationResult.Ok(new CsvImportResultDto
         {
             Creados = created.Count,
             Omitidos = skipped.Count,
             Errores = errors,
             Detalles = skipped
-        });
+        }), cancellationToken);
     }
 
     public async Task<ApplicationResult> ImportarNotasAsync(string csvText, CancellationToken cancellationToken = default)
@@ -815,14 +814,13 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
 
         if (errors.Count > 0)
         {
-            return ApplicationResult.BadRequest(new CsvImportResultDto
+            return await LogAndReturnAsync("notas", ApplicationResult.BadRequest(new CsvImportResultDto
             {
                 Detail = "La importacion de notas ha fallado y se ha cancelado.",
-                Mensaje = "La importacion de notas ha fallado y se ha cancelado.",
                 Creados = 0,
                 Errores = errors,
                 Detalles = details
-            });
+            }), cancellationToken);
         }
 
         var newCount = 0;
@@ -852,15 +850,26 @@ public class ImportService(IImportDomainRepository importRepository, IPasswordSe
             details.Add($"Notas updatedCount: {updatedCount}.");
         }
 
-        return ApplicationResult.Ok(new CsvImportResultDto
+        return await LogAndReturnAsync("notas", ApplicationResult.Ok(new CsvImportResultDto
         {
             Creados = newCount,
             Omitidos = 0,
             Errores = errors,
             Detalles = details
-        });
+        }), cancellationToken);
     }
     #endregion
+
+    private async Task<ApplicationResult> LogAndReturnAsync(string entity, ApplicationResult result, CancellationToken cancellationToken)
+    {
+        var dto = result.Value as CsvImportResultDto;
+        var creados = dto?.Creados ?? 0;
+        var omitidos = dto?.Omitidos ?? 0;
+        var errores = dto?.Errores.Count ?? 0;
+
+        await auditLog.LogCsvImportAsync(entity, result.Type == ApplicationResultType.Ok, creados, omitidos, errores, dto?.Detail, cancellationToken);
+        return result;
+    }
 
     #region Parsing and key helpers
     private static IEnumerable<CsvRow> ParseCsv(string text)

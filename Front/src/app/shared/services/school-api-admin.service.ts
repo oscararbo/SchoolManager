@@ -331,6 +331,22 @@ export class SchoolApiAdminService {
         }
     }
 
+    async registrarExportacionExcel(entidad: string, totalRegistros: number, fileName: string): Promise<void> {
+        try {
+            const formData = new FormData();
+            await firstValueFrom(
+                this.http.post<void>(`${this.apiUrl}/admin/csv/export-log/${encodeURIComponent(entidad)}`, formData, {
+                    params: {
+                        totalRegistros: String(totalRegistros),
+                        fileName
+                    }
+                })
+            );
+        } catch (e) {
+            throw extractSchoolApiError(e);
+        }
+    }
+
     async getTareasConNotas(asignaturaId: number): Promise<TareaConNotas[]> {
         try {
             return await firstValueFrom(this.http.get<TareaConNotas[]>(`${this.apiUrl}/profesores/asignaturas/${asignaturaId}/tareas-notas`));

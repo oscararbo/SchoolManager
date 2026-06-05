@@ -185,6 +185,7 @@ export class SchoolApiService {
     asignarImparticion(profesorId: number, asignaturaId: number, cursoId: number): Promise<void> { return this.admin.asignarImparticion(profesorId, asignaturaId, cursoId); }
     eliminarImparticion(profesorId: number, asignaturaId: number, cursoId: number): Promise<void> { return this.admin.eliminarImparticion(profesorId, asignaturaId, cursoId); }
     importarCsv(entidad: CsvImportEntity, file: File): Promise<CsvImportResult> { return this.admin.importarCsv(entidad, file); }
+    registrarExportacionExcel(entidad: string, totalRegistros: number, fileName: string): Promise<void> { return this.admin.registrarExportacionExcel(entidad, totalRegistros, fileName); }
     getTareasConNotas(asignaturaId: number): Promise<TareaConNotas[]> { return this.admin.getTareasConNotas(asignaturaId); }
     // #endregion
 }
