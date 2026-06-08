@@ -29,6 +29,7 @@ import {
     CSV_IMPORT_ITEMS,
     CSV_PLANTILLAS,
     MAX_CSV_FILE_SIZE_BYTES,
+    validarHeadersCsv,
     type CsvErrorGroup
 } from './admin-management-view.csv';
 
@@ -165,6 +166,7 @@ export class AdminManagementViewComponent implements OnInit {
     csvEntidadActual = signal<CsvImportEntity | null>(null);
     csvCargando = signal(false);
     csvErroresExpandidos = signal<Record<string, boolean>>({});
+    nombreEntidadCsv = signal<string>('');
     readonly csvImportItems = CSV_IMPORT_ITEMS;
 
     csvErroresAgrupados = computed<CsvErrorGroup[]>(() => {
@@ -1372,29 +1374,43 @@ export class AdminManagementViewComponent implements OnInit {
 
     // #endregion
     // #region CSV Import
-    onCsvFileChange(event: Event, entidad: CsvImportEntity): void {
+    async onCsvFileChange(event: Event, entidad: CsvImportEntity): Promise<void> {
         const input = event.target as HTMLInputElement;
         const file = input.files?.[0] ?? null;
 
-        if (file && file.size > MAX_CSV_FILE_SIZE_BYTES) {
+        if (!file) return;
+
+        if (file.size > MAX_CSV_FILE_SIZE_BYTES) {
             this.setCsvFile(entidad, null);
             input.value = '';
             this.toast.show('El archivo CSV no puede superar 10 MB.', 'warning');
             return;
         }
 
-        this.setCsvFile(entidad, file);
+        const contenido = await file.text();
+        const primeraLinea = contenido.split('\n')[0].trim();
+        const headers = primeraLinea.split(',').map(h => h.trim());
 
-        if (file) {
-            this.toast.show(`Archivo ${file.name} preparado para importar ${entidad}.`, 'info');
+        const { valido } = validarHeadersCsv(entidad, headers);
+
+        if (!valido) {
+            this.setCsvFile(entidad, null);
+            input.value = '';
+            this.toast.show('El formato es incorrecto, mira la plantilla.', 'error');
+            this.nombreEntidadCsv.set(entidad.toString());
+            await this.api.registrarErrorCsv(entidad, 'Formato incorrecto');
+            return;
         }
+
+        this.setCsvFile(entidad, file);
+        this.toast.show(`Archivo ${file.name} preparado para importar ${entidad}.`, 'info');
     }
 
     async importarCsv(entidad: CsvImportEntity): Promise<void> {
         const file = this.getCsvFile(entidad);
 
         if (!file) {
-            this.toast.show('Selecciona un archivo CSV.', 'warning');
+            this.toast.show('Selecciona un archivo CSV.', 'error');
             return;
         }
 
@@ -1514,7 +1530,9 @@ export class AdminManagementViewComponent implements OnInit {
         link.click();
         URL.revokeObjectURL(url);
     }
+    // #endregion
 
+    // #region Excel exports
     private getExcelRowsForTab(tab: Exclude<AdminTab, 'importar'>): Record<string, string | number>[] {
         const excludeKeys = new Set(['contrasenaTemporal']);
 

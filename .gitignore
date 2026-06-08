@@ -48,3 +48,5 @@
 /Front/testem.log
 /Front/typings
 /Front/__screenshots__/
+
+.fake

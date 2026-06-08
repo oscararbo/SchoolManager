@@ -55,6 +55,40 @@ export function clasificarCsvError(error: string): CsvErrorGroupKey {
     return 'otros';
 }
 
+export function getExpectedHeaders(entidad: CsvImportEntity): string[] {
+    const plantilla = CSV_PLANTILLAS[entidad];
+
+    if (!plantilla) return [];
+
+    const primeraLinea = plantilla.split('\n')[0].trim();
+
+    return primeraLinea.split(',').map(h => h.trim().toLowerCase());
+}
+
+export function validarHeadersCsv(
+    entidad: CsvImportEntity,
+    headers: string[]
+): { valido: boolean; faltan: string[]; sobran: string[]; ordenIncorrecto: boolean } {
+
+    const expected = getExpectedHeaders(entidad);
+    const normalizedHeaders = headers.map(h => h.trim().toLowerCase());
+
+    const faltan = expected.filter(e => !normalizedHeaders.includes(e));
+    const sobran = normalizedHeaders.filter(h => !expected.includes(h));
+
+    const ordenIncorrecto =
+        faltan.length === 0 &&
+        sobran.length === 0 &&
+        !expected.every((h, i) => h === normalizedHeaders[i]);
+
+    return {
+        valido: faltan.length === 0 && sobran.length === 0 && !ordenIncorrecto,
+        faltan,
+        sobran,
+        ordenIncorrecto
+    };
+}
+
 export function agruparErroresCsv(errores: string[]): CsvErrorGroup[] {
     if (errores.length === 0) return [];
 

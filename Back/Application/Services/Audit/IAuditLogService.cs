@@ -7,4 +7,5 @@ public interface IAuditLogService
     Task LogTokenRefreshAsync(bool succeeded, string? correo = null, CancellationToken cancellationToken = default);
     Task LogCsvImportAsync(string entity, bool succeeded, int creados, int omitidos, int errores, string? details = null, CancellationToken cancellationToken = default);
     Task LogExcelExportAsync(string entity, int totalRegistros, string? fileName = null, CancellationToken cancellationToken = default);
+    Task LogInvalidCsvAsync(string entity, string reason, CancellationToken cancellationToken = default);
 }

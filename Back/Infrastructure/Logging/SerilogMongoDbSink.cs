@@ -8,6 +8,23 @@ namespace Back.Api.Infrastructure.Logging;
 
 public class SerilogMongoDbSink : IBatchedLogEventSink
 {
+    private static readonly HashSet<string> ExcludedProperties = new()
+    {
+        "SourceContext",
+        "ActionId",
+        "ActionName",
+        "RequestId",
+        "ConnectionId",
+        "RequestPath",
+        "SpanId",
+        "TraceId",
+        "ParentId",
+        "RequestMethod",
+        "RequestScheme",
+        "RequestHost",
+        "RequestProtocol"
+    };
+
     private readonly IMongoCollection<BsonDocument> _collection;
 
     public SerilogMongoDbSink(MongoOptions options)
@@ -30,17 +47,17 @@ public class SerilogMongoDbSink : IBatchedLogEventSink
         var doc = new BsonDocument
         {
             ["timestamp"] = e.Timestamp.UtcDateTime,
-            ["level"] = e.Level.ToString()
+            ["level"] = e.Level.ToString(),
+            ["message"] = e.RenderMessage()
         };
-
-        if (e.Exception is not null)
-            doc["exception"] = e.Exception.ToString();
 
         foreach (var (key, value) in e.Properties)
         {
-            doc[key] = value.ToString();
-        }
 
+            if (!ExcludedProperties.Contains(key))
+                doc[key] = value.ToString();
+
+        }
         return doc;
     }
 }

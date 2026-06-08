@@ -347,6 +347,24 @@ export class SchoolApiAdminService {
         }
     }
 
+    async registrarErrorCsv(entidad: string, reason: string): Promise<void> {
+        try {
+            await firstValueFrom(
+                this.http.post<void>(
+                    `${this.apiUrl}/admin/csv/invalid/${encodeURIComponent(entidad)}`,
+                    null,
+                    {
+                        params: {
+                            reason
+                        }
+                    }
+                )
+            );
+        } catch (e) {
+            throw extractSchoolApiError(e);
+        }
+    }
+
     async getTareasConNotas(asignaturaId: number): Promise<TareaConNotas[]> {
         try {
             return await firstValueFrom(this.http.get<TareaConNotas[]>(`${this.apiUrl}/profesores/asignaturas/${asignaturaId}/tareas-notas`));

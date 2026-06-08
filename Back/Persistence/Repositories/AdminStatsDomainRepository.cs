@@ -214,6 +214,7 @@ public class AdminStatsDomainRepository(AppDbContext context) : IAdminStatsDomai
 
         var courseStudentPerformanceRowsQuery = BuildCourseStudentPerformanceRowsQuery(enrollmentFinalRowsQuery);
         var resumenCurso = await BuildCourseKpiAggregatesQuery(courseStudentPerformanceRowsQuery)
+            .OrderBy(cursoStats => cursoStats.Curso)
             .FirstOrDefaultAsync(cancellationToken);
 
         var asignaturas = asignaturasRaw.Select(asignaturaStats => new AsignaturaNotasStatsDto

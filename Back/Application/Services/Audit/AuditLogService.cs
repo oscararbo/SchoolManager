@@ -10,13 +10,19 @@ public class AuditLogService(ILogger<AuditLogService> logger) : IAuditLogService
         using var _1 = LogContext.PushProperty("UserEmail", correo ?? "anonymous");
         using var _2 = LogContext.PushProperty("Succeeded", succeeded);
         using var _3 = LogContext.PushProperty("ColegioSlug", colegioSlug);
-        logger.LogInformation("[Audit:{EventType}]", eventType);
+        logger.LogInformation(
+            "[Audit:{EventType}] Intento de inicio de sesión para {UserEmail}. Success={Succeeded}",
+            eventType, correo ?? "anonymous", succeeded
+        );
         return Task.CompletedTask;
     }
 
     public Task LogLogoutAsync(CancellationToken cancellationToken = default)
     {
-        logger.LogInformation("[Audit:{EventType}]", "Logout");
+        logger.LogInformation(
+            "[Audit:{EventType}] Cerrar sesión de usuario.",
+            "Logout"
+        );
         return Task.CompletedTask;
     }
 
@@ -25,7 +31,10 @@ public class AuditLogService(ILogger<AuditLogService> logger) : IAuditLogService
         var eventType = succeeded ? "TokenRefresh" : "TokenRefreshFailure";
         using var _1 = correo is not null ? LogContext.PushProperty("UserEmail", correo) : null;
         using var _2 = LogContext.PushProperty("Succeeded", succeeded);
-        logger.LogInformation("[Audit:{EventType}]", eventType);
+        logger.LogInformation(
+            "[Audit:{EventType}] Actualización de token para {UserEmail}. Success={Succeeded}",
+            eventType, correo ?? "anonymous", succeeded
+        );
         return Task.CompletedTask;
     }
 
@@ -37,7 +46,10 @@ public class AuditLogService(ILogger<AuditLogService> logger) : IAuditLogService
         using var _4 = LogContext.PushProperty("Omitidos", omitidos);
         using var _5 = LogContext.PushProperty("Errores", errores);
         using var _6 = details is not null ? LogContext.PushProperty("Details", details) : null;
-        logger.LogInformation("[Audit:{EventType}]", "CsvImport");
+        logger.LogInformation(
+            "[Audit:{EventType}] Importación de CSV para {Entity}. Success={Succeeded}, Creados={Creados}, Omitidos={Omitidos}, Errores={Errores}, Details={Details}",
+            "CsvImport", entity, succeeded, creados, omitidos, errores, details
+        );
         return Task.CompletedTask;
     }
 
@@ -46,7 +58,21 @@ public class AuditLogService(ILogger<AuditLogService> logger) : IAuditLogService
         using var _1 = LogContext.PushProperty("Entity", entity);
         using var _2 = LogContext.PushProperty("TotalRegistros", totalRegistros);
         using var _3 = fileName is not null ? LogContext.PushProperty("FileName", fileName) : null;
-        logger.LogInformation("[Audit:{EventType}]", "CsvExport");
+        logger.LogInformation(
+            "[Audit:{EventType}] Exportación de Excel para {Entity}. TotalRegistros={TotalRegistros}, FileName={FileName}",
+            "ExcelExport", entity, totalRegistros, fileName
+        );
+        return Task.CompletedTask;
+    }
+
+    public Task LogInvalidCsvAsync(string entity, string reason, CancellationToken cancellationToken = default)
+    {
+        using var _1 = LogContext.PushProperty("Entity", entity);
+        using var _2 = LogContext.PushProperty("Reason", reason);
+        logger.LogWarning(
+            "[Audit:{EventType}] CSV inválido para {Entity}. Reason={Reason}",
+            "InvalidCsv", entity, reason
+        );
         return Task.CompletedTask;
     }
 }

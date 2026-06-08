@@ -6,11 +6,8 @@ import { SchoolApiProfesorService } from './school-api-profesor.service';
 import { SchoolApiSuperUsuarioService } from './school-api-superusuario.service';
 import type {
     AdminComparacionCursos,
-    AdminCursoRendimiento,
-    AdminAsignaturaRendimiento,
     AdminHorarioAsignaturaItem,
     AdminTop5Stats,
-    AdminTop5AsignaturaItem,
     AdminCursoNotasStats,
     AdminCursoStatsSelector,
     AdminImparticionListItem,
@@ -186,6 +183,7 @@ export class SchoolApiService {
     eliminarImparticion(profesorId: number, asignaturaId: number, cursoId: number): Promise<void> { return this.admin.eliminarImparticion(profesorId, asignaturaId, cursoId); }
     importarCsv(entidad: CsvImportEntity, file: File): Promise<CsvImportResult> { return this.admin.importarCsv(entidad, file); }
     registrarExportacionExcel(entidad: string, totalRegistros: number, fileName: string): Promise<void> { return this.admin.registrarExportacionExcel(entidad, totalRegistros, fileName); }
+    registrarErrorCsv(entidad: string, reason: string): Promise<void> { return this.admin.registrarErrorCsv(entidad, reason); }
     getTareasConNotas(asignaturaId: number): Promise<TareaConNotas[]> { return this.admin.getTareasConNotas(asignaturaId); }
     // #endregion
 }

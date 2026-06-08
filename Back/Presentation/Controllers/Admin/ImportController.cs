@@ -35,6 +35,13 @@ public class ImportController(IImportService importService, IAuditLogService aud
         return NoContent();
     }
 
+    [HttpPost("invalid/{entidad}")]
+    public async Task<IActionResult> LogInvalidCsv([FromRoute] string entidad, [FromQuery] string reason)
+    {
+        await auditLog.LogInvalidCsvAsync(entidad, reason, HttpContext.RequestAborted);
+        return NoContent();
+    }
+
     private static async Task<string> ReadTextAsync(IFormFile file)
     {
         using var reader = new StreamReader(file.OpenReadStream());

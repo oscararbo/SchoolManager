@@ -232,7 +232,7 @@ app.UseStaticFiles(new StaticFileOptions
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
     RequestPath = "/uploads"
 });
-if (!app.Environment.IsEnvironment("Testing"))
+if (!app.Environment.IsEnvironment("Testing") && !app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
