@@ -85,4 +85,55 @@ export class SchoolApiSuperUsuarioService {
             throw extractSchoolApiError(e);
         }
     }
+
+    async getLogs(params: {
+        page?: number;
+        pageSize?: number;
+        query?: string;
+        level?: string;
+        entity?: string;
+        userEmail?: string;
+        from?: string;
+        to?: string;
+    }): Promise<any> {
+        try {
+            const response = await firstValueFrom(
+                this.http.get<any>(`${this.apiUrl}/logs`, {
+                    params: {
+                        ...(params.page !== undefined && { page: params.page }),
+                        ...(params.pageSize !== undefined && { pageSize: params.pageSize }),
+                        ...(params.query && { query: params.query }),
+                        ...(params.level && { level: params.level }),
+                        ...(params.entity && { entity: params.entity }),
+                        ...(params.userEmail && { userEmail: params.userEmail }),
+                        ...(params.from && { from: params.from }),
+                        ...(params.to && { to: params.to })
+                    }
+                })
+            );
+            return response ?? { items: [], total: 0 };
+        } catch (e) {
+            throw extractSchoolApiError(e);
+        }
+    }
+
+    async getLogsTimeline(params: {
+        from?: string;
+        to?: string;
+    }): Promise<any[]> {
+        try {
+            const response = await firstValueFrom(
+                this.http.get<any>(`${this.apiUrl}/logs/timeline`, {
+                    params: {
+                        ...(params.from && { from: params.from }),
+                        ...(params.to && { to: params.to })
+                    }
+                })
+            );
+
+            return response ?? [];
+        } catch (e) {
+            throw extractSchoolApiError(e);
+        }
+    }
 }

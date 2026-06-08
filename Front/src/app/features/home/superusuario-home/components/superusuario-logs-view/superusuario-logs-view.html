@@ -1,0 +1,94 @@
+<div class="logs-container">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="row g-2 mb-3">
+
+                <div class="col-md-6">
+                    <input class="form-control"
+                        placeholder="level:Error AND Entity:cursos"
+                        [ngModel]="query()"
+                        (ngModelChange)="query.set($event)">
+                </div>
+
+                <div class="col-md-2">
+                    <select class="form-select"
+                        [ngModel]="level()"
+                        (ngModelChange)="level.set($event)">
+                        <option value="">Nivel</option>
+                        <option value="Information">Info</option>
+                        <option value="Warning">Warning</option>
+                        <option value="Error">Error</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <input class="form-control"
+                        placeholder="Entidad"
+                        [ngModel]="entity()"
+                        (ngModelChange)="entity.set($event)">
+                </div>
+
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" (click)="cargar()">
+                        Buscar
+                    </button>
+                </div>
+
+            </div>
+
+            <div class="mb-3">
+                <canvas id="chartLogs"></canvas>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body d-flex flex-column">
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <button class="btn btn-outline-secondary btn-sm" (click)="prev()">Prev</button>
+
+                        <span class="small">Página {{ page() }}</span>
+
+                        <button class="btn btn-outline-secondary btn-sm" (click)="next()">Next</button>
+                    </div>
+
+                    <div class="table-container flex-grow-1">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Nivel</th>
+                                    <th>Mensaje</th>
+                                    <th>Entidad</th>
+                                    <th>Usuario</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                @for (log of logs(); track log.timestamp) {
+                                    <tr>
+                                        <td>{{ log.timestamp | date:'short' }}</td>
+
+                                        <td>
+                                            <span class="badge"
+                                                [ngClass]="{
+                                                    'bg-success': log.level === 'Information',
+                                                    'bg-warning': log.level === 'Warning',
+                                                    'bg-danger': log.level === 'Error'
+                                                }">
+                                                {{ log.level }}
+                                            </span>
+                                        </td>
+
+                                        <td class="text-truncate">{{ log.message }}</td>
+                                        <td>{{ log.entity || '-' }}</td>
+                                        <td>{{ log.userEmail || '-' }}</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

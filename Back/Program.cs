@@ -166,6 +166,8 @@ builder.Services.AddHostedService<RefreshTokenCleanupService>();
 // MongoDB audit log
 builder.Services.Configure<MongoOptions>(builder.Configuration.GetSection("MongoDB"));
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddScoped<MongoDbContext>();
+builder.Services.AddScoped<IAuditLogDomainRepository, AuditLogDomainRepository>();
 
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
 #endregion

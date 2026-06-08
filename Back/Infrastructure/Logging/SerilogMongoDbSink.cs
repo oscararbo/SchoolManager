@@ -55,8 +55,7 @@ public class SerilogMongoDbSink : IBatchedLogEventSink
         {
 
             if (!ExcludedProperties.Contains(key))
-                doc[key] = value.ToString();
-
+                doc[key] = BsonValue.Create(value);
         }
         return doc;
     }

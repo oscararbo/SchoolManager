@@ -1,0 +1,37 @@
+.table td {
+    vertical-align: middle;
+    font-size: 13px;
+}
+
+canvas {
+    max-height: 250px;
+}
+
+.logs-container {
+    height: 100%;
+    background: #f8f9fa;
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.table-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+thead.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: white;
+}
+
+.text-truncate {
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

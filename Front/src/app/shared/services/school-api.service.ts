@@ -186,4 +186,25 @@ export class SchoolApiService {
     registrarErrorCsv(entidad: string, reason: string): Promise<void> { return this.admin.registrarErrorCsv(entidad, reason); }
     getTareasConNotas(asignaturaId: number): Promise<TareaConNotas[]> { return this.admin.getTareasConNotas(asignaturaId); }
     // #endregion
+    // #region Logs (SuperUsuario)
+    getLogs(params: {
+        page?: number;
+        pageSize?: number;
+        query?: string;
+        level?: string;
+        entity?: string;
+        userEmail?: string;
+        from?: string;
+        to?: string;
+    }): Promise<{ items: any[]; total: number }> {
+        return this.superUsuario.getLogs(params);
+    }
+
+    getLogsTimeline(params: {
+        from?: string;
+        to?: string;
+    }): Promise<any[]> {
+        return this.superUsuario.getLogsTimeline(params);
+    }
+    // #endregion
 }

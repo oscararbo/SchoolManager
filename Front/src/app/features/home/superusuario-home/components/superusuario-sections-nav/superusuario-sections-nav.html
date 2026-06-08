@@ -1,0 +1,23 @@
+<ul class="nav nav-pills gap-2 flex-wrap">
+
+    <li class="nav-item">
+        <button
+            class="btn"
+            [class.btn-primary]="seccionActiva === 'colegios'"
+            [class.btn-outline-primary]="seccionActiva !== 'colegios'"
+            (click)="seleccionar('colegios')">
+            Colegios
+        </button>
+    </li>
+
+    <li class="nav-item">
+        <button
+            class="btn"
+            [class.btn-primary]="seccionActiva === 'logs'"
+            [class.btn-outline-primary]="seccionActiva !== 'logs'"
+            (click)="seleccionar('logs')">
+            Logs
+        </button>
+    </li>
+
+</ul>
