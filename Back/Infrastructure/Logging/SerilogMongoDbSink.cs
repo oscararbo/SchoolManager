@@ -53,9 +53,15 @@ public class SerilogMongoDbSink : IBatchedLogEventSink
 
         foreach (var (key, value) in e.Properties)
         {
-
             if (!ExcludedProperties.Contains(key))
-                doc[key] = BsonValue.Create(value);
+            {
+                if (value is ScalarValue scalar)
+                    doc[key] = scalar.Value != null
+                        ? BsonValue.Create(scalar.Value)
+                        : BsonNull.Value;
+                else
+                    doc[key] = new BsonString(value.ToString());
+            }
         }
         return doc;
     }

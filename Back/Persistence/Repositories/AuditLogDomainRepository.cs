@@ -20,6 +20,8 @@ public class AuditLogDomainRepository : IAuditLogDomainRepository
     {
         return new AdminLogDto
         {
+            Id = doc.TryGetValue("_id", out var id) && id.IsObjectId ? id.AsObjectId.ToString() : id?.ToString() ?? "",
+            
             Timestamp = GetDate(doc, "timestamp"),
             Level = GetString(doc, "level") ?? "",
             Message = GetString(doc, "message") ?? "",

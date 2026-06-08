@@ -27,6 +27,12 @@ var builder = WebApplication.CreateBuilder(args);
 var mongoOpts = builder.Configuration.GetSection("MongoDB").Get<MongoOptions>()
     ?? new MongoOptions();
 
+
+Serilog.Debugging.SelfLog.Enable(msg =>
+{
+    Console.WriteLine("SERILOG ERROR: " + msg);
+});
+
 var mongoSink = new PeriodicBatchingSink(
     new SerilogMongoDbSink(mongoOpts),
     new PeriodicBatchingSinkOptions { BatchSizeLimit = 50, Period = TimeSpan.FromSeconds(5) });

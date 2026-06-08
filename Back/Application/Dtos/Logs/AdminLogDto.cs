@@ -2,8 +2,8 @@ namespace Back.Api.Application.Dtos;
 
 public class AdminLogDto
 {
+    public string Id { get; set; } = "";
     public DateTime Timestamp { get; set; }
-
     public string Level { get; set; } = "";
     public string Message { get; set; } = "";
     public string? EventType { get; set; }

@@ -19,6 +19,7 @@ export class SuperusuarioLogsViewComponent implements OnInit {
 
     logs = signal<any[]>([]);
     total = signal(0);
+    totalPagesNum = signal(0);
 
     page = signal(0);
     pageSize = 50;
@@ -45,18 +46,24 @@ export class SuperusuarioLogsViewComponent implements OnInit {
 
         this.logs.set(res?.items ?? res?.items ?? []);
         this.total.set(res?.total ?? res?.total ?? 0);
+        this.totalPagesNum.set(await this.totalPages());
     }
 
     async next() {
+        if(this.page() + 1 >= this.totalPagesNum()) return;
         this.page.update(p => p + 1);
         await this.cargar();
     }
 
     async prev() {
-        if (this.page() > 0) {
-            this.page.update(p => p - 1);
-            await this.cargar();
-        }
+        if (this.page() === 0) return;
+        this.page.update(p => p - 1);
+        await this.cargar();
+    }
+
+    async totalPages(): Promise<number> {
+        const total = this.total();
+        return Math.ceil(total / this.pageSize);
     }
 
     async loadTimeline() {
