@@ -18,9 +18,9 @@ export class ToastService {
      *
      * @param message - Texto del mensaje a mostrar.
      * @param type - Nivel visual: `'success'`, `'error'`, `'warning'` o `'info'`.
-     * @param duration - Milisegundos antes de que el toast desaparezca (defecto: 5000).
+     * @param duration - Milisegundos antes de que el toast desaparezca (defecto: 6000).
      */
-    show(message: string, type: Toast['type'] = 'info', duration = 5000): void {
+    show(message: string, type: Toast['type'] = 'info', duration = 6000): void {
         const now = Date.now();
         const key = `${type}:${message}`;
         const last = this.lastShown.get(key) ?? 0;

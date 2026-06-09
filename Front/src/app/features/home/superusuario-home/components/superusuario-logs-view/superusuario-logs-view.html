@@ -3,18 +3,12 @@
         <div class="card-body">
             <div class="row g-2 mb-3">
 
-                <div class="col-md-6">
-                    <input class="form-control"
-                        placeholder="level:Error AND Entity:cursos"
-                        [ngModel]="query()"
-                        (ngModelChange)="query.set($event)">
-                </div>
-
                 <div class="col-md-2">
+                    <label class="form-label small">Tipo</label>
                     <select class="form-select"
                         [ngModel]="level()"
                         (ngModelChange)="level.set($event)">
-                        <option value="">Nivel</option>
+                        <option value="">Todos</option>
                         <option value="Information">Info</option>
                         <option value="Warning">Warning</option>
                         <option value="Error">Error</option>
@@ -22,22 +16,52 @@
                 </div>
 
                 <div class="col-md-2">
+                    <label class="form-label small">Entidad</label>
                     <input class="form-control"
-                        placeholder="Entidad"
                         [ngModel]="entity()"
                         (ngModelChange)="entity.set($event)">
                 </div>
 
                 <div class="col-md-2">
+                    <label class="form-label small">Usuario</label>
+                    <input class="form-control"
+                        [ngModel]="userEmail()"
+                        (ngModelChange)="userEmail.set($event)">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label small">Desde</label>
+                    <input type="date"
+                        class="form-control"
+                        [max]="maxDate"
+                        [min]="minDate"
+                        [ngModel]="from()"
+                        (ngModelChange)="from.set($event)">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label small">Hasta</label>
+                    <input type="date"
+                        class="form-control"
+                        [max]="maxDate"
+                        [min]="from() || minDate"
+                        [ngModel]="to()"
+                        (ngModelChange)="to.set($event)">
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end">
                     <button class="btn btn-primary w-100" (click)="cargar()">
                         Buscar
                     </button>
                 </div>
-
             </div>
 
             <div class="mb-3">
                 <canvas id="chartLogs"></canvas>
+            </div>
+
+            <div class="mb-3 text-center text-muted" *ngIf="chartNoData">
+                No hay datos para los filtros seleccionados
             </div>
 
             <div class="card border-0 shadow-sm">
@@ -65,8 +89,12 @@
 
                             <tbody>
                                 @for (log of logs(); track log.id) {
-                                    <tr>
-                                        <td>{{ log.timestamp | date:'short' }}</td>
+                                    <tr [ngClass]="{
+                                        'table-danger': log.level === 'Error',
+                                        'table-warning': log.level === 'Warning',
+                                        'table-success': log.level === 'Information'
+                                    }">
+                                        <td>{{ log.timestamp | date:'dd/MM/yyyy HH:mm' }}</td>
 
                                         <td>
                                             <span class="badge"
@@ -85,6 +113,11 @@
                                     </tr>
                                 }
                             </tbody>
+                            <tr *ngIf="logs().length === 0">
+                                <td colspan="5" class="text-center text-muted">
+                                    No hay logs para los filtros seleccionados
+                                </td>
+                            </tr>
                         </table>
                     </div>
                 </div>

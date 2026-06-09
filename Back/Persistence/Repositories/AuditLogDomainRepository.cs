@@ -21,7 +21,7 @@ public class AuditLogDomainRepository : IAuditLogDomainRepository
         return new AdminLogDto
         {
             Id = doc.TryGetValue("_id", out var id) && id.IsObjectId ? id.AsObjectId.ToString() : id?.ToString() ?? "",
-            
+
             Timestamp = GetDate(doc, "timestamp"),
             Level = GetString(doc, "level") ?? "",
             Message = GetString(doc, "message") ?? "",
@@ -70,7 +70,10 @@ public class AuditLogDomainRepository : IAuditLogDomainRepository
             filter &= builder.Gte("timestamp", request.From.Value);
 
         if (request.To.HasValue)
-            filter &= builder.Lte("timestamp", request.To.Value);
+        {
+            var to = request.To.Value.Date.AddDays(1).AddTicks(-1);
+            filter &= builder.Lte("timestamp", to);
+        }
 
         if (!string.IsNullOrWhiteSpace(request.Query))
             filter &= BuildQueryFilter(request.Query);
@@ -123,7 +126,10 @@ public class AuditLogDomainRepository : IAuditLogDomainRepository
             match &= builder.Gte("timestamp", request.From.Value);
 
         if (request.To.HasValue)
-            match &= builder.Lte("timestamp", request.To.Value);
+        {
+            var to = request.To.Value.Date.AddDays(1).AddTicks(-1);
+            match &= builder.Lte("timestamp", to);
+        }
 
         var pipeline = context.Logs.Aggregate()
         .Match(match)
