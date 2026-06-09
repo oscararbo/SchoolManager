@@ -75,9 +75,6 @@ public class AuditLogDomainRepository : IAuditLogDomainRepository
             filter &= builder.Lte("timestamp", to);
         }
 
-        if (!string.IsNullOrWhiteSpace(request.Query))
-            filter &= BuildQueryFilter(request.Query);
-
         var total = await context.Logs.CountDocumentsAsync(filter, cancellationToken: ct);
 
         var docs = await context.Logs
@@ -92,29 +89,6 @@ public class AuditLogDomainRepository : IAuditLogDomainRepository
             Total = total,
             Items = docs.Select(ToDto)
         };
-    }
-
-    private static FilterDefinition<BsonDocument> BuildQueryFilter(string query)
-    {
-        var builder = Builders<BsonDocument>.Filter;
-
-        var parts = query.Split("AND", StringSplitOptions.RemoveEmptyEntries);
-        var filters = new List<FilterDefinition<BsonDocument>>();
-
-        foreach (var part in parts)
-        {
-            var kv = part.Split(':', 2);
-            if (kv.Length != 2) continue;
-
-            var key = kv[0].Trim();
-            var value = kv[1].Trim();
-
-            filters.Add(builder.Regex(key, new BsonRegularExpression(value, "i")));
-        }
-
-        return filters.Count > 0
-            ? builder.And(filters)
-            : builder.Empty;
     }
 
     public async Task<IEnumerable<LogsTimelineDto>> GetTimelineAsync(LogsQueryRequest request, CancellationToken ct = default)
