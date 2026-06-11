@@ -1,18 +1,16 @@
-using Back.Api.Application.Services;
 using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Configuration;
+using Back.Api.Application.Services;
 using Back.Api.Application.Services.Audit;
 using Back.Api.Infrastructure.ErrorHandling;
 using Back.Api.Infrastructure.Logging;
-using Back.Api.Infrastructure.Mongo;
 using Back.Api.Infrastructure.Security;
 using Back.Api.Infrastructure.Startup;
 using Back.Api.Persistence.Context;
 using Back.Api.Persistence.Repositories;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -23,29 +21,63 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+#region Typed options
+builder.Services.AddOptions<ConnectionStringsOptions>()
+    .BindConfiguration(ConnectionStringsOptions.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<MongoOptions>()
+    .BindConfiguration(MongoOptions.SectionName)
+    .Validate(options => !string.IsNullOrWhiteSpace(options.DatabaseName),
+        "MongoDB:DatabaseName es obligatorio.")
+    .ValidateOnStart();
+
+builder.Services.AddOptions<JwtOptions>()
+    .BindConfiguration(JwtOptions.SectionName)
+    .ValidateDataAnnotations()
+    .Validate(options => !string.IsNullOrWhiteSpace(options.Key) && options.Key.Length >= 32,
+        "Jwt:Key debe tener al menos 32 caracteres para HMAC-SHA256.")
+    .ValidateOnStart();
+
+builder.Services.AddOptions<FrontCorsOptions>()
+    .BindConfiguration(FrontCorsOptions.SectionName)
+    .Validate(options => options.AllowedOrigins is { Length: > 0 },
+        "Cors:AllowedOrigins debe tener al menos un origen.")
+    .ValidateOnStart();
+
+builder.Services.AddOptions<SeedAdminOptions>()
+    .BindConfiguration(SeedAdminOptions.SectionName);
+
+builder.Services.AddOptions<SeedSchoolOptions>()
+    .BindConfiguration(SeedSchoolOptions.SectionName);
+
+builder.Services.AddOptions<SeedSuperUsuarioOptions>()
+    .BindConfiguration(SeedSuperUsuarioOptions.SectionName);
+#endregion
+
 #region Serilog configuration
-var mongoOpts = builder.Configuration.GetSection("MongoDB").Get<MongoOptions>()
-    ?? new MongoOptions();
-
-
 Serilog.Debugging.SelfLog.Enable(msg =>
 {
     Console.WriteLine("SERILOG ERROR: " + msg);
 });
 
-var mongoSink = new PeriodicBatchingSink(
-    new SerilogMongoDbSink(mongoOpts),
-    new PeriodicBatchingSinkOptions { BatchSizeLimit = 50, Period = TimeSpan.FromSeconds(5) });
+builder.Host.UseSerilog((context, services, loggerConfiguration) =>
+{
+    var connectionOptions = services.GetRequiredService<IOptions<ConnectionStringsOptions>>().Value;
+    var mongoOptions = services.GetRequiredService<IOptions<MongoOptions>>().Value;
 
-Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .Enrich.FromLogContext()
-    .WriteTo.Console(outputTemplate:
-        "[{Timestamp:HH:mm:ss} {Level:u3}] {UserEmail} | {Message:lj}{NewLine}{Exception}")
-    .WriteTo.Sink(mongoSink)
-    .CreateLogger();
+    var mongoSink = new PeriodicBatchingSink(
+        new SerilogMongoDbSink(connectionOptions.MongoConnection, mongoOptions),
+        new PeriodicBatchingSinkOptions { BatchSizeLimit = 50, Period = TimeSpan.FromSeconds(5) });
 
-builder.Host.UseSerilog();
+    loggerConfiguration
+        .ReadFrom.Configuration(context.Configuration)
+        .Enrich.FromLogContext()
+        .WriteTo.Console(outputTemplate:
+            "[{Timestamp:HH:mm:ss} {Level:u3}] {UserEmail} | {Message:lj}{NewLine}{Exception}")
+        .WriteTo.Sink(mongoSink);
+});
 #endregion
 
 #region Core web API services
@@ -68,20 +100,15 @@ builder.Services.AddSwaggerGen();
 #endregion
 
 #region JWT authentication setup
-builder.Services.AddOptions<JwtOptions>()
-    .Bind(builder.Configuration.GetSection("Jwt"))
-    .ValidateDataAnnotations()
-    .Validate(options => !string.IsNullOrWhiteSpace(options.Key) && options.Key.Length >= 32,
-        "Jwt:Key debe tener al menos 32 caracteres para HMAC-SHA256.")
-    .ValidateOnStart();
-
-var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()
-    ?? throw new InvalidOperationException("La seccion Jwt no esta configurada.");
-var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key));
-
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+    .AddJwtBearer();
+
+builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .Configure<IOptions<JwtOptions>>((options, jwtOptionsAccessor) =>
     {
+        var jwtOptions = jwtOptionsAccessor.Value;
+        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key));
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -170,7 +197,6 @@ builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddHostedService<RefreshTokenCleanupService>();
 
 // MongoDB audit log
-builder.Services.Configure<MongoOptions>(builder.Configuration.GetSection("MongoDB"));
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<MongoDbContext>();
 builder.Services.AddScoped<IAuditLogDomainRepository, AuditLogDomainRepository>();
@@ -179,27 +205,21 @@ builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
 #endregion
 
 #region Frontend access policy
-builder.Services.AddCors(options =>
-{
-    var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
-    var allowedOrigins = configuredOrigins is { Length: > 0 }
-        ? configuredOrigins
-        : new[] { "http://localhost:4200", "http://127.0.0.1:4200" };
-
-    options.AddPolicy("Front", policy =>
-        policy.WithOrigins(allowedOrigins)
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials());
-});
+builder.Services.AddSingleton<IConfigureOptions<Microsoft.AspNetCore.Cors.Infrastructure.CorsOptions>, ConfigureFrontCorsPolicy>();
+builder.Services.AddCors();
 #endregion
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? "Host=localhost;Port=5432;Database=schooldb;Username=postgres;Password=postgres";
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString));
-builder.Services.AddDbContextFactory<AppDbContext>(options =>
-    options.UseNpgsql(connectionString), ServiceLifetime.Scoped);
+builder.Services.AddDbContext<AppDbContext>((serviceProvider, options) =>
+{
+    var connectionOptions = serviceProvider.GetRequiredService<IOptions<ConnectionStringsOptions>>().Value;
+    options.UseNpgsql(connectionOptions.DefaultConnection);
+});
+
+builder.Services.AddDbContextFactory<AppDbContext>((serviceProvider, options) =>
+{
+    var connectionOptions = serviceProvider.GetRequiredService<IOptions<ConnectionStringsOptions>>().Value;
+    options.UseNpgsql(connectionOptions.DefaultConnection);
+}, ServiceLifetime.Scoped);
 
 var app = builder.Build();
 
@@ -257,4 +277,3 @@ app.Run();
 #region Test host entry point
 public partial class Program { }
 #endregion
-

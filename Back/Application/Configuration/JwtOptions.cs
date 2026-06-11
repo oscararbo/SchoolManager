@@ -4,6 +4,8 @@ namespace Back.Api.Application.Configuration;
 
 public sealed class JwtOptions
 {
+    public const string SectionName = "Jwt";
+
     [Required]
     public string Key { get; init; } = string.Empty;
 

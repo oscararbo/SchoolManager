@@ -1,4 +1,4 @@
-using Back.Api.Infrastructure.Mongo;
+using Back.Api.Application.Configuration;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Serilog.Events;
@@ -27,9 +27,9 @@ public class SerilogMongoDbSink : IBatchedLogEventSink
 
     private readonly IMongoCollection<BsonDocument> _collection;
 
-    public SerilogMongoDbSink(MongoOptions options)
+    public SerilogMongoDbSink(string connectionString, MongoOptions options)
     {
-        var client = new MongoClient(options.ConnectionString);
+        var client = new MongoClient(connectionString);
         var db = client.GetDatabase(options.DatabaseName);
         _collection = db.GetCollection<BsonDocument>("serilog_logs");
     }

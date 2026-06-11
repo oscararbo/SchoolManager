@@ -3,6 +3,7 @@ using Back.Api.Application.Configuration;
 using Back.Api.Domain.Entities;
 using Back.Api.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Npgsql;
 
 namespace Back.Api.Infrastructure.Startup;
@@ -10,13 +11,22 @@ namespace Back.Api.Infrastructure.Startup;
 public sealed class DatabaseSeeder
 {
     private readonly IServiceProvider serviceProvider;
-    private readonly IConfiguration configuration;
+    private readonly SeedAdminOptions seedAdminOptions;
+    private readonly SeedSchoolOptions seedSchoolOptions;
+    private readonly SeedSuperUsuarioOptions seedSuperUsuarioOptions;
     private readonly ILogger<DatabaseSeeder> logger;
 
-    public DatabaseSeeder(IServiceProvider serviceProvider, IConfiguration configuration, ILogger<DatabaseSeeder> logger)
+    public DatabaseSeeder(
+        IServiceProvider serviceProvider,
+        IOptions<SeedAdminOptions> seedAdminOptions,
+        IOptions<SeedSchoolOptions> seedSchoolOptions,
+        IOptions<SeedSuperUsuarioOptions> seedSuperUsuarioOptions,
+        ILogger<DatabaseSeeder> logger)
     {
         this.serviceProvider = serviceProvider;
-        this.configuration = configuration;
+        this.seedAdminOptions = seedAdminOptions.Value;
+        this.seedSchoolOptions = seedSchoolOptions.Value;
+        this.seedSuperUsuarioOptions = seedSuperUsuarioOptions.Value;
         this.logger = logger;
     }
 
@@ -29,17 +39,17 @@ public sealed class DatabaseSeeder
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var passwordService = scope.ServiceProvider.GetRequiredService<IPasswordService>();
 
-            var seedAdminName = configuration["SeedAdmin:Nombre"] ?? "Administrador";
-            var seedAdminEmail = (configuration["SeedAdmin:Correo"] ?? "admin@prueba.com").Trim().ToLowerInvariant();
-            var seedAdminPassword = configuration["SeedAdmin:Contrasena"] ?? "Prueba1";
-            var seedColegioNombre = configuration["SeedSchool:Nombre"] ?? "Colegio Principal";
-            var seedColegioSlug = (configuration["SeedSchool:Slug"] ?? "default").Trim().ToLowerInvariant();
-            var seedColegioLogoUrl = configuration["SeedSchool:LogoUrl"];
-            var seedColegioFaviconUrl = configuration["SeedSchool:FaviconUrl"];
-            var seedColegioColorPrimario = configuration["SeedSchool:ColorPrimario"] ?? "#1f2937";
-            var seedColegioMensajeLogin = configuration["SeedSchool:MensajeLogin"] ?? "Consulta tus clases, tus asignaturas y tus notas en un solo lugar.";
-            var seedSuperUsuarioEmail = (configuration["SeedSuperUsuario:Correo"] ?? "root@schoolmanager.com").Trim().ToLowerInvariant();
-            var seedSuperUsuarioPassword = configuration["SeedSuperUsuario:Contrasena"] ?? "Super123!";
+            var seedAdminName = seedAdminOptions.Nombre;
+            var seedAdminEmail = seedAdminOptions.Correo.Trim().ToLowerInvariant();
+            var seedAdminPassword = seedAdminOptions.Contrasena;
+            var seedColegioNombre = seedSchoolOptions.Nombre;
+            var seedColegioSlug = seedSchoolOptions.Slug.Trim().ToLowerInvariant();
+            var seedColegioLogoUrl = seedSchoolOptions.LogoUrl;
+            var seedColegioFaviconUrl = seedSchoolOptions.FaviconUrl;
+            var seedColegioColorPrimario = seedSchoolOptions.ColorPrimario;
+            var seedColegioMensajeLogin = seedSchoolOptions.MensajeLogin;
+            var seedSuperUsuarioEmail = seedSuperUsuarioOptions.Correo.Trim().ToLowerInvariant();
+            var seedSuperUsuarioPassword = seedSuperUsuarioOptions.Contrasena;
 
             if (db.Database.IsRelational())
             {

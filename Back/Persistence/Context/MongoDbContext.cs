@@ -1,4 +1,4 @@
-using Back.Api.Infrastructure.Mongo;
+using Back.Api.Application.Configuration;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -9,11 +9,12 @@ public class MongoDbContext
 {
     private readonly IMongoDatabase database;
 
-    public MongoDbContext(IOptions<MongoOptions> options)
+    public MongoDbContext(IOptions<ConnectionStringsOptions> connectionOptions, IOptions<MongoOptions> mongoOptions)
     {
-        var config = options.Value;
+        var connections = connectionOptions.Value;
+        var config = mongoOptions.Value;
 
-        var client = new MongoClient(config.ConnectionString);
+        var client = new MongoClient(connections.MongoConnection);
         database = client.GetDatabase(config.DatabaseName);
 
         EnsureIndexes();

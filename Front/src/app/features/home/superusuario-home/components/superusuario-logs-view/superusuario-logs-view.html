@@ -49,11 +49,18 @@
                         (ngModelChange)="to.set($event)">
                 </div>
 
-                <div class="col-md-2 d-flex align-items-end">
+                <div class="col-md-1 d-flex align-items-end">
                     <button class="btn btn-primary w-100" (click)="cargar()">
                         Buscar
                     </button>
                 </div>
+
+                <div class="col-md-1 d-flex align-items-end">
+                    <button class="btn btn-secondary w-100" (click)="originalFilters()">
+                        Limpiar
+                    </button>
+                </div>
+
             </div>
 
             <div class="mb-3">

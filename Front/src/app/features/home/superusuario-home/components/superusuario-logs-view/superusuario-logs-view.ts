@@ -239,4 +239,14 @@ export class SuperusuarioLogsViewComponent implements OnInit {
             }
         });
     }
+
+    async originalFilters(){
+        this.level.set('');
+        this.entity.set('');
+        this.userEmail.set('');
+        this.from.set(undefined);
+        this.to.set(undefined);
+        this.page.set(0);
+        await this.cargar();
+    }
 }

@@ -52,6 +52,8 @@ Archivo principal: `appsettings.json`.
 Claves relevantes:
 
 - `ConnectionStrings:DefaultConnection`
+- `ConnectionStrings:MongoConnection`
+- `MongoDB:DatabaseName`
 - `Jwt:Key`, `Jwt:Issuer`, `Jwt:Audience`
 - `SeedAdmin:Nombre`, `SeedAdmin:Correo`, `SeedAdmin:Contrasena`
 - `SeedSchool:Nombre`, `SeedSchool:Slug`, `SeedSchool:LogoUrl`, `SeedSchool:FaviconUrl`, `SeedSchool:ColorPrimario`, `SeedSchool:MensajeLogin`
