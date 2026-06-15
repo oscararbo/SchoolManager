@@ -83,17 +83,37 @@ export class SchoolApiAdminService {
         }
     }
 
-    async getAdminMatriculas(): Promise<AdminMatriculaListItem[]> {
+    async getAdminMatriculas(page: number, pageSize: number): Promise<{ total: number; items: AdminMatriculaListItem[] }> {
         try {
-            return await firstValueFrom(this.http.get<AdminMatriculaListItem[]>(`${this.apiUrl}/admin/matriculas`));
+            return await firstValueFrom(
+                this.http.get<{ total: number; items: AdminMatriculaListItem[] }>(
+                    `${this.apiUrl}/admin/matriculas`,
+                    {
+                        params: {
+                            page: page.toString(),
+                            pageSize: pageSize.toString()
+                        }
+                    }
+                )
+            );
         } catch (e) {
             throw extractSchoolApiError(e);
         }
     }
 
-    async getAdminImparticiones(): Promise<AdminImparticionListItem[]> {
+    async getAdminImparticiones(page: number, pageSize: number): Promise<{ total: number; items: AdminImparticionListItem[] }> {
         try {
-            return await firstValueFrom(this.http.get<AdminImparticionListItem[]>(`${this.apiUrl}/admin/imparticiones`));
+            return await firstValueFrom(
+                this.http.get<{ total: number; items: AdminImparticionListItem[] }>(
+                    `${this.apiUrl}/admin/imparticiones`,
+                    {
+                        params: {
+                            page: page.toString(),
+                            pageSize: pageSize.toString()
+                        }
+                    }
+                )
+            );
         } catch (e) {
             throw extractSchoolApiError(e);
         }
@@ -243,10 +263,25 @@ export class SchoolApiAdminService {
         }
     }
 
-    async getEstudiantes(): Promise<EstudianteItem[]> {
+    async getEstudiantes(page: number, pageSize: number): Promise<{ total: number; items: EstudianteItem[] }> {
         try {
-            const response = await firstValueFrom(this.http.get<ApiEstudianteItem[]>(`${this.apiUrl}/estudiantes`));
-            return response.map(mapEstudianteItem);
+            const response = await firstValueFrom(
+                this.http.get<{ total: number; items: ApiEstudianteItem[] }>(
+                    `${this.apiUrl}/estudiantes`,
+                    {
+                        params: {
+                            page: page.toString(),
+                            pageSize: pageSize.toString()
+                        }
+                    }
+                )
+            );
+
+            return {
+                total: response.total ?? 0,
+                items: response.items.map(mapEstudianteItem) ?? []
+            };
+
         } catch (e) {
             throw extractSchoolApiError(e);
         }

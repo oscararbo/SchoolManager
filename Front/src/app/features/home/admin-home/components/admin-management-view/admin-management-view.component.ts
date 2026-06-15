@@ -89,7 +89,6 @@ export class AdminManagementViewComponent implements OnInit {
         estudiantes: { page: 0, pageSize: 50, total: 0 },
         matriculas: { page: 0, pageSize: 50, total: 0 },
         imparticiones: { page: 0, pageSize: 50, total: 0 },
-        horarios: { page: 0, pageSize: 50, total: 0 }
     });
 
     cursos = signal<CursoItem[]>([]);
@@ -628,14 +627,26 @@ export class AdminManagementViewComponent implements OnInit {
     }
 
     private async cargarMatriculas(force = false): Promise<void> {
-        if (!force && this.resourcesLoaded().matriculas) {
-            return;
-        }
+        if (!force && this.resourcesLoaded().matriculas) return;
+
+        const { page, pageSize } = this.paginacion().matriculas;
 
         await this.runWithLoading('cargarMatriculas', async () => {
             try {
-                this.matriculas.set(await this.api.getAdminMatriculas());
+                const result = await this.api.getAdminMatriculas(page, pageSize);
+
+                this.matriculas.set(result.items ?? []);
+
+                this.paginacion.update(p => ({
+                    ...p,
+                    matriculas: {
+                        ...p.matriculas,
+                        total: result.total
+                    }
+                }));
+
                 this.setResourceLoaded('matriculas', true);
+
             } catch (e) {
                 this.mostrarError(e, 'No se pudieron cargar las matriculas.');
             }
@@ -643,14 +654,26 @@ export class AdminManagementViewComponent implements OnInit {
     }
 
     private async cargarImparticiones(force = false): Promise<void> {
-        if (!force && this.resourcesLoaded().imparticiones) {
-            return;
-        }
+        if (!force && this.resourcesLoaded().imparticiones) return;
+
+        const { page, pageSize } = this.paginacion().imparticiones;
 
         await this.runWithLoading('cargarImparticiones', async () => {
             try {
-                this.imparticiones.set(await this.api.getAdminImparticiones());
+                const result = await this.api.getAdminImparticiones(page, pageSize);
+
+                this.imparticiones.set(result.items ?? []);
+
+                this.paginacion.update(p => ({
+                    ...p,
+                    imparticiones: {
+                        ...p.imparticiones,
+                        total: result.total
+                    }
+                }));
+
                 this.setResourceLoaded('imparticiones', true);
+
             } catch (e) {
                 this.mostrarError(e, 'No se pudieron cargar las imparticiones.');
             }
@@ -715,15 +738,27 @@ export class AdminManagementViewComponent implements OnInit {
     }
 
     private async cargarEstudiantes(force = false): Promise<void> {
-        if (!force && this.resourcesLoaded().estudiantes) {
-            return;
-        }
+        if (!force && this.resourcesLoaded().estudiantes) return;
+
+        const { page, pageSize } = this.paginacion().estudiantes;
 
         await this.runWithLoading('cargarEstudiantes', async () => {
             try {
-                this.estudiantes.set(await this.api.getEstudiantes());
+                const result = await this.api.getEstudiantes(page, pageSize);
+
+                this.estudiantes.set(result.items ?? []);
+
+                this.paginacion.update(p => ({
+                    ...p,
+                    estudiantes: {
+                        ...p.estudiantes,
+                        total: result.total
+                    }
+                }));
+
                 this.setResourceLoaded('estudiantes', true);
                 this.actualizarValidacionDocumentos();
+
             } catch (e) {
                 this.mostrarError(e, 'No se pudieron cargar los estudiantes.');
             }

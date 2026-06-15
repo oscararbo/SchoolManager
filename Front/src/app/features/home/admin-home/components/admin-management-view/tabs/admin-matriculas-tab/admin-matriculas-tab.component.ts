@@ -14,20 +14,26 @@ export class AdminMatriculasTabComponent {
     @Input() cargandoListaMatriculas = false;
     @Input() cargandoMatricularEstudiante = false;
     @Input() cargandoEliminarMatricula = false;
-
     @Input() estudiantes: EstudianteItem[] = [];
     @Input() asignaturasFiltradas: AsignaturaItem[] = [];
     @Input() matriculasVista: AdminMatriculaListItem[] = [];
     @Input() cursos: CursoItem[] = [];
-
     @Input() matriculaEstudianteId: number | null = null;
     @Input() matriculaAsignaturaId: number | null = null;
     @Input() filtroMatriculasCursoId: number | null = null;
+    @Input() page = 0;
+    @Input() total = 0;
+    @Input() pageSize = 50;
 
     @Output() matriculaEstudianteIdChange = new EventEmitter<number | null>();
     @Output() matriculaAsignaturaIdChange = new EventEmitter<number | null>();
     @Output() filtroMatriculasCursoIdChange = new EventEmitter<number | null>();
-
     @Output() matricularEstudiante = new EventEmitter<void>();
     @Output() eliminarMatricula = new EventEmitter<{ estudianteId: number; asignaturaId: number; asignaturaNombre: string }>();
+    @Output() paginaAnterior = new EventEmitter<void>();
+    @Output() siguientePagina = new EventEmitter<void>();
+
+    totalPagesNum(): number {
+        return Math.max(1, Math.ceil(this.total / this.pageSize));
+    }
 }

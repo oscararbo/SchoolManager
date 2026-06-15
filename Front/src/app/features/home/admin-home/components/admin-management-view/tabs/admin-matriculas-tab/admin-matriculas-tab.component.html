@@ -41,10 +41,33 @@
         <div class="card shadow-sm border-0">
             <div class="card-body">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                    <h5 class="card-title mb-0">Listado de matriculas</h5>
-                    <select class="form-select form-select-sm" style="max-width:220px" [ngModel]="filtroMatriculasCursoId" (ngModelChange)="filtroMatriculasCursoIdChange.emit($event)">
+                    <h5 class="card-title mb-0">Matriculas</h5>
+
+                    <div class="d-flex align-items-center">
+                        <button class="btn btn-primary btn-sm"
+                            (click)="paginaAnterior.emit()"
+                            [disabled]="page === 0">
+                            Prev
+                        </button>
+
+                        <span class="small mx-2 text-secondary">
+                            Página {{ page + 1 }} de {{ totalPagesNum() }}
+                        </span>
+
+                        <button class="btn btn-primary btn-sm"
+                            (click)="siguientePagina.emit()"
+                            [disabled]="page + 1 >= totalPagesNum()">
+                            Next
+                        </button>
+                    </div>
+
+                    <select class="form-select form-select-sm" style="max-width:220px"
+                        [ngModel]="filtroMatriculasCursoId"
+                        (ngModelChange)="filtroMatriculasCursoIdChange.emit($event)">
                         <option [ngValue]="null">Todos los cursos</option>
-                        @for (c of cursos; track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
+                        @for (c of cursos; track c.id) {
+                            <option [value]="c.id">{{ c.nombre }}</option>
+                        }
                     </select>
                 </div>
                 <div class="table-responsive list-scroll-body">

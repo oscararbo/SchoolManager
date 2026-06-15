@@ -262,13 +262,18 @@
             [cargandoGuardarEstudiante]="estaCargando('guardarEstudiante')"
             [cargandoEliminarEstudiante]="estaCargando('eliminarEstudiante')"
             [controlErrorMessage]="getControlErrorMessage"
+            [page]="paginacion().estudiantes.page"
+            [total]="paginacion().estudiantes.total"
+            [pageSize]="paginacion().estudiantes.pageSize"
             (busquedaEstudiantesChange)="onBusquedaEstudiantesChange($event)"
             (filtroEstudiantesCursoIdChange)="filtroEstudiantesCursoId.set($event)"
             (iniciarEditarEstudiante)="iniciarEditarEstudiante($event)"
             (eliminarEstudiante)="eliminarEstudiante($event.id, $event.nombre)"
             (guardarEstudiante)="guardarEstudiante()"
             (cancelarEditarEstudiante)="editandoEstudianteId=null"
-            (crearEstudiante)="crearEstudiante()">
+            (crearEstudiante)="crearEstudiante()"
+            (paginaAnterior)="paginaAnterior('estudiantes')"
+            (siguientePagina)="siguientePagina('estudiantes')">
         </app-admin-estudiantes-tab>
     }
 
@@ -286,11 +291,16 @@
             [matriculaEstudianteId]="matriculaEstudianteId()"
             [matriculaAsignaturaId]="matriculaAsignaturaId()"
             [filtroMatriculasCursoId]="filtroMatriculasCursoId()"
+            [page]="paginacion().matriculas.page"
+            [total]="paginacion().matriculas.total"
+            [pageSize]="paginacion().matriculas.pageSize"
             (matriculaEstudianteIdChange)="matriculaEstudianteId.set($event)"
             (matriculaAsignaturaIdChange)="matriculaAsignaturaId.set($event)"
             (filtroMatriculasCursoIdChange)="filtroMatriculasCursoId.set($event)"
             (matricularEstudiante)="matricularEstudiante()"
-            (eliminarMatricula)="eliminarMatricula($event.estudianteId, $event.asignaturaId, $event.asignaturaNombre)">
+            (eliminarMatricula)="eliminarMatricula($event.estudianteId, $event.asignaturaId, $event.asignaturaNombre)"
+            (paginaAnterior)="paginaAnterior('matriculas')"
+            (siguientePagina)="siguientePagina('matriculas')">
         </app-admin-matriculas-tab>
     }
 
@@ -309,12 +319,17 @@
             [imparticionCursoId]="imparticionCursoId()"
             [imparticionAsignaturaId]="imparticionAsignaturaId()"
             [filtroImparticionesCursoId]="filtroImparticionesCursoId()"
+            [page]="paginacion().imparticiones.page"
+            [total]="paginacion().imparticiones.total"
+            [pageSize]="paginacion().imparticiones.pageSize"
             (imparticionProfesorIdChange)="imparticionProfesorId.set($event)"
             (imparticionCursoIdChange)="imparticionCursoId.set($event)"
             (imparticionAsignaturaIdChange)="imparticionAsignaturaId.set($event)"
             (filtroImparticionesCursoIdChange)="filtroImparticionesCursoId.set($event)"
             (asignarImparticion)="asignarImparticion()"
-            (eliminarImparticion)="eliminarImparticion($event.profesorId, $event.asignaturaId, $event.cursoId, $event.asignaturaNombre)">
+            (eliminarImparticion)="eliminarImparticion($event.profesorId, $event.asignaturaId, $event.cursoId, $event.asignaturaNombre)"
+            (paginaAnterior)="paginaAnterior('imparticiones')"
+            (siguientePagina)="siguientePagina('imparticiones')">
         </app-admin-imparticiones-tab>
     }
 

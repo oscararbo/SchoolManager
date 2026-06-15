@@ -28,6 +28,9 @@ export class AdminEstudiantesTabComponent {
     @Input() cargandoGuardarEstudiante = false;
     @Input() cargandoEliminarEstudiante = false;
     @Input() controlErrorMessage: (control: AbstractControl | null) => string | null = () => null;
+    @Input() page = 0;
+    @Input() total = 0;
+    @Input() pageSize = 50;
 
     @Output() busquedaEstudiantesChange = new EventEmitter<string>();
     @Output() filtroEstudiantesCursoIdChange = new EventEmitter<number | null>();
@@ -36,4 +39,10 @@ export class AdminEstudiantesTabComponent {
     @Output() guardarEstudiante = new EventEmitter<void>();
     @Output() cancelarEditarEstudiante = new EventEmitter<void>();
     @Output() crearEstudiante = new EventEmitter<void>();
+    @Output() paginaAnterior = new EventEmitter<void>();
+    @Output() siguientePagina = new EventEmitter<void>();
+
+    totalPagesNum(): number {
+        return Math.max(1, Math.ceil(this.total / this.pageSize));
+    }
 }

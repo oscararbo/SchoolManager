@@ -14,22 +14,28 @@ export class AdminImparticionesTabComponent {
     @Input() cargandoListaImparticiones = false;
     @Input() cargandoAsignarImparticion = false;
     @Input() cargandoEliminarImparticion = false;
-
     @Input() profesores: ProfesorListItem[] = [];
     @Input() cursos: CursoItem[] = [];
     @Input() asignaturasDeImparticion: AsignaturaItem[] = [];
     @Input() imparticionesVista: AdminImparticionListItem[] = [];
-
     @Input() imparticionProfesorId: number | null = null;
     @Input() imparticionCursoId: number | null = null;
     @Input() imparticionAsignaturaId: number | null = null;
     @Input() filtroImparticionesCursoId: number | null = null;
+    @Input() page = 0;
+    @Input() total = 0;
+    @Input() pageSize = 50;
 
     @Output() imparticionProfesorIdChange = new EventEmitter<number | null>();
     @Output() imparticionCursoIdChange = new EventEmitter<number | null>();
     @Output() imparticionAsignaturaIdChange = new EventEmitter<number | null>();
     @Output() filtroImparticionesCursoIdChange = new EventEmitter<number | null>();
-
     @Output() asignarImparticion = new EventEmitter<void>();
     @Output() eliminarImparticion = new EventEmitter<{ profesorId: number; asignaturaId: number; cursoId: number; asignaturaNombre: string }>();
+    @Output() paginaAnterior = new EventEmitter<void>();
+    @Output() siguientePagina = new EventEmitter<void>();
+
+    totalPagesNum(): number {
+        return Math.max(1, Math.ceil(this.total / this.pageSize));
+    }
 }

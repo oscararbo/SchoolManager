@@ -151,8 +151,12 @@ export class SchoolApiService {
     getAdminCursosStatsSelector(): Promise<AdminCursoStatsSelector[]> { return this.admin.getAdminCursosStatsSelector(); }
     getAdminStatsByCurso(cursoId: number): Promise<AdminCursoNotasStats> { return this.admin.getAdminStatsByCurso(cursoId); }
     compararCursos(cursoIds: number[]): Promise<AdminComparacionCursos> { return this.admin.compararCursos(cursoIds); }
-    getAdminMatriculas(): Promise<AdminMatriculaListItem[]> { return this.admin.getAdminMatriculas(); }
-    getAdminImparticiones(): Promise<AdminImparticionListItem[]> { return this.admin.getAdminImparticiones(); }
+    getAdminMatriculas(page: number, pageSize: number): Promise<{ total: number; items: AdminMatriculaListItem[] }> {
+        return this.admin.getAdminMatriculas(page, pageSize);
+}
+    getAdminImparticiones(page: number, pageSize: number): Promise<{ total: number; items: AdminImparticionListItem[] }> {
+        return this.admin.getAdminImparticiones(page, pageSize);
+    }
     getAdminHorarios(): Promise<AdminHorarioAsignaturaItem[]> { return this.admin.getAdminHorarios(); }
     createAdminHorario(asignaturaId: number, diaSemana: number, horaInicio: string, horaFin: string, aula?: string | null): Promise<AdminHorarioAsignaturaItem> {
         return this.admin.createAdminHorario({ asignaturaId, diaSemana, horaInicio, horaFin, aula });
@@ -173,7 +177,9 @@ export class SchoolApiService {
     createProfesor(data: CreateProfesorData): Promise<ProfesorListItem> { return this.admin.createProfesor(data); }
     updateProfesor(id: number, data: UpdateProfesorData): Promise<ProfesorListItem> { return this.admin.updateProfesor(id, data); }
     deleteProfesor(id: number): Promise<void> { return this.admin.deleteProfesor(id); }
-    getEstudiantes(): Promise<EstudianteItem[]> { return this.admin.getEstudiantes(); }
+    getEstudiantes(page: number, pageSize: number): Promise<{ total: number; items: EstudianteItem[] }> {
+        return this.admin.getEstudiantes(page, pageSize);
+    }
     createEstudiante(data: CreateEstudianteData): Promise<EstudianteItem> { return this.admin.createEstudiante(data); }
     updateEstudiante(id: number, data: UpdateEstudianteData): Promise<EstudianteItem> { return this.admin.updateEstudiante(id, data); }
     deleteEstudiante(id: number): Promise<void> { return this.admin.deleteEstudiante(id); }
