@@ -1,6 +1,20 @@
 # SchoolManager
 
-Aplicación de gestión escolar multi‑colegio desarrollada con ASP.NET Core y Angular. El proyecto permite administrar distintos centros educativos desde una misma plataforma, separando la información de cada colegio mediante un sistema multi‑tenant y ofreciendo paneles específicos para superusuario, administradores, profesores y alumnos.
+# Sobre el proyecto
+
+SchoolManager ha sido desarrollado como proyecto personal con el objetivo de construir una plataforma de gestión académica moderna basada en una arquitectura escalable y preparada para entornos multi-colegio desarrollada con ASP.NET Core y Angular. El proyecto permite administrar distintos centros educativos desde una misma plataforma, separando la información de cada colegio mediante un sistema multi‑tenant y ofreciendo paneles específicos para superusuario, administradores, profesores y alumnos.
+
+Durante el desarrollo se han aplicado buenas prácticas relacionadas con:
+
+- Separación de responsabilidades.
+- Arquitectura por capas.
+- Diseño de APIs REST.
+- Seguridad mediante JWT.
+- Testing automatizado.
+- Contenerización mediante Docker.
+- Desarrollo frontend moderno con Angular.
+
+El proyecto continúa evolucionando con nuevas funcionalidades y mejoras técnicas.
 
 ## Stack tecnológico
 
@@ -615,13 +629,11 @@ La arquitectura actual permite incorporar nuevas funcionalidades sin realizar ca
 Posibles ampliaciones:
 
 - Control de asistencia.
-- Calendario académico.
 - Notificaciones.
-- Exportación Excel.
-- Exportación PDF.
-- Comunicación interna.
+- Subir tareas
 - Analítica avanzada.
 - Integraciones externas.
+- Mejoras de diseño y estilo
 
 ---
 
@@ -635,3 +647,11 @@ Back/Application/Dtos/DTO_CONVENTIONS.md
 ```
 
 Este README pretende servir como punto de entrada para comprender la estructura general del proyecto, los módulos principales y el flujo funcional de la aplicación.
+
+## Autor
+
+Óscar Arboleya Carpintero
+
+GitHub:
+https://github.com/oscararbo
+
