@@ -1,142 +1,637 @@
-# Proyecto Inicial
+# SchoolManager
 
-Aplicacion de gestion escolar multi-colegio con backend en ASP.NET Core y frontend en Angular.
+Aplicación de gestión escolar multi‑colegio desarrollada con ASP.NET Core y Angular. El proyecto permite administrar distintos centros educativos desde una misma plataforma, separando la información de cada colegio mediante un sistema multi‑tenant y ofreciendo paneles específicos para superusuario, administradores, profesores y alumnos.
 
-## Stack
-
-- Backend: ASP.NET Core 10, Entity Framework Core, PostgreSQL, JWT Bearer, Swagger UI.
-- Frontend: Angular 21 standalone, signals, Bootstrap 5, Bootstrap Icons.
-- Contenedores: Docker + Docker Compose (PostgreSQL, API y Front).
-
-## Estructura general
-
-```text
-proyectoInicial/
-├── Back/                      # API REST por capas (Application/Domain/Infrastructure/Persistence/Presentation)
-├── Front/                     # Aplicacion Angular (superusuario, admin, profesor, alumno)
-├── Back.Tests/                # Pruebas de backend
-└── docker-compose.yml         # Orquestacion local (postgres + back + front)
-```
-
-## Arranque rapido
+## Stack tecnológico
 
 ### Backend
 
-```bash
-cd Back
-dotnet restore Back.Api.csproj
-dotnet ef database update --project Back.Api.csproj --startup-project Back.Api.csproj
-dotnet run --project Back.Api.csproj
-```
-
-- API: `http://localhost:5014`
-- Swagger UI: `http://localhost:5014/swagger`
-
-Base de datos local por defecto: PostgreSQL (`Host=localhost;Port=5432;Database=schooldb;Username=postgres;Password=postgres`).
-
-Si no tienes PostgreSQL local levantado, arranca al menos el contenedor de DB:
-
-```bash
-cd ..
-docker compose up -d postgres
-```
+- ASP.NET Core 10
+- Entity Framework Core
+- PostgreSQL
+- MongoDB (auditoría y logs)
+- JWT Bearer Authentication
+- Swagger UI
+- API Versioning
+- Serilog
 
 ### Frontend
 
-```bash
-cd Front
-npm install
-npm start
+- Angular 21 (Standalone)
+- Signals
+- RxJS
+- Bootstrap 5
+- Bootstrap Icons
+- Chart.js
+
+### Testing
+
+- xUnit
+- Moq
+- Integration Tests
+- EF Core InMemory
+
+### Infraestructura
+
+- Docker
+- Docker Compose
+- GitHub Actions
+
+---
+
+# Estructura general
+
+```text
+SchoolManager/
+│
+├── Back/                      # API REST
+├── Front/                     # Cliente Angular
+├── Back.Tests/                # Pruebas automatizadas
+├── csv-pruebas-grandes/       # Ficheros de ejemplo para importaciones
+├── .github/workflows/         # CI/CD
+├── postman/                   # Colecciones y recursos de pruebas
+└── docker-compose.yml
 ```
 
-- App: `http://localhost:4200`
+---
 
-## Arranque con Docker Compose
+# Arquitectura
+
+El proyecto sigue una separación clara por capas para desacoplar la lógica de negocio de la infraestructura y de la interfaz de usuario.
+
+```text
+Presentation
+    ↓
+Application
+    ↓
+Domain
+    ↓
+Persistence
+```
+
+Además, la capa Infrastructure contiene funcionalidades transversales como seguridad, manejo de errores y auditoría.
+
+## Presentation
+
+Contiene los controladores REST que exponen la API.
+
+Controladores principales:
+
+- AuthController
+- CursosController
+- AsignaturasController
+- ProfesoresController
+- EstudiantesController
+- SuperUsuarioController
+- LogsController
+
+## Application
+
+Contiene los casos de uso, DTOs, contratos e interfaces.
+
+Servicios organizados por dominio:
+
+```text
+Application/Services
+├── Admin
+├── AdminStats
+├── Asignaturas
+├── Audit
+├── Auth
+├── Cursos
+├── Estudiantes
+├── Imports
+├── Profesores
+└── SuperUsuario
+```
+
+## Domain
+
+Contiene las entidades y reglas de negocio del sistema.
+
+Dominios principales:
+
+- Colegios
+- Cursos
+- Asignaturas
+- Profesores
+- Estudiantes
+- Tareas
+- Matrículas
+- Calificaciones
+- Usuarios
+
+## Persistence
+
+Responsable del acceso a datos.
+
+Incluye:
+
+- DbContext
+- Repositorios
+- Migraciones
+- Configuración EF Core
+- Acceso PostgreSQL
+- Acceso MongoDB
+
+## Infrastructure
+
+Responsabilidades técnicas transversales:
+
+- Seguridad JWT
+- Gestión de contexto de colegio
+- Manejo global de errores
+- Auditoría
+- Logging
+
+---
+
+# Gestión multi‑colegio
+
+Una de las características principales del proyecto es su arquitectura multi‑tenant.
+
+Cada colegio dispone de:
+
+```text
+Colegio
+├── Administradores
+├── Profesores
+├── Estudiantes
+├── Cursos
+├── Asignaturas
+├── Matrículas
+└── Calificaciones
+```
+
+El sistema incorpora:
+
+- Contexto de colegio.
+- Aislamiento de datos entre centros.
+- Superusuario global.
+- Branding independiente por colegio.
+- Validación automática de tenant.
+
+Ejemplo local:
+
+```text
+http://localhost:4200/?school=default
+```
+
+---
+
+# Roles disponibles
+
+## Superusuario
+
+Responsable de la administración global de la plataforma.
+
+Funciones principales:
+
+- Crear colegios.
+- Modificar colegios.
+- Configurar branding.
+- Gestionar administradores.
+
+## Administrador
+
+Responsable de la gestión académica de un colegio.
+
+Funciones principales:
+
+- Gestionar cursos.
+- Gestionar asignaturas.
+- Gestionar profesores.
+- Gestionar estudiantes.
+- Gestionar matrículas.
+- Gestionar imparticiones.
+- Importar datos mediante CSV.
+- Consultar estadísticas.
+
+## Profesor
+
+Funciones principales:
+
+- Consultar asignaturas.
+- Crear tareas.
+- Evaluar estudiantes.
+- Consultar rendimiento.
+
+## Alumno
+
+Funciones principales:
+
+- Consultar notas.
+- Consultar medias.
+- Consultar progreso académico.
+
+---
+
+# Autenticación y seguridad
+
+La autenticación se realiza mediante JWT.
+
+Flujo simplificado:
+
+```text
+Login
+ └── Access Token
+        └── Refresh Token
+                └── Renovación automática
+```
+
+Características:
+
+- JWT Bearer.
+- Refresh Tokens.
+- Roles.
+- Protección de endpoints.
+- Validación de tenant.
+- Gestión de sesión.
+
+Para usuarios asociados a colegios se utiliza el header:
+
+```http
+X-School-Slug
+```
+
+Los superusuarios no requieren contexto de colegio.
+
+---
+
+# Funcionalidades principales
+
+## Gestión académica
+
+- Cursos.
+- Asignaturas.
+- Profesores.
+- Estudiantes.
+- Matrículas.
+- Imparticiones.
+
+## Evaluación
+
+- Creación de tareas.
+- Calificaciones.
+- Cálculo de medias.
+- Nota final.
+- Seguimiento por trimestres.
+
+## Estadísticas
+
+El módulo AdminStats permite:
+
+- Estadísticas por curso.
+- Comparativas entre cursos.
+- Indicadores académicos.
+- Métricas de rendimiento.
+
+## Importación masiva
+
+Importación de información mediante archivos CSV.
+
+Entidades soportadas:
+
+- Cursos
+- Asignaturas
+- Profesores
+- Estudiantes
+- Imparticiones
+- Tareas
+- Matrículas
+- Notas
+
+Orden recomendado:
+
+1. Cursos
+2. Asignaturas
+3. Profesores
+4. Estudiantes
+5. Imparticiones
+6. Tareas
+7. Matrículas
+8. Notas
+
+Los ejemplos incluidos pueden encontrarse en:
+
+```text
+csv-pruebas-grandes/
+```
+
+---
+
+# Backend
+
+## Estructura
+
+```text
+Back/
+├── Application/
+├── Domain/
+├── Infrastructure/
+├── Persistence/
+├── Presentation/
+├── Program.cs
+├── appsettings.json
+├── Dockerfile
+└── ARCHITECTURE.md
+```
+
+## Convención de DTOs
+
+Para evitar acoplamientos entre cliente y servidor se utilizan distintos tipos de DTO:
+
+```text
+RequestDto
+ResponseDto
+ReadModelDto
+StatsDto
+```
+
+Documentación adicional:
+
+```text
+Application/Dtos/DTO_CONVENTIONS.md
+```
+
+## Endpoints destacados
+
+### Auth
+
+```text
+POST /api/auth/login
+POST /api/auth/refresh
+POST /api/auth/logout
+```
+
+### Superusuario
+
+```text
+GET    /api/superusuario/colegios
+POST   /api/superusuario/colegios
+PUT    /api/superusuario/colegios/{id}
+DELETE /api/superusuario/colegios/{id}
+```
+
+### Administración
+
+- Gestión de cursos.
+- Gestión de asignaturas.
+- Gestión de profesores.
+- Gestión de estudiantes.
+- Estadísticas.
+- Importaciones CSV.
+
+### Profesor
+
+- Gestión de tareas.
+- Calificaciones.
+- Consulta de alumnos.
+
+### Alumno
+
+- Consulta de progreso.
+- Consulta de asignaturas.
+- Consulta de notas.
+
+## Auditoría
+
+El sistema incorpora auditoría mediante MongoDB.
+
+Permite registrar:
+
+- Operaciones relevantes.
+- Eventos de sistema.
+- Logs de aplicación.
+- Trazabilidad de acciones.
+
+---
+
+# Frontend
+
+Cliente Angular encargado de consumir la API y presentar la información al usuario.
+
+## Estructura principal
+
+```text
+src/app
+├── core
+├── features
+├── layouts
+└── shared
+```
+
+## Core
+
+Contiene elementos transversales.
+
+### Guards
+
+```text
+auth.guard.ts
+```
+
+### Interceptors
+
+```text
+auth.interceptor.ts
+error.interceptor.ts
+```
+
+### Servicios
+
+```text
+auth-state.service.ts
+session.service.ts
+tenant.service.ts
+toast.service.ts
+```
+
+## Layouts
+
+### Auth Layout
+
+Responsable del acceso al sistema.
+
+### Home Layout
+
+Responsable de la navegación principal de la aplicación.
+
+## Flujo de navegación
+
+```text
+Login
+├── Superusuario
+├── Administrador
+├── Profesor
+└── Alumno
+```
+
+Cada perfil dispone de vistas y funcionalidades específicas.
+
+## Shared
+
+Incluye:
+
+- Componentes reutilizables.
+- Servicios HTTP.
+- Contratos.
+- Tipos.
+- Mappers.
+- Gestión de errores.
+
+## Servicios API
+
+El frontend centraliza la comunicación con el backend mediante servicios especializados.
+
+Ejemplos:
+
+```text
+school-api-auth.service
+school-api-admin.service
+school-api-profesor.service
+school-api-alumno.service
+school-api-superusuario.service
+```
+
+---
+
+# Testing
+
+El proyecto incluye pruebas automatizadas para distintos escenarios.
+
+## Unit Tests
+
+Cobertura sobre:
+
+- Servicios.
+- Repositorios.
+- Controladores.
+- Importaciones.
+
+## Integration Tests
+
+Escenarios destacados:
+
+- Endpoints administrativos.
+- Multi‑colegio.
+- Disponibilidad de API.
+
+Ejemplos:
+
+```text
+AdminEndpointsIntegrationTests
+MultiSchoolIntegrationTests
+ApiAvailabilityInfrastructureTests
+```
+
+---
+
+# Docker
+
+Arranque completo del entorno:
 
 ```bash
 docker compose up --build
 ```
 
-Servicios:
+Servicios disponibles:
 
-- Front: `http://localhost:4200`
-- Back (Swagger): `http://localhost:5014/swagger`
-- PostgreSQL: `localhost:5432`
+| Servicio | Puerto |
+|-----------|----------|
+| Frontend | 4200 |
+| API | 5014 |
+| PostgreSQL | 5432 |
+| MongoDB | 27017 |
 
-## Credenciales semilla
+---
 
-El backend asegura un administrador inicial y un superusuario inicial (configurable en `Back/appsettings.json`):
+# Credenciales semilla
 
-- correo: `admin@prueba.com`
-- contrasena: `Prueba1`
-- superusuario correo: `root@schoolmanager.com`
-- superusuario contrasena: `Super123!`
+Administrador inicial:
 
-Colegio semilla por defecto:
+```text
+Correo: admin@prueba.com
+Contraseña: Prueba1
+```
 
-- nombre: `Colegio Principal`
-- slug: `default`
+Superusuario inicial:
 
-Puedes probar tenant por query string en local: `http://localhost:4200/?school=default`.
+```text
+Correo: root@schoolmanager.com
+Contraseña: Super123!
+```
 
-## Troubleshooting rapido (PostgreSQL)
+Colegio inicial:
 
-Si al ejecutar `dotnet ef database update` ves `Failed to connect to 127.0.0.1:5432`:
+```text
+Nombre: Colegio Principal
+Slug: default
+```
 
-1. Verifica que Docker Desktop este iniciado.
-2. Levanta PostgreSQL con `docker compose up -d postgres` desde la raiz del repo.
-3. Revisa estado con `docker compose ps`.
-4. Reintenta: `cd Back && dotnet ef database update --project Back.Api.csproj --startup-project Back.Api.csproj`.
+---
 
-## Flujo funcional recomendado
+# Calidad y validación
 
-1. Crear cursos.
-2. Crear asignaturas ligadas a curso.
-3. Crear profesores y estudiantes.
-4. Asignar imparticiones profesor-asignatura-curso.
-5. Crear tareas por asignatura/curso.
-6. Matricular estudiantes en asignaturas de su curso.
-7. Calificar desde profesor.
-8. Consultar progreso desde alumno.
-9. Cargar datos iniciales con importacion CSV desde admin en este orden: cursos, asignaturas, profesores, estudiantes, imparticiones, tareas, matriculas y notas.
-
-## Funcionalidad destacada
-
-- Panel admin con dos areas: gestion academica e indicadores.
-- Estadisticas admin por curso con selector, detalle por curso y comparacion multi-curso.
-- Vistas admin de matriculas e imparticiones servidas por endpoints dedicados.
-- Panel profesor con creacion de tareas, calificacion y resumen del rendimiento de sus alumnos.
-- Panel alumno con medias por trimestre, nota final y detalle por tareas.
-- Importacion CSV con validacion por linea, reseteo del formulario tras procesar y overlay de carga por tarjeta.
-
-## Calidad y verificacion
+Backend:
 
 ```bash
 cd Back
 dotnet build Back.slnx
+dotnet test
 ```
 
-```bash
-dotnet test Back.Tests/Back.Tests.csproj
-```
+Frontend:
 
 ```bash
 cd Front
+npm install
 npm run build
 ```
 
-## Convencion de contratos DTO
+---
 
-El backend usa convencion explicita de contratos para evitar acoplamiento y sobre-exposicion:
+# Integración continua
 
-- `*RequestDto` para entrada
-- `*ResponseDto` para salida
-- `*ReadModelDto` para lecturas compuestas
-- `*StatsDto` para proyecciones analiticas
+El repositorio incluye una pipeline de GitHub Actions:
 
-Detalle en `Back/Application/Dtos/DTO_CONVENTIONS.md`.
+```text
+.github/workflows/ci.yml
+```
 
-## Documentacion detallada
+La pipeline ejecuta:
 
-- Backend: `Back/README.md`
-- Frontend: `Front/README.md`
+- Restauración de dependencias.
+- Compilación.
+- Validaciones.
+- Ejecución de pruebas.
+
+---
+
+# Roadmap
+
+La arquitectura actual permite incorporar nuevas funcionalidades sin realizar cambios importantes en la estructura base.
+
+Posibles ampliaciones:
+
+- Control de asistencia.
+- Calendario académico.
+- Notificaciones.
+- Exportación Excel.
+- Exportación PDF.
+- Comunicación interna.
+- Analítica avanzada.
+- Integraciones externas.
+
+---
+
+# Documentación adicional
+
+La mayor parte de las decisiones técnicas relevantes se encuentran documentadas directamente en el código y en los documentos incluidos dentro del backend, especialmente:
+
+```text
+Back/ARCHITECTURE.md
+Back/Application/Dtos/DTO_CONVENTIONS.md
+```
+
+Este README pretende servir como punto de entrada para comprender la estructura general del proyecto, los módulos principales y el flujo funcional de la aplicación.
