@@ -4,6 +4,7 @@ namespace Back.Api.Application.Abstractions.Repositories;
 
 public interface IEstudiantesDomainRepository
 {
+    public record PagedResult<T>(IEnumerable<T> Items, int Total);
     Task<bool> ExisteAsync(int estudianteId, CancellationToken cancellationToken = default);
     Task<bool> CorreoDuplicadoAsync(string correo, CancellationToken cancellationToken = default);
     Task<bool> CorreoDuplicadoExceptAsync(string correo, int exceptEstudianteId, CancellationToken cancellationToken = default);
@@ -15,7 +16,7 @@ public interface IEstudiantesDomainRepository
     Task<bool> AsignaturaEsDelCursoAsync(int asignaturaId, int cursoId, CancellationToken cancellationToken = default);
     Task<string?> GetCursoNombreAsync(int cursoId, CancellationToken cancellationToken = default);
     Task<IEnumerable<EstudianteLookupDto>> GetSimpleEstudiantesAsync(CancellationToken cancellationToken = default);
-    Task<IEnumerable<EstudianteListItemDto>> GetAllEstudiantesAsync(CancellationToken cancellationToken = default);
+    Task<PagedResult<EstudianteListItemDto>> GetAllEstudiantesAsync(int page, int pageSize, CancellationToken cancellationToken = default);
     Task<EstudianteDetalleDto?> GetDetalleAsync(int estudianteId, CancellationToken cancellationToken = default);
     Task<AlumnoPanelDto?> GetPanelAlumnoAsync(int estudianteId, CancellationToken cancellationToken = default);
     Task<AlumnoPanelResumenDto?> GetPanelResumenAsync(int estudianteId, CancellationToken cancellationToken = default);

@@ -34,6 +34,7 @@ import {
 } from './admin-management-view.csv';
 
 type AdminTab = 'cursos' | 'asignaturas' | 'profesores' | 'estudiantes' | 'matriculas' | 'imparticiones' | 'horarios' | 'importar';
+type PaginacionKeys = 'profesores' | 'estudiantes' | 'matriculas' | 'imparticiones';
 
 @Component({
     selector: 'app-admin-management-view',
@@ -83,6 +84,14 @@ export class AdminManagementViewComponent implements OnInit {
         horarios: false
     });
 
+    paginacion = signal({
+        profesores: { page: 0, pageSize: 50, total: 0 },
+        estudiantes: { page: 0, pageSize: 50, total: 0 },
+        matriculas: { page: 0, pageSize: 50, total: 0 },
+        imparticiones: { page: 0, pageSize: 50, total: 0 },
+        horarios: { page: 0, pageSize: 50, total: 0 }
+    });
+
     cursos = signal<CursoItem[]>([]);
     asignaturas = signal<AsignaturaItem[]>([]);
     profesores = signal<ProfesorListItem[]>([]);
@@ -110,7 +119,6 @@ export class AdminManagementViewComponent implements OnInit {
 
     // #endregion
     // #region Profesor Management
-    filtroProfesoresCursoId = signal<number | null>(null);
     editandoProfesorId: number | null = null;
     busquedaProfesores = signal('');
 
@@ -300,6 +308,51 @@ export class AdminManagementViewComponent implements OnInit {
         return this.estaCargando('cargarHorarios') || (this.tabBootstrapping() && !this.resourcesLoaded().horarios);
     }
 
+    siguientePagina(recurso: PaginacionKeys) {
+        const state = this.paginacion()[recurso];
+
+        if ((state.page + 1) * state.pageSize >= state.total) return;
+
+        this.paginacion.update(p => ({
+            ...p,
+            [recurso]: { ...state, page: state.page + 1 }
+        }));
+
+        this.recargarPorRecurso(recurso);
+    }
+
+    paginaAnterior(recurso: PaginacionKeys) {
+        const state = this.paginacion()[recurso];
+
+        if (state.page === 0) return;
+
+        this.paginacion.update(p => ({
+            ...p,
+            [recurso]: { ...state, page: state.page - 1 }
+        }));
+
+        this.recargarPorRecurso(recurso);
+    }
+
+    private recargarPorRecurso(recurso: PaginacionKeys) {
+        switch (recurso) {
+            case 'profesores': void this.cargarProfesores(true); break;
+            case 'estudiantes': void this.cargarEstudiantes(true); break;
+            case 'matriculas': void this.cargarMatriculas(true); break;
+            case 'imparticiones': void this.cargarImparticiones(true); break;
+        }
+    }
+
+    private resetPagina(recurso: PaginacionKeys): void {
+        this.paginacion.update(p => ({
+            ...p,
+            [recurso]: {
+                ...p[recurso],
+                page: 0
+            }
+        }));
+    }
+
     // #region Forms
     private readonly forms: AdminManagementForms = createAdminManagementForms(this.fb);
     readonly cursoForm = this.forms.cursoForm;
@@ -330,14 +383,16 @@ export class AdminManagementViewComponent implements OnInit {
     });
 
     profesoresVista = computed<ProfesorListItem[]>(() => {
-        let result = this.profesores();
-        const cursoIdFiltro = this.filtroProfesoresCursoId();
-        if (cursoIdFiltro) {
-            const cursoId = Number(cursoIdFiltro);
-            result = result.filter(p => p.imparticiones.some(i => i.cursoId === cursoId));
-        }
+        let result = this.profesores() ?? [];
+
         const q = this.busquedaProfesores().trim().toLowerCase();
-        if (q) result = result.filter(p => p.nombre.toLowerCase().includes(q) || p.correo.toLowerCase().includes(q));
+        if (q) {
+            result = result.filter(p =>
+                p.nombre.toLowerCase().includes(q) ||
+                p.correo.toLowerCase().includes(q)
+            );
+        }
+
         return result;
     });
 
@@ -633,13 +688,24 @@ export class AdminManagementViewComponent implements OnInit {
     }
 
     private async cargarProfesores(force = false): Promise<void> {
-        if (!force && this.resourcesLoaded().profesores) {
-            return;
-        }
+        if (!force && this.resourcesLoaded().profesores) return;
+
+        const { page, pageSize } = this.paginacion().profesores;
 
         await this.runWithLoading('cargarProfesores', async () => {
             try {
-                this.profesores.set(await this.api.getProfesores());
+                const result = await this.api.getProfesores(page, pageSize);
+
+                this.profesores.set(result.items ?? []);
+
+                this.paginacion.update(p => ({
+                    ...p,
+                    profesores: {
+                        ...p.profesores,
+                        total: result.total
+                    }
+                }));
+
                 this.setResourceLoaded('profesores', true);
                 this.actualizarValidacionDocumentos();
             } catch (e) {
@@ -954,7 +1020,7 @@ export class AdminManagementViewComponent implements OnInit {
     }
 
     async eliminarProfesor(id: number, nombre: string): Promise<void> {
-        const imparticiones = this.profesores().find(p => p.id === id)?.imparticiones.length ?? 0;
+        const imparticiones = this.profesores().find(p => p.id === id)?.imparticionesCount ?? 0;
         const confirmado = await this.confirmDialog.show(
             'Eliminar profesor',
             `¿Eliminar al profesor "${nombre}"? Tiene ${imparticiones} imparticiones asignadas y se eliminaran sus tareas.`
@@ -1093,7 +1159,24 @@ export class AdminManagementViewComponent implements OnInit {
     }
 
     async recargarTabActual(): Promise<void> {
-        await this.cargarTab(this.tabActiva(), true);
+    const tab = this.tabActiva();
+
+    switch (tab) {
+        case 'profesores':
+            this.resetPagina('profesores');
+            break;
+        case 'estudiantes':
+            this.resetPagina('estudiantes');
+            break;
+        case 'matriculas':
+            this.resetPagina('matriculas');
+            break;
+        case 'imparticiones':
+            this.resetPagina('imparticiones');
+            break;
+    }
+
+        await this.cargarTab(tab, true);
     }
 
     exportarTabActualExcel(): void {
@@ -1192,22 +1275,14 @@ export class AdminManagementViewComponent implements OnInit {
                             return profesor;
                         }
 
-                        const yaExiste = profesor.imparticiones.some(i => i.asignaturaId === asignaturaId && i.cursoId === cursoId);
+                        const yaExiste = false;
                         if (yaExiste) {
                             return profesor;
                         }
 
                         return {
                             ...profesor,
-                            imparticiones: [
-                                ...profesor.imparticiones,
-                                {
-                                    asignaturaId,
-                                    asignatura: asignatura.nombre,
-                                    cursoId,
-                                    curso: curso.nombre
-                                }
-                            ]
+                            imparticionesCount: profesor.imparticionesCount + 1
                         };
                     }));
                 }
@@ -1256,9 +1331,7 @@ export class AdminManagementViewComponent implements OnInit {
                     if (p.id !== profesorId) return p;
                     return {
                         ...p,
-                        imparticiones: p.imparticiones.filter(
-                            i => !(i.asignaturaId === asignaturaId && i.cursoId === cursoId)
-                        )
+                        imparticionesCount: p.imparticionesCount - 1
                     };
                 }));
                 await this.cargarImparticiones(true);
@@ -1531,7 +1604,6 @@ export class AdminManagementViewComponent implements OnInit {
         URL.revokeObjectURL(url);
     }
     // #endregion
-
     // #region Excel exports
     private getExcelRowsForTab(tab: Exclude<AdminTab, 'importar'>): Record<string, string | number>[] {
         const excludeKeys = new Set(['contrasenaTemporal']);
@@ -1555,6 +1627,7 @@ export class AdminManagementViewComponent implements OnInit {
             case 'matriculas': return this.matriculasVista();
             case 'imparticiones': return this.imparticionesVista();
             case 'horarios': return this.horariosVista();
+            default: return [];
         }
     }
 

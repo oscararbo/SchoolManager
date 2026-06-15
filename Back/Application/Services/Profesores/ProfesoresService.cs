@@ -4,16 +4,16 @@ using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Configuration;
 using Back.Api.Application.Dtos;
 using Back.Api.Application.Dtos.Profesores.Requests;
-using Microsoft.AspNetCore.Hosting;
+using Back.Api.Application.Services.Common;
 using System.Security.Claims;
 
 namespace Back.Api.Application.Services;
 
-public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPasswordService passwordService, ICurrentSchoolContext currentSchoolContext, IWebHostEnvironment hostEnvironment) : IProfesoresService
+public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPasswordService passwordService, ICurrentSchoolContext currentSchoolContext, IWebHostEnvironment hostEnvironment, ICommonService commonService) : IProfesoresService
 {
     #region CRUD profesores
-    public async Task<ApplicationResult> GetAllProfesoresAsync(CancellationToken cancellationToken = default)
-        => ApplicationResult.Ok(await profesoresDomain.GetAllProfesoresAsync(cancellationToken));
+    public async Task<ApplicationResult> GetAllProfesoresAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+        => ApplicationResult.Ok(await profesoresDomain.GetAllProfesoresAsync(page, pageSize, cancellationToken));
 
     public async Task<ApplicationResult> GetSimpleProfesoresAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await profesoresDomain.GetSimpleProfesoresAsync(cancellationToken));
@@ -27,22 +27,39 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
     }
 
     public async Task<ApplicationResult> CreateProfesorAsync(CreateProfesorRequestDto createProfesorRequestDto, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(createProfesorRequestDto.Nombre))
-            return ApplicationResult.BadRequest("El nombre del teacher es obligatorio.");
-        var normalizedDocumento = CredentialGenerationHelper.NormalizeDniNie(createProfesorRequestDto.DNI);
-        if (!CredentialGenerationHelper.IsValidDniNie(normalizedDocumento))
-            return ApplicationResult.BadRequest("El documento debe ser un DNI o NIE valido.");
-        if (await profesoresDomain.DocumentoDuplicadoAsync(normalizedDocumento, cancellationToken))
-            return ApplicationResult.BadRequest("Ya existe una persona con ese DNI/NIE.");
+    
+{
+        var required = commonService.Required(createProfesorRequestDto.Nombre, "Nombre obligatorio.");
+        if (required != null) return required;
 
-        var schoolSlug = CredentialGenerationHelper.NormalizeSchoolSlugForDomain(currentSchoolContext.SchoolSlug, currentSchoolContext.SchoolId);
-        var generatedPassword = CredentialGenerationHelper.GeneratePassword();
-        var generatedEmail = await GenerateUniqueEmailAsync($"{createProfesorRequestDto.Nombre} {createProfesorRequestDto.Apellidos}", "profesor", schoolSlug, cancellationToken);
+        var dni = CredentialGenerationHelper.NormalizeDniNie(createProfesorRequestDto.DNI);
 
-        var createdProfesor = await profesoresDomain.CreateProfesorAsync(createProfesorRequestDto.Nombre.Trim(), generatedEmail, passwordService.Hash(generatedPassword), createProfesorRequestDto.Apellidos.Trim(), normalizedDocumento, createProfesorRequestDto.Telefono.Trim(), createProfesorRequestDto.Especialidad.Trim(), cancellationToken);
-        createdProfesor.ContrasenaTemporal = generatedPassword;
-        return ApplicationResult.Created($"/api/profesores/{createdProfesor.Id}", createdProfesor);
+        if (!CredentialGenerationHelper.IsValidDniNie(dni))
+            return ApplicationResult.BadRequest("DNI inválido.");
+
+        var slug = CredentialGenerationHelper.NormalizeSchoolSlugForDomain(currentSchoolContext.SchoolSlug, currentSchoolContext.SchoolId);
+
+        var pass = CredentialGenerationHelper.GeneratePassword();
+
+        var email = await commonService.GenerateUniqueEmailAsync(
+            $"{createProfesorRequestDto.Nombre} {createProfesorRequestDto.Apellidos}",
+            "profesor",
+            slug,
+            e => profesoresDomain.CorreoDuplicadoAsync(e, cancellationToken));
+
+        var profesor = await profesoresDomain.CreateProfesorAsync(
+            commonService.Normalize(createProfesorRequestDto.Nombre),
+            email,
+            passwordService.Hash(pass),
+            commonService.Normalize(createProfesorRequestDto.Apellidos),
+            dni,
+            createProfesorRequestDto.Telefono.Trim(),
+            createProfesorRequestDto.Especialidad.Trim(),
+            cancellationToken);
+
+        profesor.ContrasenaTemporal = pass;
+
+        return ApplicationResult.Created($"/api/profesores/{profesor.Id}", profesor);
     }
 
     public async Task<ApplicationResult> UpdateProfesorAsync(int profesorId, UpdateProfesorRequestDto updateProfesorRequestDto, CancellationToken cancellationToken = default)
@@ -239,62 +256,49 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
             : ApplicationResult.Ok(updated);
     }
 
-    public async Task<ApplicationResult> SubirTareaSubmisionAsync(int profesorId, int tareaId, UploadTareaSubmisionRequestDto request, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+public async Task<ApplicationResult> SubirTareaSubmisionAsync(int profesorId, int tareaId, UploadTareaSubmisionRequestDto uploadTareaSubmisionRequestDto, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+{
+    if (!commonService.UsuarioCoincide(profesorId, user))
+        return ApplicationResult.Forbidden();
+
+    if (!await profesoresDomain.ProfesorImparteTareaAsync(profesorId, tareaId, cancellationToken))
+        return ApplicationResult.BadRequest("El profesor no tiene acceso a esa tarea.");
+        
+    var fileValidation = commonService.ValidateFile(uploadTareaSubmisionRequestDto.Archivo);
+    if (fileValidation != null)
+        return fileValidation;
+
+    var file = uploadTareaSubmisionRequestDto.Archivo!;
+
+    var tarea = await profesoresDomain.GetTareaInfoAsync(tareaId, cancellationToken);
+    if (tarea is null)
+        return ApplicationResult.NotFound("La tarea no existe.");
+
+    if (!await profesoresDomain.EstudiantePerteneceAAsignaturaAsync(
+            uploadTareaSubmisionRequestDto.EstudianteId,
+            tarea.Value.AsignaturaId,
+            cancellationToken))
     {
-        if (!UsuarioCoincideConProfesor(profesorId, user))
-            return ApplicationResult.Forbidden();
-
-        if (!await profesoresDomain.ProfesorImparteTareaAsync(profesorId, tareaId, cancellationToken))
-            return ApplicationResult.BadRequest("El teacher no tiene acceso a esa task.");
-
-        if (request.Archivo is null || request.Archivo.Length == 0)
-            return ApplicationResult.BadRequest("Debes adjuntar un archivo.");
-
-        if (request.Archivo.Length > 10 * 1024 * 1024)
-            return ApplicationResult.BadRequest("El archivo supera el tamano maximo permitido (10MB).");
-
-        var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png"
-        };
-
-        var extension = Path.GetExtension(request.Archivo.FileName);
-        if (string.IsNullOrWhiteSpace(extension) || !allowedExtensions.Contains(extension))
-            return ApplicationResult.BadRequest("Tipo de archivo no permitido.");
-
-        var tarea = await profesoresDomain.GetTareaInfoAsync(tareaId, cancellationToken);
-        if (tarea is null)
-            return ApplicationResult.NotFound("La task no existe.");
-
-        if (!await profesoresDomain.EstudiantePerteneceAAsignaturaAsync(request.EstudianteId, tarea.Value.AsignaturaId, cancellationToken))
-            return ApplicationResult.BadRequest("El estudiante no pertenece a la asignatura de la task.");
-
-        var uploadsRoot = Path.Combine(hostEnvironment.ContentRootPath, "uploads", "tareas", tareaId.ToString());
-        Directory.CreateDirectory(uploadsRoot);
-
-        var safeBaseName = Path.GetFileNameWithoutExtension(request.Archivo.FileName);
-        safeBaseName = string.Concat(safeBaseName.Where(ch => char.IsLetterOrDigit(ch) || ch == '-' || ch == '_'));
-        if (string.IsNullOrWhiteSpace(safeBaseName)) safeBaseName = "archivo";
-
-        var generatedFileName = $"{request.EstudianteId}_{DateTime.UtcNow:yyyyMMddHHmmss}_{safeBaseName}{extension}";
-        var absolutePath = Path.Combine(uploadsRoot, generatedFileName);
-
-        await using (var stream = File.Create(absolutePath))
-        {
-            await request.Archivo.CopyToAsync(stream, cancellationToken);
-        }
-
-        var relativePath = $"/uploads/tareas/{tareaId}/{generatedFileName}";
-        var saved = await profesoresDomain.UpsertTareaSubmisionAsync(
-            tareaId,
-            request.EstudianteId,
-            request.Archivo.FileName,
-            relativePath,
-            request.Archivo.Length,
-            cancellationToken);
-
-        return ApplicationResult.Ok(saved);
+        return ApplicationResult.BadRequest("El estudiante no pertenece a la asignatura.");
     }
+
+    var path = await commonService.SaveFileAsync(
+        file.OpenReadStream(),
+        file.FileName,
+        hostEnvironment.ContentRootPath,
+        $"uploads/tareas/{tareaId}",
+        cancellationToken);
+
+    var saved = await profesoresDomain.UpsertTareaSubmisionAsync(
+        tareaId,
+        uploadTareaSubmisionRequestDto.EstudianteId,
+        file.FileName,
+        path,
+        file.Length,
+        cancellationToken);
+
+    return ApplicationResult.Ok(saved);
+}
 
     public async Task<ApplicationResult> GetSubmisionesDeTareaAsync(int profesorId, int tareaId, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
@@ -302,7 +306,7 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
             return ApplicationResult.Forbidden();
 
         if (!await profesoresDomain.ProfesorImparteTareaAsync(profesorId, tareaId, cancellationToken))
-            return ApplicationResult.BadRequest("El teacher no tiene acceso a esa task.");
+            return ApplicationResult.BadRequest("El profesor no tiene acceso a esa tarea.");
 
         var submisiones = await profesoresDomain.GetSubmisionesDeTareaAsync(tareaId, cancellationToken);
         return ApplicationResult.Ok(submisiones);
@@ -326,22 +330,6 @@ public class ProfesoresService(IProfesoresDomainRepository profesoresDomain, IPa
 
         var tasks = await profesoresDomain.GetTareasDeProfesorEnAsignaturaAsync(profesorId, asignaturaId, cancellationToken);
         return ApplicationResult.Ok(tasks);
-    }
-    #endregion
-
-    #region Imparticiones
-    private async Task<string> GenerateUniqueEmailAsync(string fullName, string rolePrefix, string schoolSlug, CancellationToken cancellationToken)
-    {
-        for (var i = 0; i < 2000; i++)
-        {
-            var candidate = CredentialGenerationHelper.BuildGeneratedEmail(fullName, rolePrefix, schoolSlug, i);
-            if (!await profesoresDomain.CorreoDuplicadoAsync(candidate, cancellationToken))
-            {
-                return candidate;
-            }
-        }
-
-        throw new InvalidOperationException("No se pudo generar un correo unico para el profesor.");
     }
     #endregion
 

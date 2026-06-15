@@ -9,10 +9,16 @@ namespace Back.Api.Persistence.Repositories;
 
 public class SuperUsuarioDomainRepository(AppDbContext context) : ISuperUsuarioDomainRepository
 {
-    public async Task<IEnumerable<ColegioListItemDto>> GetColegiosAsync(CancellationToken cancellationToken = default)
-        => await context.Colegios
-            .AsNoTracking()
+    public async Task<ISuperUsuarioDomainRepository.PagedResult<ColegioListItemDto>> GetColegiosAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var query = context.Colegios.AsNoTracking();
+
+        var total = await query.CountAsync(cancellationToken);
+
+        var items = await query
             .OrderBy(c => c.Nombre)
+            .Skip(page * pageSize)
+            .Take(pageSize)
             .Select(c => new ColegioListItemDto
             {
                 Id = c.Id,
@@ -22,12 +28,15 @@ public class SuperUsuarioDomainRepository(AppDbContext context) : ISuperUsuarioD
                 FaviconUrl = c.FaviconUrl,
                 ColorPrimario = c.ColorPrimario,
                 MensajeLogin = c.MensajeLogin,
-                TotalAdmins = c.Cuentas.Count(cuenta => cuenta.Rol == Roles.Admin && !cuenta.IsDeleted),
-                TotalProfesores = c.Cuentas.Count(cuenta => cuenta.Rol == Roles.Profesor && !cuenta.IsDeleted),
-                TotalAlumnos = c.Cuentas.Count(cuenta => cuenta.Rol == Roles.Alumno && !cuenta.IsDeleted),
-                TotalCursos = c.Cursos.Count(curso => !curso.IsDeleted)
+                TotalAdmins = c.Cuentas.Count(x => x.Rol == Roles.Admin && !x.IsDeleted),
+                TotalProfesores = c.Cuentas.Count(x => x.Rol == Roles.Profesor && !x.IsDeleted),
+                TotalAlumnos = c.Cuentas.Count(x => x.Rol == Roles.Alumno && !x.IsDeleted),
+                TotalCursos = c.Cursos.Count(x => !x.IsDeleted)
             })
             .ToListAsync(cancellationToken);
+
+        return new ISuperUsuarioDomainRepository.PagedResult<ColegioListItemDto>(items, total);
+    }
 
     public Task<ColegioListItemDto?> GetColegioBySlugAsync(string slug, CancellationToken cancellationToken = default)
         => context.Colegios

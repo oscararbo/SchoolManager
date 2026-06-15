@@ -64,7 +64,7 @@ export interface ApiProfesorListItem {
   especialidad: string;
   correo: string;
   contrasenaTemporal?: string;
-  imparticiones: ApiProfesorImparticion[];
+  imparticionesCount: number;
 }
 
 export interface ApiEstudianteItem {

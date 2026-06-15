@@ -59,61 +59,80 @@ public class AdminStatsDomainRepository(AppDbContext context) : IAdminStatsDomai
     {
         var totals = await GetTotalsAsync(cancellationToken);
 
-        var enrollmentFinalRowsQuery = BuildEnrollmentFinalRowsQuery(context);
+        var enrollmentFinalRows = await BuildEnrollmentFinalRowsQuery(context)
+            .ToListAsync(cancellationToken);
 
-        var courseStudentPerformanceRowsQuery = BuildCourseStudentPerformanceRowsQuery(enrollmentFinalRowsQuery);
-        var courseKpiAggregatesQuery = BuildCourseKpiAggregatesQuery(courseStudentPerformanceRowsQuery);
-        var subjectKpiAggregatesQuery = BuildSubjectKpiAggregatesQuery(enrollmentFinalRowsQuery);
-
-        var cursoConMejorMediaRaw = await courseKpiAggregatesQuery
-            .Where(cursoRendimiento => cursoRendimiento.Media.HasValue)
-            .OrderByDescending(cursoRendimiento => cursoRendimiento.Media)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var cursoConPeorMediaRaw = await courseKpiAggregatesQuery
-            .Where(cursoRendimiento => cursoRendimiento.Media.HasValue)
-            .OrderBy(cursoRendimiento => cursoRendimiento.Media)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var cursoConMejorMedia = cursoConMejorMediaRaw is null ? null : ToCursoResumenKpiDto(cursoConMejorMediaRaw);
-        var cursoConPeorMedia = cursoConPeorMediaRaw is null ? null : ToCursoResumenKpiDto(cursoConPeorMediaRaw);
-
-        var asignaturaConMejorMediaRaw = await subjectKpiAggregatesQuery
-            .Where(asignaturaRendimiento => asignaturaRendimiento.Media.HasValue)
-            .OrderByDescending(asignaturaRendimiento => asignaturaRendimiento.Media)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var asignaturaConPeorMediaRaw = await subjectKpiAggregatesQuery
-            .Where(asignaturaRendimiento => asignaturaRendimiento.Media.HasValue)
-            .OrderBy(asignaturaRendimiento => asignaturaRendimiento.Media)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var mediaGlobal = await subjectKpiAggregatesQuery
-            .Where(asignaturaRendimiento => asignaturaRendimiento.Media.HasValue)
-            .Select(asignaturaRendimiento => asignaturaRendimiento.Media)
-            .AverageAsync(cancellationToken);
-
-        var asignaturaConMejorMedia = asignaturaConMejorMediaRaw is null
-            ? null
-            : new AsignaturaResumenKpiDto
+        var courseKpis = enrollmentFinalRows
+            .GroupBy(x => new { x.CursoId, x.Curso })
+            .Select(g =>
             {
-                Asignatura = asignaturaConMejorMediaRaw.Asignatura,
-                Curso = asignaturaConMejorMediaRaw.Curso,
-                Media = asignaturaConMejorMediaRaw.Media.HasValue
-                    ? Math.Round(asignaturaConMejorMediaRaw.Media.Value, 2)
-                    : null
-            };
+                var conNota = g.Where(x => x.NotaFinal.HasValue).ToList();
 
-        var asignaturaConPeorMedia = asignaturaConPeorMediaRaw is null
-            ? null
-            : new AsignaturaResumenKpiDto
+                return new CourseKpiAggregateRow
+                {
+                    CursoId = g.Key.CursoId,
+                    Curso = g.Key.Curso,
+                    TotalAlumnos = g.Count(),
+                    Aprobados = conNota.Count(x => x.NotaFinal >= 5),
+                    Suspensos = conNota.Count(x => x.NotaFinal < 5),
+                    Media = conNota.Count > 0
+                        ? conNota.Average(x => x.NotaFinal) 
+                        : null
+                };
+            })
+            .ToList();
+
+        var subjectKpis = enrollmentFinalRows
+            .GroupBy(x => new { x.AsignaturaId, x.Asignatura, x.Curso })
+            .Select(g =>
             {
-                Asignatura = asignaturaConPeorMediaRaw.Asignatura,
-                Curso = asignaturaConPeorMediaRaw.Curso,
-                Media = asignaturaConPeorMediaRaw.Media.HasValue
-                    ? Math.Round(asignaturaConPeorMediaRaw.Media.Value, 2)
-                    : null
-            };
+                var conNota = g.Where(x => x.NotaFinal.HasValue).ToList();
+
+                return new SubjectKpiAggregateRow
+                {
+                    AsignaturaId = g.Key.AsignaturaId,
+                    Asignatura = g.Key.Asignatura,
+                    Curso = g.Key.Curso,
+                    CursoId = g.First().CursoId,
+                    TotalAlumnos = g.Count(),
+                    Aprobados = conNota.Count(x => x.NotaFinal >= 5),
+                    Suspensos = conNota.Count(x => x.NotaFinal < 5),
+                    SinNota = g.Count(x => !x.NotaFinal.HasValue),
+                    Media = conNota.Count > 0
+                        ? conNota.Average(x => x.NotaFinal)
+                        : null
+                };
+            })
+            .ToList();
+
+        var mejorCurso = courseKpis
+            .Where(x => x.Media.HasValue)
+            .OrderByDescending(x => x.Media)
+            .FirstOrDefault();
+
+        var peorCurso = courseKpis
+            .Where(x => x.Media.HasValue)
+            .OrderBy(x => x.Media)
+            .FirstOrDefault();
+
+        var mejorAsignatura = subjectKpis
+            .Where(x => x.Media.HasValue)
+            .OrderByDescending(x => x.Media)
+            .FirstOrDefault();
+
+        var peorAsignatura = subjectKpis
+            .Where(x => x.Media.HasValue)
+            .OrderBy(x => x.Media)
+            .FirstOrDefault();
+
+        var medias = subjectKpis
+            .Where(x => x.Media.HasValue)
+            .Select(x => x.Media!.Value)
+            .ToList();
+
+        double? mediaGlobal = medias.Count > 0
+            ? Math.Round(medias.Average(), 2)
+            : null;
 
         return new AdminStatsDto
         {
@@ -123,48 +142,126 @@ public class AdminStatsDomainRepository(AppDbContext context) : IAdminStatsDomai
             TotalEstudiantes = totals.TotalEstudiantes,
             TotalMatriculas = totals.TotalMatriculas,
             TotalTareas = totals.TotalTareas,
-            MediaGlobal = mediaGlobal.HasValue ? Math.Round(mediaGlobal.Value, 2) : null,
-            CursoConMejorMedia = cursoConMejorMedia,
-            CursoConPeorMedia = cursoConPeorMedia,
-            AsignaturaConMejorMedia = asignaturaConMejorMedia,
-            AsignaturaConPeorMedia = asignaturaConPeorMedia
+
+            MediaGlobal = mediaGlobal,
+
+            CursoConMejorMedia = mejorCurso != null
+                ? ToCursoResumenKpiDto(mejorCurso)
+                : null,
+
+            CursoConPeorMedia = peorCurso != null
+                ? ToCursoResumenKpiDto(peorCurso)
+                : null,
+
+            AsignaturaConMejorMedia = mejorAsignatura != null
+                ? new AsignaturaResumenKpiDto
+                {
+                    Asignatura = mejorAsignatura.Asignatura,
+                    Curso = mejorAsignatura.Curso,
+                    Media = mejorAsignatura.Media.HasValue
+                        ? Math.Round(mejorAsignatura.Media.Value, 2)
+                        : null
+                }
+                : null,
+
+            AsignaturaConPeorMedia = peorAsignatura != null
+                ? new AsignaturaResumenKpiDto
+                {
+                    Asignatura = peorAsignatura.Asignatura,
+                    Curso = peorAsignatura.Curso,
+                    Media = peorAsignatura.Media.HasValue
+                        ? Math.Round(peorAsignatura.Media.Value, 2)
+                        : null
+                }
+                : null
         };
     }
 
     public async Task<AdminTop5StatsDto> GetTop5Async(CancellationToken cancellationToken = default)
     {
-        var enrollmentFinalRowsQuery = BuildEnrollmentFinalRowsQuery(context);
-        var courseStudentPerformanceRowsQuery = BuildCourseStudentPerformanceRowsQuery(enrollmentFinalRowsQuery);
-
-        var courseKpiAggregates = await BuildCourseKpiAggregatesQuery(courseStudentPerformanceRowsQuery)
-            .Where(curso => curso.Media.HasValue)
+        var rows = await BuildEnrollmentFinalRowsQuery(context)
+            .Where(x => x.NotaFinal.HasValue)
             .ToListAsync(cancellationToken);
 
-        var subjectKpiAggregates = await BuildSubjectKpiAggregatesQuery(enrollmentFinalRowsQuery)
-            .Where(asignatura => asignatura.Media.HasValue)
-            .ToListAsync(cancellationToken);
+        var courseKpis = rows
+            .GroupBy(x => new { x.CursoId, x.Curso })
+            .Select(g => new
+            {
+                g.Key.CursoId,
+                g.Key.Curso,
+                Media = g.Average(x => x.NotaFinal!.Value),
+                TotalAlumnos = g.Count(),
+                Aprobados = g.Count(x => x.NotaFinal >= 5),
+                Suspensos = g.Count(x => x.NotaFinal < 5)
+            })
+            .ToList();
+
+        var subjectKpis = rows
+            .GroupBy(x => new { x.AsignaturaId, x.Asignatura, x.Curso })
+            .Select(g => new
+            {
+                g.Key.AsignaturaId,
+                g.Key.Asignatura,
+                g.Key.Curso,
+                Media = g.Average(x => x.NotaFinal!.Value),
+                TotalAlumnos = g.Count(),
+                Aprobados = g.Count(x => x.NotaFinal >= 5),
+                Suspensos = g.Count(x => x.NotaFinal < 5)
+            })
+            .ToList();
 
         return new AdminTop5StatsDto
         {
-            TopCursos = courseKpiAggregates
-                .OrderByDescending(curso => curso.Media)
+            TopCursos = courseKpis
+                .OrderByDescending(x => x.Media)
                 .Take(5)
-                .Select(ToCursoResumenKpiDto)
+                .Select(x => new CursoResumenKpiDto
+                {
+                    Curso = x.Curso,
+                    MediaGlobalCurso = Math.Round(x.Media, 2),
+                    PorcentajeAprobados = ToPercentage(x.Aprobados, x.TotalAlumnos),
+                    PorcentajeSuspensos = ToPercentage(x.Suspensos, x.TotalAlumnos)
+                })
                 .ToList(),
-            BottomCursos = courseKpiAggregates
-                .OrderBy(curso => curso.Media)
+
+            BottomCursos = courseKpis
+                .OrderBy(x => x.Media)
                 .Take(5)
-                .Select(ToCursoResumenKpiDto)
+                .Select(x => new CursoResumenKpiDto
+                {
+                    Curso = x.Curso,
+                    MediaGlobalCurso = Math.Round(x.Media, 2),
+                    PorcentajeAprobados = ToPercentage(x.Aprobados, x.TotalAlumnos),
+                    PorcentajeSuspensos = ToPercentage(x.Suspensos, x.TotalAlumnos)
+                })
                 .ToList(),
-            TopAsignaturas = subjectKpiAggregates
-                .OrderByDescending(asignatura => asignatura.Media)
+
+            TopAsignaturas = subjectKpis
+                .OrderByDescending(x => x.Media)
                 .Take(5)
-                .Select(ToAsignaturaTop5ItemDto)
+                .Select(x => new AsignaturaTop5ItemDto
+                {
+                    AsignaturaId = x.AsignaturaId,
+                    Asignatura = x.Asignatura,
+                    Curso = x.Curso,
+                    Media = Math.Round(x.Media, 2),
+                    PorcentajeAprobados = ToPercentage(x.Aprobados, x.TotalAlumnos),
+                    PorcentajeSuspensos = ToPercentage(x.Suspensos, x.TotalAlumnos)
+                })
                 .ToList(),
-            BottomAsignaturas = subjectKpiAggregates
-                .OrderBy(asignatura => asignatura.Media)
+
+            BottomAsignaturas = subjectKpis
+                .OrderBy(x => x.Media)
                 .Take(5)
-                .Select(ToAsignaturaTop5ItemDto)
+                .Select(x => new AsignaturaTop5ItemDto
+                {
+                    AsignaturaId = x.AsignaturaId,
+                    Asignatura = x.Asignatura,
+                    Curso = x.Curso,
+                    Media = Math.Round(x.Media, 2),
+                    PorcentajeAprobados = ToPercentage(x.Aprobados, x.TotalAlumnos),
+                    PorcentajeSuspensos = ToPercentage(x.Suspensos, x.TotalAlumnos)
+                })
                 .ToList()
         };
     }
@@ -186,90 +283,95 @@ public class AdminStatsDomainRepository(AppDbContext context) : IAdminStatsDomai
     {
         var curso = await context.Cursos
             .AsNoTracking()
-            .Where(curso => curso.Id == cursoId)
-            .Select(curso => new { curso.Id, curso.Nombre })
+            .Where(c => c.Id == cursoId)
+            .Select(c => new { c.Id, c.Nombre })
             .FirstOrDefaultAsync(cancellationToken);
 
         if (curso is null)
             return null;
 
-        var enrollmentFinalRowsQuery = BuildEnrollmentFinalRowsQuery(context).Where(enrollmentFinalRow => enrollmentFinalRow.CursoId == cursoId);
-
-        var asignaturasRaw = await (
-            from enrollmentFinalRow in enrollmentFinalRowsQuery
-            group enrollmentFinalRow by new { enrollmentFinalRow.AsignaturaId, enrollmentFinalRow.Asignatura } into groupedByAsignatura
-            select new
-            {
-                groupedByAsignatura.Key.AsignaturaId,
-                groupedByAsignatura.Key.Asignatura,
-                TotalAlumnos = groupedByAsignatura.Count(),
-                Aprobados = groupedByAsignatura.Sum(enrollmentFinalRowItem => enrollmentFinalRowItem.NotaFinal.HasValue && enrollmentFinalRowItem.NotaFinal.Value >= 5d ? 1 : 0),
-                Suspensos = groupedByAsignatura.Sum(enrollmentFinalRowItem => enrollmentFinalRowItem.NotaFinal.HasValue && enrollmentFinalRowItem.NotaFinal.Value < 5d ? 1 : 0),
-                SinNota = groupedByAsignatura.Sum(enrollmentFinalRowItem => enrollmentFinalRowItem.NotaFinal.HasValue ? 0 : 1),
-                Media = groupedByAsignatura.Where(enrollmentFinalRowItem => enrollmentFinalRowItem.NotaFinal.HasValue)
-                    .Average(enrollmentFinalRowItem => enrollmentFinalRowItem.NotaFinal)
-            })
-            .OrderBy(asignaturaStats => asignaturaStats.Asignatura)
+        // 🔥 MATERIALIZACIÓN CLAVE
+        var rows = await BuildEnrollmentFinalRowsQuery(context)
+            .Where(x => x.CursoId == cursoId)
             .ToListAsync(cancellationToken);
 
-        var courseStudentPerformanceRowsQuery = BuildCourseStudentPerformanceRowsQuery(enrollmentFinalRowsQuery);
-        var resumenCurso = await BuildCourseKpiAggregatesQuery(courseStudentPerformanceRowsQuery)
-            .OrderBy(cursoStats => cursoStats.Curso)
-            .FirstOrDefaultAsync(cancellationToken);
+        // 🔥 AGRUPACIÓN ASIGNATURAS
+        var asignaturasRaw = rows
+            .GroupBy(x => new { x.AsignaturaId, x.Asignatura })
+            .Select(g =>
+            {
+                var conNota = g.Where(x => x.NotaFinal.HasValue).ToList();
 
-        var asignaturas = asignaturasRaw.Select(asignaturaStats => new AsignaturaNotasStatsDto
-        {
-            AsignaturaId = asignaturaStats.AsignaturaId,
-            Asignatura = asignaturaStats.Asignatura,
-            TotalAlumnos = asignaturaStats.TotalAlumnos,
-            Aprobados = asignaturaStats.Aprobados,
-            Suspensos = asignaturaStats.Suspensos,
-            SinNota = asignaturaStats.SinNota,
-            Media = asignaturaStats.Media.HasValue ? Math.Round(asignaturaStats.Media.Value, 2) : null,
-            PorcentajeAprobados = ToPercentage(asignaturaStats.Aprobados, asignaturaStats.TotalAlumnos),
-            PorcentajeSuspensos = ToPercentage(asignaturaStats.Suspensos, asignaturaStats.TotalAlumnos)
-        }).ToList();
+                return new
+                {
+                    g.Key.AsignaturaId,
+                    g.Key.Asignatura,
+                    TotalAlumnos = g.Count(),
+                    Aprobados = conNota.Count(x => x.NotaFinal >= 5),
+                    Suspensos = conNota.Count(x => x.NotaFinal < 5),
+                    SinNota = g.Count(x => !x.NotaFinal.HasValue),
+                    Media = conNota.Count > 0 ? conNota.Average(x => x.NotaFinal) : null
+                };
+            })
+            .OrderBy(x => x.Asignatura)
+            .ToList();
 
-        var asignaturaConMejorMedia = asignaturas
-            .Where(asignaturaStats => asignaturaStats.Media.HasValue)
-            .OrderByDescending(asignaturaStats => asignaturaStats.Media)
-            .FirstOrDefault();
+        var conNotaCurso = rows.Where(x => x.NotaFinal.HasValue).ToList();
 
-        var asignaturaConPeorMedia = asignaturas
-            .Where(asignaturaStats => asignaturaStats.Media.HasValue)
-            .OrderBy(asignaturaStats => asignaturaStats.Media)
-            .FirstOrDefault();
-
-        var asignaturaDestacada = asignaturas
-            .OrderByDescending(asignaturaStats => asignaturaStats.PorcentajeAprobados)
-            .ThenByDescending(asignaturaStats => asignaturaStats.Media)
-            .FirstOrDefault();
-
-        var asignaturaAVigilar = asignaturas
-            .OrderByDescending(asignaturaStats => asignaturaStats.PorcentajeSuspensos)
-            .ThenBy(asignaturaStats => asignaturaStats.Media)
-            .FirstOrDefault();
-
-        var totalAlumnos = resumenCurso?.TotalAlumnos ?? 0;
-        var aprobados = resumenCurso?.Aprobados ?? 0;
-        var suspensos = resumenCurso?.Suspensos ?? 0;
+        var totalAlumnos = rows.Count;
+        var aprobados = conNotaCurso.Count(x => x.NotaFinal >= 5);
+        var suspensos = conNotaCurso.Count(x => x.NotaFinal < 5);
         var sinNota = totalAlumnos - aprobados - suspensos;
+
+        var mediaCurso = conNotaCurso.Count > 0
+            ? conNotaCurso.Average(x => x.NotaFinal)
+            : null;
+
+        var asignaturas = asignaturasRaw.Select(x => new AsignaturaNotasStatsDto
+        {
+            AsignaturaId = x.AsignaturaId,
+            Asignatura = x.Asignatura,
+            TotalAlumnos = x.TotalAlumnos,
+            Aprobados = x.Aprobados,
+            Suspensos = x.Suspensos,
+            SinNota = x.SinNota,
+            Media = x.Media.HasValue ? Math.Round(x.Media.Value, 2) : null,
+            PorcentajeAprobados = ToPercentage(x.Aprobados, x.TotalAlumnos),
+            PorcentajeSuspensos = ToPercentage(x.Suspensos, x.TotalAlumnos)
+        }).ToList();
 
         return new CursoNotasStatsResponseDto
         {
             CursoId = curso.Id,
             Curso = curso.Nombre,
-            MediaGlobalCurso = resumenCurso?.Media is double mediaCurso ? Math.Round(mediaCurso, 2) : null,
+            MediaGlobalCurso = mediaCurso.HasValue ? Math.Round(mediaCurso.Value, 2) : null,
             TotalAlumnos = totalAlumnos,
             Aprobados = aprobados,
             Suspensos = suspensos,
             SinNota = sinNota,
             PorcentajeAprobados = ToPercentage(aprobados, totalAlumnos),
             PorcentajeSuspensos = ToPercentage(suspensos, totalAlumnos),
-            AsignaturaDestacada = asignaturaDestacada,
-            AsignaturaAVigilar = asignaturaAVigilar,
-            AsignaturaConMejorMedia = asignaturaConMejorMedia,
-            AsignaturaConPeorMedia = asignaturaConPeorMedia,
+
+            AsignaturaConMejorMedia = asignaturas
+                .Where(x => x.Media.HasValue)
+                .OrderByDescending(x => x.Media)
+                .FirstOrDefault(),
+
+            AsignaturaConPeorMedia = asignaturas
+                .Where(x => x.Media.HasValue)
+                .OrderBy(x => x.Media)
+                .FirstOrDefault(),
+
+            AsignaturaDestacada = asignaturas
+                .OrderByDescending(x => x.PorcentajeAprobados)
+                .ThenByDescending(x => x.Media)
+                .FirstOrDefault(),
+
+            AsignaturaAVigilar = asignaturas
+                .OrderByDescending(x => x.PorcentajeSuspensos)
+                .ThenBy(x => x.Media)
+                .FirstOrDefault(),
+
             Asignaturas = asignaturas
         };
     }
@@ -372,25 +474,27 @@ public class AdminStatsDomainRepository(AppDbContext context) : IAdminStatsDomai
             };
     }
 
-    private static IQueryable<EnrollmentFinalRow> BuildEnrollmentFinalRowsQuery(AppDbContext dbContext)
+    private static IQueryable<EnrollmentFinalRow> BuildEnrollmentFinalRowsQuery(AppDbContext appDbContext)
     {
-        var finalGradesQuery = BuildFinalGradesQuery(dbContext);
+        var finalGrades = BuildFinalGradesQuery(appDbContext);
 
         return
-            from estudianteAsignatura in dbContext.EstudianteAsignaturas.AsNoTracking()
-            join finalGrade in finalGradesQuery
-                on new { estudianteAsignatura.EstudianteId, estudianteAsignatura.AsignaturaId }
-                equals new { finalGrade.EstudianteId, finalGrade.AsignaturaId }
-                into finalGradesJoin
-            from finalGrade in finalGradesJoin.DefaultIfEmpty()
+            from ea in appDbContext.EstudianteAsignaturas.AsNoTracking()
+            join a in appDbContext.Asignaturas on ea.AsignaturaId equals a.Id
+            join c in appDbContext.Cursos on a.CursoId equals c.Id
+            join fg in finalGrades
+                on new { ea.EstudianteId, ea.AsignaturaId }
+                equals new { fg.EstudianteId, fg.AsignaturaId }
+                into fgJoin
+            from fg in fgJoin.DefaultIfEmpty()
             select new EnrollmentFinalRow
             {
-                EstudianteId = estudianteAsignatura.EstudianteId,
-                CursoId = estudianteAsignatura.Asignatura!.CursoId,
-                Curso = estudianteAsignatura.Asignatura!.Curso!.Nombre,
-                AsignaturaId = estudianteAsignatura.AsignaturaId,
-                Asignatura = estudianteAsignatura.Asignatura!.Nombre,
-                NotaFinal = finalGrade != null ? finalGrade.NotaFinal : null
+                EstudianteId = ea.EstudianteId,
+                CursoId = c.Id,
+                Curso = c.Nombre,
+                AsignaturaId = a.Id,
+                Asignatura = a.Nombre,
+                NotaFinal = fg != null ? fg.NotaFinal : null
             };
     }
 

@@ -8,7 +8,7 @@ namespace Back.Api.Application.Services;
 
 public interface IProfesoresService
 {
-    Task<ApplicationResult> GetAllProfesoresAsync(CancellationToken cancellationToken = default);
+    Task<ApplicationResult> GetAllProfesoresAsync(int page, int pageSize, CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetSimpleProfesoresAsync(CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetProfesorByIdAsync(int profesorId, CancellationToken cancellationToken = default);
     Task<ApplicationResult> CreateProfesorAsync(CreateProfesorRequestDto createProfesorRequestDto, CancellationToken cancellationToken = default);

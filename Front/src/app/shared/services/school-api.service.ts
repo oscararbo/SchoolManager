@@ -169,7 +169,7 @@ export class SchoolApiService {
     createAsignatura(nombre: string, cursoId: number): Promise<AsignaturaItem> { return this.admin.createAsignatura(nombre, cursoId); }
     updateAsignatura(id: number, nombre: string, cursoId: number): Promise<AsignaturaItem> { return this.admin.updateAsignatura(id, nombre, cursoId); }
     deleteAsignatura(id: number): Promise<void> { return this.admin.deleteAsignatura(id); }
-    getProfesores(): Promise<ProfesorListItem[]> { return this.admin.getProfesores(); }
+    getProfesores(page: number, pageSize: number): Promise<{ total: number; items: ProfesorListItem[] }> { return this.admin.getProfesores(page, pageSize); }
     createProfesor(data: CreateProfesorData): Promise<ProfesorListItem> { return this.admin.createProfesor(data); }
     updateProfesor(id: number, data: UpdateProfesorData): Promise<ProfesorListItem> { return this.admin.updateProfesor(id, data); }
     deleteProfesor(id: number): Promise<void> { return this.admin.deleteProfesor(id); }

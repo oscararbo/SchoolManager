@@ -19,7 +19,7 @@ public class ImportController(IImportService importService, IAuditLogService aud
     private async Task<IActionResult> ImportarCsvAsync(
         CsvImportRequest request,
         string entidad,
-        Func<string, CancellationToken, Task<Back.Api.Application.Common.ApplicationResult>> importAction)
+        Func<string, CancellationToken, Task<Application.Common.ApplicationResult>> importAction)
     {
         var csvText = await ReadTextAsync(request.File!);
         return this.ToActionResult(await importAction(csvText, HttpContext.RequestAborted));

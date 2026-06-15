@@ -11,14 +11,14 @@ public class AdminService(
     IAdminDomainRepository adminDomain,
     IPasswordService passwordService) : IAdminService
 {
-    public async Task<ApplicationResult> GetAllAdminsAsync(CancellationToken cancellationToken = default)
-        => ApplicationResult.Ok(await adminDomain.GetAllAdminsAsync(cancellationToken));
+    public async Task<ApplicationResult> GetAllAdminsAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+        => ApplicationResult.Ok(await adminDomain.GetAllAdminsAsync(page, pageSize, cancellationToken));
 
-    public async Task<ApplicationResult> GetMatriculasAsync(CancellationToken cancellationToken = default)
-        => ApplicationResult.Ok(await adminDomain.GetMatriculasAsync(cancellationToken));
+    public async Task<ApplicationResult> GetMatriculasAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+        => ApplicationResult.Ok(await adminDomain.GetMatriculasAsync(page, pageSize, cancellationToken));
 
-    public async Task<ApplicationResult> GetImparticionesAsync(CancellationToken cancellationToken = default)
-        => ApplicationResult.Ok(await adminDomain.GetImparticionesAsync(cancellationToken));
+    public async Task<ApplicationResult> GetImparticionesAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+        => ApplicationResult.Ok(await adminDomain.GetImparticionesAsync(page, pageSize, cancellationToken));
 
     public async Task<ApplicationResult> GetHorariosAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await adminDomain.GetHorariosAsync(cancellationToken));

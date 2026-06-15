@@ -15,21 +15,21 @@ namespace Back.Api.Presentation.Controllers;
 public class AdminController(IAdminService adminService) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(int page, int pageSize)
     {
-        return this.ToActionResult(await adminService.GetAllAdminsAsync(HttpContext.RequestAborted));
+        return this.ToActionResult(await adminService.GetAllAdminsAsync(page, pageSize, HttpContext.RequestAborted));
     }
 
     [HttpGet("matriculas")]
-    public async Task<IActionResult> GetMatriculas()
+    public async Task<IActionResult> GetMatriculas(int page, int pageSize)
     {
-        return this.ToActionResult(await adminService.GetMatriculasAsync(HttpContext.RequestAborted));
+        return this.ToActionResult(await adminService.GetMatriculasAsync(page, pageSize, HttpContext.RequestAborted));
     }
 
     [HttpGet("imparticiones")]
-    public async Task<IActionResult> GetImparticiones()
+    public async Task<IActionResult> GetImparticiones(int page, int pageSize)
     {
-        return this.ToActionResult(await adminService.GetImparticionesAsync(HttpContext.RequestAborted));
+        return this.ToActionResult(await adminService.GetImparticionesAsync(page, pageSize, HttpContext.RequestAborted));
     }
 
     [HttpGet("horarios")]

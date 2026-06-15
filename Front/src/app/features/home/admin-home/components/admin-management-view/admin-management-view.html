@@ -224,20 +224,23 @@
             [profesorForm]="profesorForm"
             [profesoresVista]="profesoresVista()"
             [cursos]="cursos()"
-            [filtroProfesoresCursoId]="filtroProfesoresCursoId()"
             [busquedaProfesores]="busquedaProfesores()"
             [cargandoListaProfesores]="cargandoListaProfesores()"
             [cargandoCrearProfesor]="estaCargando('crearProfesor')"
             [cargandoGuardarProfesor]="estaCargando('guardarProfesor')"
             [cargandoEliminarProfesor]="estaCargando('eliminarProfesor')"
             [controlErrorMessage]="getControlErrorMessage"
+            [page]="paginacion().profesores.page"
+            [total]="paginacion().profesores.total"
+            [pageSize]="paginacion().profesores.pageSize"
             (busquedaProfesoresChange)="onBusquedaProfesoresChange($event)"
-            (filtroProfesoresCursoIdChange)="filtroProfesoresCursoId.set($event)"
             (iniciarEditarProfesor)="iniciarEditarProfesor($event)"
             (eliminarProfesor)="eliminarProfesor($event.id, $event.nombre)"
             (guardarProfesor)="guardarProfesor()"
             (cancelarEditarProfesor)="editandoProfesorId=null"
-            (crearProfesor)="crearProfesor()">
+            (crearProfesor)="crearProfesor()"
+            (paginaAnterior)="paginaAnterior('profesores')"
+            (siguientePagina)="siguientePagina('profesores')">
         </app-admin-profesores-tab>
     }
 

@@ -3,17 +3,16 @@ using Back.Api.Application.Abstractions.Repositories;
 using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Configuration;
 using Back.Api.Application.Dtos;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
+using Back.Api.Application.Services.Common;
 
 namespace Back.Api.Application.Services;
 
-public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, IPasswordService passwordService, ICurrentSchoolContext currentSchoolContext, IWebHostEnvironment hostEnvironment) : IEstudiantesService
+public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, IPasswordService passwordService, ICurrentSchoolContext currentSchoolContext, IWebHostEnvironment hostEnvironment, ICommonService commonService) : IEstudiantesService
 {
     #region CRUD estudiantes
-    public async Task<ApplicationResult> GetAllEstudiantesAsync(CancellationToken cancellationToken = default)
-        => ApplicationResult.Ok(await estudiantesDomain.GetAllEstudiantesAsync(cancellationToken));
+    public async Task<ApplicationResult> GetAllEstudiantesAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+        => ApplicationResult.Ok(await estudiantesDomain.GetAllEstudiantesAsync(page, pageSize, cancellationToken));
 
     public async Task<ApplicationResult> GetSimpleEstudiantesAsync(CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await estudiantesDomain.GetSimpleEstudiantesAsync(cancellationToken));
@@ -25,27 +24,48 @@ public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, 
     }
 
     public async Task<ApplicationResult> CreateEstudianteAsync(CreateEstudianteRequestDto createEstudianteRequestDto, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(createEstudianteRequestDto.Nombre))
-            return ApplicationResult.BadRequest("El nombre del estudiante es obligatorio.");
+    
+{
+        var required = commonService.Required(createEstudianteRequestDto.Nombre, "El nombre del estudiante es obligatorio.");
+        if (required != null) return required;
+
         if (createEstudianteRequestDto.CursoId <= 0)
-            return ApplicationResult.BadRequest("El curso del estudiante es obligatorio.");
+            return ApplicationResult.BadRequest("El curso es obligatorio.");
 
-        var normalizedDocumento = CredentialGenerationHelper.NormalizeDniNie(createEstudianteRequestDto.DNI);
-        if (!CredentialGenerationHelper.IsValidDniNie(normalizedDocumento))
+        var dni = CredentialGenerationHelper.NormalizeDniNie(createEstudianteRequestDto.DNI);
+
+        if (!CredentialGenerationHelper.IsValidDniNie(dni))
             return ApplicationResult.BadRequest("El documento debe ser un DNI o NIE valido.");
-        if (await estudiantesDomain.DocumentoDuplicadoAsync(normalizedDocumento, cancellationToken))
+
+        if (await estudiantesDomain.DocumentoDuplicadoAsync(dni, cancellationToken))
             return ApplicationResult.BadRequest("Ya existe una persona con ese DNI/NIE.");
-        if (!await estudiantesDomain.CursoExisteAsync(createEstudianteRequestDto.CursoId, cancellationToken))
-            return ApplicationResult.BadRequest("El curso indicado no existe.");
 
-        var schoolSlug = CredentialGenerationHelper.NormalizeSchoolSlugForDomain(currentSchoolContext.SchoolSlug, currentSchoolContext.SchoolId);
-        var generatedPassword = CredentialGenerationHelper.GeneratePassword();
-        var generatedEmail = await GenerateUniqueEmailAsync($"{createEstudianteRequestDto.Nombre} {createEstudianteRequestDto.Apellidos}", "alumno", schoolSlug, cancellationToken);
+        var schoolSlug = CredentialGenerationHelper.NormalizeSchoolSlugForDomain(
+            currentSchoolContext.SchoolSlug,
+            currentSchoolContext.SchoolId);
 
-        var createdEstudiante = await estudiantesDomain.CreateEstudianteAsync(createEstudianteRequestDto.Nombre.Trim(), generatedEmail, createEstudianteRequestDto.CursoId, passwordService.Hash(generatedPassword), createEstudianteRequestDto.Apellidos.Trim(), normalizedDocumento, createEstudianteRequestDto.Telefono.Trim(), createEstudianteRequestDto.FechaNacimiento!.Value, cancellationToken);
-        createdEstudiante.ContrasenaTemporal = generatedPassword;
-        return ApplicationResult.Created($"/api/estudiantes/{createdEstudiante.Id}", createdEstudiante);
+        var password = CredentialGenerationHelper.GeneratePassword();
+
+        var email = await commonService.GenerateUniqueEmailAsync(
+            $"{createEstudianteRequestDto.Nombre} {createEstudianteRequestDto.Apellidos}",
+            "alumno",
+            schoolSlug,
+            e => estudiantesDomain.CorreoDuplicadoAsync(e, cancellationToken));
+
+        var estudiante = await estudiantesDomain.CreateEstudianteAsync(
+            commonService.Normalize(createEstudianteRequestDto.Nombre),
+            email,
+            createEstudianteRequestDto.CursoId,
+            passwordService.Hash(password),
+            commonService.Normalize(createEstudianteRequestDto.Apellidos),
+            dni,
+            createEstudianteRequestDto.Telefono.Trim(),
+            createEstudianteRequestDto.FechaNacimiento!.Value,
+            cancellationToken);
+
+        estudiante.ContrasenaTemporal = password;
+
+        return ApplicationResult.Created($"/api/estudiantes/{estudiante.Id}", estudiante);
     }
 
     public async Task<ApplicationResult> MatricularAsync(int estudianteId, int asignaturaId, CancellationToken cancellationToken = default)
@@ -151,20 +171,6 @@ public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, 
             : ApplicationResult.Ok(updatedEstudiante);
     }
 
-    private async Task<string> GenerateUniqueEmailAsync(string fullName, string rolePrefix, string schoolSlug, CancellationToken cancellationToken)
-    {
-        for (var i = 0; i < 2000; i++)
-        {
-            var candidate = CredentialGenerationHelper.BuildGeneratedEmail(fullName, rolePrefix, schoolSlug, i);
-            if (!await estudiantesDomain.CorreoDuplicadoAsync(candidate, cancellationToken))
-            {
-                return candidate;
-            }
-        }
-
-        throw new InvalidOperationException("No se pudo generar un correo unico para el estudiante.");
-    }
-
     public async Task<ApplicationResult> DeleteEstudianteAsync(int estudianteId, CancellationToken cancellationToken = default)
     {
         if (!await estudiantesDomain.ExisteAsync(estudianteId, cancellationToken))
@@ -188,40 +194,21 @@ public class EstudiantesService(IEstudiantesDomainRepository estudiantesDomain, 
         if (!UsuarioCoincideConEstudiante(estudianteId, user))
             return ApplicationResult.Forbidden();
 
-        if (archivo is null || archivo.Length == 0)
-            return ApplicationResult.BadRequest("Debes adjuntar un archivo.");
-
-        if (archivo.Length > 10 * 1024 * 1024)
-            return ApplicationResult.BadRequest("El archivo supera el tamano maximo permitido (10MB).");
-
-        var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png"
-        };
-        var extension = Path.GetExtension(archivo.FileName);
-        if (string.IsNullOrWhiteSpace(extension) || !allowedExtensions.Contains(extension))
-            return ApplicationResult.BadRequest("Tipo de archivo no permitido.");
+        var fileValidation = commonService.ValidateFile(archivo);
+        if (fileValidation != null)
+            return fileValidation;
 
         if (!await estudiantesDomain.EstudianteMatriculadoEnTareaAsync(estudianteId, tareaId, cancellationToken))
             return ApplicationResult.BadRequest("El estudiante no tiene acceso a esa tarea.");
 
-        var uploadsRoot = Path.Combine(hostEnvironment.ContentRootPath, "uploads", "tareas", tareaId.ToString());
-        Directory.CreateDirectory(uploadsRoot);
+        var path = await commonService.SaveFileAsync(
+            archivo.OpenReadStream(),
+            archivo.FileName,
+            hostEnvironment.ContentRootPath,
+            $"uploads/tareas/{tareaId}",
+            cancellationToken);
 
-        var safeBaseName = Path.GetFileNameWithoutExtension(archivo.FileName);
-        safeBaseName = string.Concat(safeBaseName.Where(ch => char.IsLetterOrDigit(ch) || ch == '-' || ch == '_'));
-        if (string.IsNullOrWhiteSpace(safeBaseName)) safeBaseName = "archivo";
-
-        var generatedFileName = $"{estudianteId}_{DateTime.UtcNow:yyyyMMddHHmmss}_{safeBaseName}{extension}";
-        var absolutePath = Path.Combine(uploadsRoot, generatedFileName);
-
-        await using (var stream = File.Create(absolutePath))
-        {
-            await archivo.CopyToAsync(stream, cancellationToken);
-        }
-
-        var relativePath = $"/uploads/tareas/{tareaId}/{generatedFileName}";
-        var saved = await estudiantesDomain.UpsertSubmisionEstudianteAsync(estudianteId, tareaId, archivo.FileName, relativePath, archivo.Length, cancellationToken);
+        var saved = await estudiantesDomain.UpsertSubmisionEstudianteAsync(estudianteId, tareaId, archivo.FileName, path, archivo.Length, cancellationToken);
         return ApplicationResult.Ok(saved);
     }
 

@@ -7,6 +7,7 @@ public record ProfesorTareaCalificacionRow(int EstudianteId, string Alumno, deci
 
 public interface IProfesoresDomainRepository
 {
+    public record PagedResult<T>(IEnumerable<T> Items, int Total);
     Task<bool> ProfesorExisteAsync(int profesorId, CancellationToken cancellationToken = default);
     Task<bool> ProfesorImparteAsignaturaAsync(int profesorId, int asignaturaId, CancellationToken cancellationToken = default);
     Task<bool> ProfesorImparteTareaAsync(int profesorId, int tareaId, CancellationToken cancellationToken = default);
@@ -27,7 +28,7 @@ public interface IProfesoresDomainRepository
     Task<int?> GetEstudianteCursoAsync(int estudianteId, CancellationToken cancellationToken = default);
     Task<TareaResumenDto?> GetTareaResumenAsync(int tareaId, CancellationToken cancellationToken = default);
     Task<IEnumerable<ProfesorLookupDto>> GetSimpleProfesoresAsync(CancellationToken cancellationToken = default);
-    Task<IEnumerable<ProfesorListItemDto>> GetAllProfesoresAsync(CancellationToken cancellationToken = default);
+    Task<PagedResult<ProfesorListItemDto>> GetAllProfesoresAsync(int page, int pageSize, CancellationToken cancellationToken = default);
     Task<ProfesorDetalleDto?> GetDetalleAsync(int profesorId, CancellationToken cancellationToken = default);
     Task<ProfesorPanelDto?> GetPanelAsync(int profesorId, CancellationToken cancellationToken = default);
     Task<List<TareaResumenDto>> GetTareasDeAsignaturaAsync(int asignaturaId, CancellationToken cancellationToken = default);

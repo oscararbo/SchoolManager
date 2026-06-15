@@ -223,7 +223,7 @@ export interface ProfesorListItem {
     especialidad: string;
     correo: string;
     contrasenaTemporal?: string;
-    imparticiones: ProfesorImparticion[];
+    imparticionesCount: number;
 }
 
 export interface EstudianteItem {

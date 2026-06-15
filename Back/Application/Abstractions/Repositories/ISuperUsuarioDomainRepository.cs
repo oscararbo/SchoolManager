@@ -4,7 +4,8 @@ namespace Back.Api.Application.Abstractions.Repositories;
 
 public interface ISuperUsuarioDomainRepository
 {
-    Task<IEnumerable<ColegioListItemDto>> GetColegiosAsync(CancellationToken cancellationToken = default);
+    public record PagedResult<T>(IEnumerable<T> Items, int Total);
+    Task<PagedResult<ColegioListItemDto>> GetColegiosAsync(int page, int pageSize, CancellationToken cancellationToken = default);
     Task<ColegioListItemDto?> GetColegioBySlugAsync(string slug, CancellationToken cancellationToken = default);
     Task<ColegioListItemDto?> GetColegioByIdAsync(int colegioId, CancellationToken cancellationToken = default);
     Task<IEnumerable<ColegioAdminListItemDto>> GetAdminsByColegioAsync(int colegioId, CancellationToken cancellationToken = default);

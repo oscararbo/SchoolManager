@@ -7,7 +7,7 @@ namespace Back.Api.Application.Services;
 
 public interface IEstudiantesService
 {
-    Task<ApplicationResult> GetAllEstudiantesAsync(CancellationToken cancellationToken = default);
+    Task<ApplicationResult> GetAllEstudiantesAsync(int page, int pageSize, CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetSimpleEstudiantesAsync(CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetEstudianteByIdAsync(int estudianteId, CancellationToken cancellationToken = default);
     Task<ApplicationResult> CreateEstudianteAsync(CreateEstudianteRequestDto createEstudianteRequestDto, CancellationToken cancellationToken = default);

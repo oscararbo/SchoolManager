@@ -197,10 +197,21 @@ export class SchoolApiAdminService {
         }
     }
 
-    async getProfesores(): Promise<ProfesorListItem[]> {
+    async getProfesores(page: number, pageSize: number): Promise<{ total: number; items: ProfesorListItem[] }> {
         try {
-            const response = await firstValueFrom(this.http.get<ApiProfesorListItem[]>(`${this.apiUrl}/profesores`));
-            return response.map(mapProfesorListItem);
+            const response = await firstValueFrom(
+                this.http.get<{ total: number; items: ApiProfesorListItem[] }>(`${this.apiUrl}/profesores`,
+                    {
+                        params: {
+                            page: page.toString(),
+                            pageSize: pageSize.toString()
+                        }
+                    }
+                ));
+            return {
+                total: response.total ?? 0,
+                items: response.items.map(mapProfesorListItem) ?? []
+            }
         } catch (e) {
             throw extractSchoolApiError(e);
         }

@@ -16,9 +16,9 @@ public class EstudiantesController(IEstudiantesService estudiantesService) : Con
 {
     [HttpGet]
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(int page, int pageSize)
     {
-        return this.ToActionResult(await estudiantesService.GetAllEstudiantesAsync(HttpContext.RequestAborted));
+        return this.ToActionResult(await estudiantesService.GetAllEstudiantesAsync(page, pageSize, HttpContext.RequestAborted));
     }
 
     [HttpGet("simple")]

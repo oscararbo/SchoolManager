@@ -4,11 +4,12 @@ namespace Back.Api.Application.Abstractions.Repositories;
 
 public interface IAdminDomainRepository
 {
-    Task<IEnumerable<AdminListItemDto>> GetAllAdminsAsync(CancellationToken cancellationToken = default);
+    public record PagedResult<T>(IEnumerable<T> Items, int Total);
+    Task<PagedResult<AdminListItemDto>> GetAllAdminsAsync(int page, int pageSize, CancellationToken cancellationToken = default);
     Task<bool> CorreoDuplicadoAsync(string correo, CancellationToken cancellationToken = default);
     Task<AdminListItemDto> CreateAdminAsync(string nombre, string correo, string contrasenaHash, CancellationToken cancellationToken = default);
-    Task<IEnumerable<AdminMatriculaListReadModelDto>> GetMatriculasAsync(CancellationToken cancellationToken = default);
-    Task<IEnumerable<AdminImparticionListReadModelDto>> GetImparticionesAsync(CancellationToken cancellationToken = default);
+    Task<PagedResult<AdminMatriculaListReadModelDto>> GetMatriculasAsync(int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<PagedResult<AdminImparticionListReadModelDto>> GetImparticionesAsync(int page, int pageSize, CancellationToken cancellationToken = default);
     Task<IEnumerable<AdminHorarioAsignaturaReadModelDto>> GetHorariosAsync(CancellationToken cancellationToken = default);
     Task<bool> AsignaturaExisteAsync(int asignaturaId, CancellationToken cancellationToken = default);
     Task<bool> HorarioExisteAsync(int horarioId, CancellationToken cancellationToken = default);

@@ -3,18 +3,15 @@ using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Common;
 using Back.Api.Application.Dtos;
 using Back.Api.Application.Dtos.SuperUsuario.Requests;
-using Microsoft.AspNetCore.Hosting;
+using Back.Api.Application.Services.Common;
 
 namespace Back.Api.Application.Services;
 
-public class SuperUsuarioService(
-    ISuperUsuarioDomainRepository superUsuarioDomain,
-    IPasswordService passwordService,
-    IWebHostEnvironment hostEnvironment) : ISuperUsuarioService
+public class SuperUsuarioService(ISuperUsuarioDomainRepository superUsuarioDomain, IPasswordService passwordService, IWebHostEnvironment hostEnvironment, ICommonService commonService) : ISuperUsuarioService
 {
     #region Consultas colegios
-    public async Task<ApplicationResult> GetColegiosAsync(CancellationToken cancellationToken = default)
-        => ApplicationResult.Ok(await superUsuarioDomain.GetColegiosAsync(cancellationToken));
+    public async Task<ApplicationResult> GetColegiosAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+        => ApplicationResult.Ok(await superUsuarioDomain.GetColegiosAsync(page, pageSize, cancellationToken));
 
     public async Task<ApplicationResult> GetAdminsByColegioAsync(int colegioId, CancellationToken cancellationToken = default)
         => ApplicationResult.Ok(await superUsuarioDomain.GetAdminsByColegioAsync(colegioId, cancellationToken));
@@ -30,15 +27,15 @@ public class SuperUsuarioService(
     #endregion
 
     #region CRUD colegios
-    public async Task<ApplicationResult> CreateColegioAsync(CreateColegioRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> CreateColegioAsync(CreateColegioRequestDto createColegioRequestDto, CancellationToken cancellationToken = default)
     {
-        var nombre = request.Nombre.Trim();
-        var slug = NormalizeSlug(request.Slug);
+        var nombre = createColegioRequestDto.Nombre.Trim();
+        var slug = NormalizeSlug(createColegioRequestDto.Slug);
 
         if (await superUsuarioDomain.ColegioSlugExistsAsync(slug, null, cancellationToken))
             return ApplicationResult.BadRequest("Ya existe un colegio con ese slug.");
 
-        var created = await superUsuarioDomain.CreateColegioAsync(nombre, slug, request.LogoUrl, request.FaviconUrl, request.ColorPrimario, request.MensajeLogin, cancellationToken);
+        var created = await superUsuarioDomain.CreateColegioAsync(nombre, slug, createColegioRequestDto.LogoUrl, createColegioRequestDto.FaviconUrl, createColegioRequestDto.ColorPrimario, createColegioRequestDto.MensajeLogin, cancellationToken);
         return ApplicationResult.Created($"/api/superusuario/colegios/{created.Id}", created);
     }
 
@@ -66,26 +63,32 @@ public class SuperUsuarioService(
     #endregion
 
     #region Admins de colegio
-    public async Task<ApplicationResult> CreateAdminColegioAsync(int colegioId, CreateAdminColegioRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<ApplicationResult> CreateAdminColegioAsync(int colegioId, CreateAdminColegioRequestDto createAdminColegioRequestDto, CancellationToken cancellationToken = default)
     {
         var colegio = await superUsuarioDomain.GetColegioByIdAsync(colegioId, cancellationToken);
         if (colegio is null)
             return ApplicationResult.NotFound("Colegio no encontrado.");
 
-        var schoolSlug = CredentialGenerationHelper.NormalizeSchoolSlugForDomain(colegio.Slug, colegio.Id);
-        var generatedPassword = CredentialGenerationHelper.GeneratePassword();
-        var generatedEmail = await GenerateUniqueEmailAsync($"{request.Nombre}", "admin", schoolSlug, colegioId, cancellationToken);
+        var slug = CredentialGenerationHelper.NormalizeSchoolSlugForDomain(colegio.Slug, colegio.Id);
 
-        var created = await superUsuarioDomain.CreateAdminColegioAsync(
+        var password = CredentialGenerationHelper.GeneratePassword();
+
+        var email = await commonService.GenerateUniqueEmailAsync(
+            createAdminColegioRequestDto.Nombre,
+            "admin",
+            slug,
+            e => superUsuarioDomain.ColegioCorreoDuplicadoAsync(colegioId, e, cancellationToken));
+
+        var admin = await superUsuarioDomain.CreateAdminColegioAsync(
             colegioId,
-            request.Nombre.Trim(),
-            generatedEmail,
-            passwordService.Hash(generatedPassword),
+            commonService.Normalize(createAdminColegioRequestDto.Nombre),
+            email,
+            passwordService.Hash(password),
             cancellationToken);
 
-        created.ContrasenaTemporal = generatedPassword;
+        admin.ContrasenaTemporal = password;
 
-        return ApplicationResult.Created($"/api/superusuario/colegios/{colegioId}/admins/{created.Id}", created);
+        return ApplicationResult.Created($"/api/superusuario/colegios/{colegioId}/admins/{admin.Id}", admin);
     }
     #endregion
 
@@ -126,20 +129,6 @@ public class SuperUsuarioService(
     #endregion
 
     #region Helpers
-    private async Task<string> GenerateUniqueEmailAsync(string fullName, string rolePrefix, string schoolSlug, int colegioId, CancellationToken cancellationToken)
-    {
-        for (var i = 0; i < 2000; i++)
-        {
-            var candidate = CredentialGenerationHelper.BuildGeneratedEmail(fullName, rolePrefix, schoolSlug, i);
-            if (!await superUsuarioDomain.ColegioCorreoDuplicadoAsync(colegioId, candidate, cancellationToken))
-            {
-                return candidate;
-            }
-        }
-
-        throw new InvalidOperationException("No se pudo generar un correo unico para el administrador del colegio.");
-    }
-
     private static string NormalizeSlug(string slug)
         => slug.Trim().ToLowerInvariant();
     #endregion

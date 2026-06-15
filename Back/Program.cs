@@ -3,6 +3,7 @@ using Back.Api.Application.Abstractions.Security;
 using Back.Api.Application.Configuration;
 using Back.Api.Application.Services;
 using Back.Api.Application.Services.Audit;
+using Back.Api.Application.Services.Common;
 using Back.Api.Infrastructure.ErrorHandling;
 using Back.Api.Infrastructure.Logging;
 using Back.Api.Infrastructure.Security;
@@ -193,6 +194,7 @@ builder.Services.AddScoped<IEstudiantesService, EstudiantesService>();
 builder.Services.AddScoped<ICursosService, CursosService>();
 builder.Services.AddScoped<IAsignaturasService, AsignaturasService>();
 builder.Services.AddScoped<IImportService, ImportService>();
+builder.Services.AddScoped<ICommonService, CommonService>();
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddHostedService<RefreshTokenCleanupService>();
 

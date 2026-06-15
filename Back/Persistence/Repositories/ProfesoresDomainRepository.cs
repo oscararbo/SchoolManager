@@ -132,27 +132,39 @@ public class ProfesoresDomainRepository(AppDbContext context, ICurrentSchoolCont
             })
             .ToListAsync(cancellationToken);
 
-    public async Task<IEnumerable<ProfesorListItemDto>> GetAllProfesoresAsync(CancellationToken cancellationToken = default)
-        => await context.Profesores
+    public async Task<IProfesoresDomainRepository.PagedResult<ProfesorListItemDto>> GetAllProfesoresAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var query = context.Profesores
             .AsNoTracking()
-            .Select(teacher => new ProfesorListItemDto
-            {
-                Id = teacher.Id,
-                Nombre = teacher.Nombre,
-                Apellidos = teacher.Apellidos,
-                DNI = teacher.DNI,
-                Telefono = teacher.Telefono,
-                Especialidad = teacher.Especialidad,
-                Correo = teacher.Cuenta!.Correo,
-                Imparticiones = teacher.ProfesorAsignaturaCursos.Select(assignment => new ProfesorImparticionDto
-                {
-                    AsignaturaId = assignment.AsignaturaId,
-                    Asignatura = assignment.Asignatura!.Nombre,
-                    CursoId = assignment.CursoId,
-                    Curso = assignment.Curso!.Nombre
-                }).ToList()
-            })
+            .Include(p => p.Cuenta)
+            .Include(p => p.ProfesorAsignaturaCursos)
+                .ThenInclude(pac => pac.Asignatura)
+            .Include(p => p.ProfesorAsignaturaCursos)
+                .ThenInclude(pac => pac.Curso);
+
+        var total = await query.CountAsync(cancellationToken);
+
+        var profesores = await query
+            .OrderBy(p => p.Nombre)
+            .Skip(page * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
+
+        return new IProfesoresDomainRepository.PagedResult<ProfesorListItemDto>(
+            profesores.Select(p => new ProfesorListItemDto
+            {
+                Id = p.Id,
+                Nombre = p.Nombre,
+                Apellidos = p.Apellidos,
+                DNI = p.DNI,
+                Telefono = p.Telefono,
+                Especialidad = p.Especialidad,
+                Correo = p.Cuenta!.Correo,
+                ImparticionesCount = p.ProfesorAsignaturaCursos.Count(i => !i.IsDeleted),
+            }),
+            total
+        );
+    }
 
     public async Task<ProfesorDetalleDto?> GetDetalleAsync(int profesorId, CancellationToken cancellationToken = default)
     {
@@ -634,7 +646,11 @@ public class ProfesoresDomainRepository(AppDbContext context, ICurrentSchoolCont
         var teacher = await context.Profesores
             .IgnoreQueryFilters()
             .Include(p => p.Cuenta)
-            .FirstOrDefaultAsync(p => p.Cuenta != null && p.Cuenta.Correo == correo && p.Cuenta.ColegioId == currentSchoolContext.SchoolId, cancellationToken);
+            .FirstOrDefaultAsync(p =>
+                p.Cuenta != null &&
+                p.Cuenta.Correo == correo &&
+                p.Cuenta.ColegioId == currentSchoolContext.SchoolId,
+                cancellationToken);
 
         if (teacher is null)
         {
@@ -663,6 +679,7 @@ public class ProfesoresDomainRepository(AppDbContext context, ICurrentSchoolCont
             teacher.Telefono = telefono;
             teacher.Especialidad = especialidad;
             teacher.IsDeleted = false;
+
             if (teacher.Cuenta is not null)
             {
                 teacher.Cuenta.Correo = correo;
@@ -674,7 +691,21 @@ public class ProfesoresDomainRepository(AppDbContext context, ICurrentSchoolCont
         }
 
         await context.SaveChangesAsync(cancellationToken);
-        return new ProfesorListItemDto { Id = teacher.Id, Nombre = teacher.Nombre, Apellidos = teacher.Apellidos, DNI = teacher.DNI, Telefono = teacher.Telefono, Especialidad = teacher.Especialidad, Correo = teacher.Cuenta!.Correo, Imparticiones = new() };
+
+        var count = await context.ProfesorAsignaturaCursos
+            .CountAsync(i => i.ProfesorId == teacher.Id && !i.IsDeleted, cancellationToken);
+
+        return new ProfesorListItemDto
+        {
+            Id = teacher.Id,
+            Nombre = teacher.Nombre,
+            Apellidos = teacher.Apellidos,
+            DNI = teacher.DNI,
+            Telefono = teacher.Telefono,
+            Especialidad = teacher.Especialidad,
+            Correo = teacher.Cuenta!.Correo,
+            ImparticionesCount = count
+        };
     }
 
     public async Task<ProfesorListItemDto?> UpdateProfesorAsync(int profesorId, string nombre, string apellidos, string dni, string telefono, string especialidad, CancellationToken cancellationToken = default)
@@ -682,6 +713,7 @@ public class ProfesoresDomainRepository(AppDbContext context, ICurrentSchoolCont
         var teacher = await context.Profesores
             .Include(p => p.Cuenta)
             .FirstOrDefaultAsync(p => p.Id == profesorId, cancellationToken);
+
         if (teacher is null) return null;
 
         teacher.Nombre = nombre;
@@ -692,19 +724,20 @@ public class ProfesoresDomainRepository(AppDbContext context, ICurrentSchoolCont
 
         await context.SaveChangesAsync(cancellationToken);
 
-        var assignments = await context.ProfesorAsignaturaCursos
-            .AsNoTracking()
-            .Where(i => i.ProfesorId == profesorId)
-            .Select(i => new ProfesorImparticionDto
-            {
-                AsignaturaId = i.AsignaturaId,
-                Asignatura = i.Asignatura!.Nombre,
-                CursoId = i.CursoId,
-                Curso = i.Curso!.Nombre
-            })
-            .ToListAsync(cancellationToken);
+        var count = await context.ProfesorAsignaturaCursos
+            .CountAsync(i => i.ProfesorId == profesorId && !i.IsDeleted, cancellationToken);
 
-        return new ProfesorListItemDto { Id = teacher.Id, Nombre = teacher.Nombre, Apellidos = teacher.Apellidos, DNI = teacher.DNI, Telefono = teacher.Telefono, Especialidad = teacher.Especialidad, Correo = teacher.Cuenta!.Correo, Imparticiones = assignments };
+        return new ProfesorListItemDto
+        {
+            Id = teacher.Id,
+            Nombre = teacher.Nombre,
+            Apellidos = teacher.Apellidos,
+            DNI = teacher.DNI,
+            Telefono = teacher.Telefono,
+            Especialidad = teacher.Especialidad,
+            Correo = teacher.Cuenta!.Correo,
+            ImparticionesCount = count
+        };
     }
 
     public async Task DeleteProfesorAsync(int profesorId, CancellationToken cancellationToken = default)

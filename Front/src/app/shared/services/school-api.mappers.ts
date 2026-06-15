@@ -91,12 +91,7 @@ export function mapProfesorListItem(api: ApiProfesorListItem): ProfesorListItem 
     especialidad: safeText(api.especialidad),
     correo: safeText(api.correo).toLowerCase(),
     contrasenaTemporal: api.contrasenaTemporal ? safeText(api.contrasenaTemporal) : undefined,
-    imparticiones: api.imparticiones.map(i => ({
-      asignaturaId: i.asignaturaId,
-      asignatura: safeText(i.asignatura),
-      cursoId: i.cursoId,
-      curso: safeText(i.curso)
-    }))
+    imparticionesCount: api.imparticionesCount ?? 0
   };
 }
 

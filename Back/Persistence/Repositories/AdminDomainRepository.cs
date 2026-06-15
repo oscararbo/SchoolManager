@@ -9,7 +9,6 @@ namespace Back.Api.Persistence.Repositories;
 
 public class AdminDomainRepository(AppDbContext context, ICurrentSchoolContext currentSchoolContext) : IAdminDomainRepository
 {
-
     public async Task<IEnumerable<AdminHorarioAsignaturaReadModelDto>> GetHorariosAsync(CancellationToken cancellationToken = default)
         => await context.HorariosAsignaturas
             .AsNoTracking()
@@ -31,11 +30,26 @@ public class AdminDomainRepository(AppDbContext context, ICurrentSchoolContext c
             })
             .ToListAsync(cancellationToken);
 
-    public async Task<IEnumerable<AdminListItemDto>> GetAllAdminsAsync(CancellationToken cancellationToken = default)
-        => await context.Admins
-            .AsNoTracking()
-            .Select(a => new AdminListItemDto { Id = a.Id, Nombre = a.Nombre, Correo = a.Cuenta!.Correo })
+    public async Task<IAdminDomainRepository.PagedResult<AdminListItemDto>> GetAllAdminsAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var query = context.Admins.AsNoTracking();
+
+        var total = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderBy(a => a.Nombre)
+            .Skip(page * pageSize)
+            .Take(pageSize)
+            .Select(a => new AdminListItemDto
+            {
+                Id = a.Id,
+                Nombre = a.Nombre,
+                Correo = a.Cuenta!.Correo
+            })
             .ToListAsync(cancellationToken);
+
+        return new IAdminDomainRepository.PagedResult<AdminListItemDto>(items, total);
+    }
 
     public Task<bool> AsignaturaExisteAsync(int asignaturaId, CancellationToken cancellationToken = default)
         => context.Asignaturas.AnyAsync(asignatura => asignatura.Id == asignaturaId, cancellationToken);
@@ -172,44 +186,69 @@ public class AdminDomainRepository(AppDbContext context, ICurrentSchoolContext c
         await context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<IEnumerable<AdminMatriculaListReadModelDto>> GetMatriculasAsync(CancellationToken cancellationToken = default)
-        => await context.Estudiantes
+    public async Task<IAdminDomainRepository.PagedResult<AdminMatriculaListReadModelDto>> GetMatriculasAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var query = context.Estudiantes
             .AsNoTracking()
-            .Include(e => e.EstudianteAsignaturas)
-                .ThenInclude(ea => ea.Asignatura)
             .Include(e => e.Curso)
+            .Include(e => e.EstudianteAsignaturas)
+                .ThenInclude(ea => ea.Asignatura);
+
+        var total = await query.CountAsync(cancellationToken);
+
+        var estudiantes = await query
             .OrderBy(e => e.Nombre)
-            .Select(e => new AdminMatriculaListReadModelDto
-            {
-                EstudianteId = e.Id,
-                Estudiante = e.Nombre,
-                CursoId = e.CursoId,
-                Curso = e.Curso != null ? e.Curso.Nombre : null,
-                Asignaturas = e.EstudianteAsignaturas
-                    .Where(ea => !ea.IsDeleted)
-                    .Select(ea => new AdminMatriculaAsignaturaReadModelDto
-                    {
-                        AsignaturaId = ea.AsignaturaId,
-                        Asignatura = ea.Asignatura != null ? ea.Asignatura.Nombre : string.Empty
-                    })
-                    .OrderBy(a => a.Asignatura)
-                    .ToList()
-            })
+            .Skip(page * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-    public async Task<IEnumerable<AdminImparticionListReadModelDto>> GetImparticionesAsync(CancellationToken cancellationToken = default)
-        => await context.ProfesorAsignaturaCursos
+        var items = estudiantes.Select(e => new AdminMatriculaListReadModelDto
+        {
+            EstudianteId = e.Id,
+            Estudiante = e.Nombre,
+            CursoId = e.CursoId,
+            Curso = e.Curso?.Nombre,
+            Asignaturas = e.EstudianteAsignaturas
+                .Where(ea => !ea.IsDeleted)
+                .OrderBy(a => a.Asignatura!.Nombre)
+                .Select(ea => new AdminMatriculaAsignaturaReadModelDto
+                {
+                    AsignaturaId = ea.AsignaturaId,
+                    Asignatura = ea.Asignatura?.Nombre ?? ""
+                })
+                .ToList()
+        });
+
+        return new IAdminDomainRepository.PagedResult<AdminMatriculaListReadModelDto>(items, total);
+    }
+
+    public async Task<IAdminDomainRepository.PagedResult<AdminImparticionListReadModelDto>> GetImparticionesAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var query = context.ProfesorAsignaturaCursos
             .AsNoTracking()
-            .OrderBy(imparticion => imparticion.Curso!.Nombre)
-            .ThenBy(imparticion => imparticion.Asignatura!.Nombre)
-            .Select(imparticion => new AdminImparticionListReadModelDto
-            {
-                ProfesorId = imparticion.ProfesorId,
-                Profesor = imparticion.Profesor != null ? imparticion.Profesor.Nombre : string.Empty,
-                AsignaturaId = imparticion.AsignaturaId,
-                Asignatura = imparticion.Asignatura != null ? imparticion.Asignatura.Nombre : string.Empty,
-                CursoId = imparticion.CursoId,
-                Curso = imparticion.Curso != null ? imparticion.Curso.Nombre : string.Empty
-            })
+            .Include(i => i.Profesor)
+            .Include(i => i.Asignatura)
+            .Include(i => i.Curso);
+
+        var total = await query.CountAsync(cancellationToken);
+
+        var imparticiones = await query
+            .OrderBy(i => i.Curso!.Nombre)
+            .ThenBy(i => i.Asignatura!.Nombre)
+            .Skip(page * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
+
+        var items = imparticiones.Select(i => new AdminImparticionListReadModelDto
+        {
+            ProfesorId = i.ProfesorId,
+            Profesor = i.Profesor?.Nombre ?? "",
+            AsignaturaId = i.AsignaturaId,
+            Asignatura = i.Asignatura?.Nombre ?? "",
+            CursoId = i.CursoId,
+            Curso = i.Curso?.Nombre ?? ""
+        });
+
+        return new IAdminDomainRepository.PagedResult<AdminImparticionListReadModelDto>(items, total);
+    }
 }

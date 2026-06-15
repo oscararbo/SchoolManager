@@ -6,7 +6,7 @@ namespace Back.Api.Application.Services;
 
 public interface ISuperUsuarioService
 {
-    Task<ApplicationResult> GetColegiosAsync(CancellationToken cancellationToken = default);
+    Task<ApplicationResult> GetColegiosAsync(int page, int pageSize, CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetColegioBySlugAsync(string slug, CancellationToken cancellationToken = default);
     Task<ApplicationResult> GetAdminsByColegioAsync(int colegioId, CancellationToken cancellationToken = default);
     Task<ApplicationResult> CreateColegioAsync(CreateColegioRequestDto request, CancellationToken cancellationToken = default);

@@ -23,6 +23,9 @@ export class AdminProfesoresTabComponent {
     @Input() cargandoGuardarProfesor = false;
     @Input() cargandoEliminarProfesor = false;
     @Input() controlErrorMessage: (control: AbstractControl | null) => string | null = () => null;
+    @Input() page = 0;
+    @Input() total = 0;
+    @Input() pageSize = 50;
 
     @Output() busquedaProfesoresChange = new EventEmitter<string>();
     @Output() filtroProfesoresCursoIdChange = new EventEmitter<number | null>();
@@ -31,4 +34,10 @@ export class AdminProfesoresTabComponent {
     @Output() guardarProfesor = new EventEmitter<void>();
     @Output() cancelarEditarProfesor = new EventEmitter<void>();
     @Output() crearProfesor = new EventEmitter<void>();
+    @Output() paginaAnterior = new EventEmitter<void>();
+    @Output() siguientePagina = new EventEmitter<void>();
+
+    totalPagesNum(): number {
+        return Math.max(1, Math.ceil(this.total / this.pageSize));
+    }
 }

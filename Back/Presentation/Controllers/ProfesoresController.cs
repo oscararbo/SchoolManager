@@ -17,9 +17,9 @@ public class ProfesoresController(IProfesoresService profesoresService) : Contro
 {
     [HttpGet]
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(int page, int pageSize)
     {
-        return this.ToActionResult(await profesoresService.GetAllProfesoresAsync(HttpContext.RequestAborted));
+        return this.ToActionResult(await profesoresService.GetAllProfesoresAsync(page, pageSize, HttpContext.RequestAborted));
     }
 
     [HttpGet("simple")]

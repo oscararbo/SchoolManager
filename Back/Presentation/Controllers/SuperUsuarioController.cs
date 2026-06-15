@@ -21,8 +21,8 @@ public class SuperUsuarioController(ISuperUsuarioService superUsuarioService) : 
 
     [Authorize(Policy = AuthorizationPolicies.SuperUsuarioOnly)]
     [HttpGet("colegios")]
-    public async Task<IActionResult> GetColegios()
-        => this.ToActionResult(await superUsuarioService.GetColegiosAsync(HttpContext.RequestAborted));
+    public async Task<IActionResult> GetColegios(int page, int pageSize)
+        => this.ToActionResult(await superUsuarioService.GetColegiosAsync(page, pageSize, HttpContext.RequestAborted));
 
     [Authorize(Policy = AuthorizationPolicies.SuperUsuarioOnly)]
     [HttpGet("colegios/{colegioId:int}/admins")]

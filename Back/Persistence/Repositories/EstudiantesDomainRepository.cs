@@ -214,12 +214,25 @@ public class EstudiantesDomainRepository(AppDbContext context, ICurrentSchoolCon
         => await context.Cursos.AsNoTracking()
             .Where(c => c.Id == cursoId)
             .Select(c => (string?)c.Nombre)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
-    public async Task<IEnumerable<EstudianteListItemDto>> GetAllEstudiantesAsync(CancellationToken cancellationToken = default)
-        => await context.Estudiantes
+    public async Task<IEstudiantesDomainRepository.PagedResult<EstudianteListItemDto>> GetAllEstudiantesAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var query = context.Estudiantes
             .AsNoTracking()
-            .Select(e => new EstudianteListItemDto
+            .Include(e => e.Curso)
+            .Include(e => e.Cuenta);
+
+        var total = await query.CountAsync(cancellationToken);
+
+        var estudiantes = await query
+            .OrderBy(e => e.Nombre)
+            .Skip(page * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new IEstudiantesDomainRepository.PagedResult<EstudianteListItemDto>(
+            estudiantes.Select(e => new EstudianteListItemDto
             {
                 Id = e.Id,
                 Nombre = e.Nombre,
@@ -229,9 +242,11 @@ public class EstudiantesDomainRepository(AppDbContext context, ICurrentSchoolCon
                 FechaNacimiento = e.FechaNacimiento,
                 Correo = e.Cuenta!.Correo,
                 CursoId = e.CursoId,
-                Curso = e.Curso != null ? e.Curso.Nombre : null
-            })
-            .ToListAsync(cancellationToken);
+                Curso = e.Curso?.Nombre
+            }),
+            total
+        );
+    }
 
     public async Task<IEnumerable<EstudianteLookupDto>> GetSimpleEstudiantesAsync(CancellationToken cancellationToken = default)
         => await context.Estudiantes
@@ -286,7 +301,7 @@ public class EstudiantesDomainRepository(AppDbContext context, ICurrentSchoolCon
                     Profesor = grade.Tarea.Profesor!.Nombre
                 }).ToList()
             })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
     public async Task<AlumnoPanelDto?> GetPanelAlumnoAsync(int estudianteId, CancellationToken cancellationToken = default)
     {
@@ -294,7 +309,7 @@ public class EstudiantesDomainRepository(AppDbContext context, ICurrentSchoolCon
             .AsNoTracking()
             .Where(e => e.Id == estudianteId)
             .Select(e => new { e.Id, e.Nombre, e.CursoId, Curso = e.Curso!.Nombre })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (student is null) return null;
 
@@ -317,7 +332,7 @@ public class EstudiantesDomainRepository(AppDbContext context, ICurrentSchoolCon
                         .Select(pac => pac.Profesor!.Nombre)
                         .FirstOrDefault()
                 })
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (subject is not null)
             {
